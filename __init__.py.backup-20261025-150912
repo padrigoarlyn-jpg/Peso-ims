@@ -1,0 +1,617 @@
+from flask import Flask, abort, redirect, request, url_for, Response, jsonify, render_template, session, g
+from flask_login import current_user, login_required, logout_user
+from flask_apscheduler import APScheduler
+import os
+import json
+import psgc
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
+from website.config import Config
+from website.extensions import db, login_manager, csrf, mail, limiter
+
+from website.home.routes import home
+from website.auth import auth
+from website.admin import admin
+from website.jobseeker import jobseeker
+from website.employer import employer
+from website.kiosk import kiosk
+from website.supervised_registration import supervised_registration
+
+from website.models import Notification
+
+
+def create_app():
+
+    app = Flask(__name__)
+
+    app.config.from_object(Config)
+
+    # Explicit Cookie and Session Security Configuration
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = app.config.get("SESSION_COOKIE_SECURE", False)
+
+    @app.after_request
+    def apply_security_headers(response):
+        response.headers.setdefault(
+            "X-Content-Type-Options",
+            "nosniff",
+        )
+        response.headers.setdefault(
+            "X-Frame-Options",
+            "SAMEORIGIN",
+        )
+        response.headers.setdefault(
+            "Referrer-Policy",
+            "strict-origin-when-cross-origin",
+        )
+        response.headers.setdefault(
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=()",
+        )
+
+        # Do not allow authenticated pages containing personal or administrative
+        # data to remain usable from the browser cache after logout.
+        if current_user.is_authenticated:
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+
+        if current_user.is_authenticated and current_user.role != "kiosk":
+            response.headers["X-PESO-Idle-Guard"] = "active"
+            response.headers["X-PESO-Idle-Expires-At"] = str(session.get("_dashboard_last_action", ""))
+        if getattr(g, "dashboard_idle_expired", False):
+            response.delete_cookie(app.config.get("REMEMBER_COOKIE_NAME", "remember_token"))
+
+        if os.getenv("APP_ENV", "development").lower() == "production" and request.is_secure:
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+        return response
+
+    # Server-authoritative 15-minute inactivity policy. Background requests do not renew it.
+    IDLE_SECONDS = 15 * 60
+
+    def _idle_now():
+        return datetime.now(timezone.utc).timestamp()
+
+    @app.before_request
+    def dashboard_idle_guard():
+        if not current_user.is_authenticated or current_user.role == "kiosk":
+            return
+        now = _idle_now()
+        last = session.get("_dashboard_last_action")
+        # For a session created before this patch, begin the clock on its first request.
+        if last is None:
+            session["_dashboard_last_action"] = now
+            last = now
+        try:
+            elapsed = now - float(last)
+        except (ValueError, TypeError):
+            elapsed = IDLE_SECONDS
+        if elapsed >= IDLE_SECONDS:
+            logout_user()
+            session.clear()
+            g.dashboard_idle_expired = True
+            if request.path.startswith("/auth/dashboard-idle-") or request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({"expired": True, "redirect": url_for("auth.login")}), 401
+            return redirect(url_for("auth.login"))
+
+    @app.get("/auth/dashboard-idle-status", endpoint="dashboard_idle_status")
+    @login_required
+    def dashboard_idle_status():
+        if current_user.role == "kiosk":
+            return jsonify({"exempt": True})
+        return jsonify({"expires_at": float(session["_dashboard_last_action"]) + IDLE_SECONDS, "server_now": _idle_now(), "timeout_seconds": IDLE_SECONDS})
+
+    @app.post("/auth/dashboard-idle-ping", endpoint="dashboard_idle_ping")
+    @csrf.exempt
+    @login_required
+    def dashboard_idle_ping():
+        if current_user.role == "kiosk":
+            return jsonify({"exempt": True})
+        # Do not allow hidden/background tabs or arbitrary automatic polling to renew.
+        if request.headers.get("X-PESO-User-Visible") != "1":
+            return jsonify({"error": "Foreground user interaction required"}), 400
+        session["_dashboard_last_action"] = _idle_now()
+        return jsonify({"expires_at": session["_dashboard_last_action"] + IDLE_SECONDS})
+
+    # =========================================================
+    # PHILIPPINE ADDRESS / LOCAL PSGC DATA
+    # =========================================================
+    # The `psgc` package bundles the Philippine geographic hierarchy
+    # locally, so registration does not depend on an external API.
+
+    def _place_item(place):
+        return {"code": str(place.psgc_code), "name": place.name}
+
+    @app.get("/api/psgc/provinces")
+    def psgc_provinces():
+        try:
+            return jsonify([_place_item(place) for place in psgc.provinces])
+        except Exception as exc:
+            app.logger.exception("Unable to load local PSGC provinces: %s", exc)
+            return jsonify({"error": "Unable to load local address data"}), 500
+
+    @app.get("/api/psgc/provinces/<province_code>/cities-municipalities")
+    def psgc_cities_municipalities(province_code):
+        try:
+            province = psgc.get(province_code)
+            places = [
+                child for child in province.children
+                if child.__class__.__name__ in {"City", "Municipality"}
+            ]
+            return jsonify([_place_item(place) for place in places])
+        except Exception as exc:
+            app.logger.exception("Unable to load local PSGC cities/municipalities: %s", exc)
+            return jsonify({"error": "Unable to load local address data"}), 500
+
+    @app.get("/api/psgc/cities-municipalities/<city_code>/barangays")
+    def psgc_barangays(city_code):
+        try:
+            locality = psgc.get(city_code)
+            # `children` also handles cities with sub-municipality structures.
+            places = [
+                child for child in locality.children
+                if child.__class__.__name__ == "Barangay"
+            ]
+            return jsonify([_place_item(place) for place in places])
+        except Exception as exc:
+            app.logger.exception("Unable to load local PSGC barangays: %s", exc)
+            return jsonify({"error": "Unable to load local address data"}), 500
+
+    db.init_app(app)
+    login_manager.init_app(app)
+    csrf.init_app(app)
+    mail.init_app(app)
+    limiter.init_app(app)
+
+    # =========================================================
+    # QZ TRAY SIGNING
+    # =========================================================
+    #
+    # The private key stays on the Flask server.
+    # The digital certificate is returned to the browser.
+    #
+    # Project structure:
+    #
+    # PESO-IMS/
+    # ├── qz_keys/
+    # │   ├── digital-certificate.txt
+    # │   └── private-key.pem
+    # └── website/
+    #
+    # =========================================================
+
+    qz_keys_directory = os.path.abspath(
+        os.path.join(
+            app.root_path,
+            os.pardir,
+            "qz_keys"
+        )
+    )
+
+    default_qz_directory = os.path.abspath(
+        os.path.join(app.root_path, os.pardir, "qz_peso_certs")
+    )
+
+    qz_certificate_path = app.config.get("QZ_CERTIFICATE_PATH") or os.path.join(
+        default_qz_directory, "peso-qz.crt"
+    )
+
+    qz_private_key_path = app.config.get("QZ_PRIVATE_KEY_PATH") or os.path.join(
+        default_qz_directory, "peso-qz.key"
+    )
+
+    @app.route("/qz/certificate")
+    @login_required
+    def qz_certificate():
+        if current_user.role not in {"kiosk", "admin"}:
+            abort(403)
+
+        if not os.path.isfile(qz_certificate_path):
+            return Response(
+                "QZ digital certificate was not found.",
+                status=500,
+                mimetype="text/plain"
+            )
+
+        try:
+            with open(
+                qz_certificate_path,
+                "r",
+                encoding="utf-8"
+            ) as certificate_file:
+
+                certificate = certificate_file.read()
+
+            return Response(
+                certificate,
+                status=200,
+                mimetype="text/plain"
+            )
+
+        except Exception as error:
+
+            app.logger.exception(
+                "Unable to read QZ digital certificate."
+            )
+
+            return Response(
+                "Unable to read QZ digital certificate.",
+                status=500,
+                mimetype="text/plain"
+            )
+
+    @app.route("/qz/sign")
+    @login_required
+    @limiter.limit("120 per minute")
+    def qz_sign():
+        if current_user.role not in {"kiosk", "admin"}:
+            abort(403)
+
+        data_to_sign = request.args.get("request")
+
+        if not data_to_sign:
+            return Response(
+                "Missing request parameter.",
+                status=400,
+                mimetype="text/plain"
+            )
+
+        if not os.path.isfile(qz_private_key_path):
+            return Response(
+                "QZ private key was not found.",
+                status=500,
+                mimetype="text/plain"
+            )
+
+        try:
+
+            from cryptography.hazmat.primitives import hashes
+            from cryptography.hazmat.primitives.asymmetric import padding
+            from cryptography.hazmat.primitives.serialization import (
+                load_pem_private_key
+            )
+
+            with open(
+                qz_private_key_path,
+                "rb"
+            ) as private_key_file:
+
+                private_key_data = (
+                    private_key_file.read()
+                )
+
+            private_key = load_pem_private_key(
+                private_key_data,
+                password=None
+            )
+
+            signature = private_key.sign(
+                data_to_sign.encode("utf-8"),
+                padding.PKCS1v15(),
+                hashes.SHA512()
+            )
+
+            import base64
+
+            signature_base64 = base64.b64encode(
+                signature
+            ).decode("utf-8")
+
+            return Response(
+                signature_base64,
+                status=200,
+                mimetype="text/plain"
+            )
+
+        except Exception:
+
+            app.logger.exception(
+                "Unable to sign QZ Tray request."
+            )
+
+            return Response(
+                "Unable to sign QZ Tray request.",
+                status=500,
+                mimetype="text/plain"
+            )
+
+    # Initialize APScheduler for automatic job fair status updates
+    scheduler = APScheduler()
+    app.config['SCHEDULER_API_ENABLED'] = False
+    app.config['SCHEDULER_TIMEZONE'] = 'Asia/Manila'
+    scheduler.init_app(app)
+    if os.getenv("ENABLE_SCHEDULER", "true").lower() == "true":
+        scheduler.start()
+
+    # Import scheduler tasks
+    from website.scheduler import (
+        _update_job_fair_statuses_task,
+        _interview_reminders_task,
+    )
+
+    # Add scheduled job to update job fair statuses every 5 minutes
+    if os.getenv("ENABLE_SCHEDULER", "true").lower() == "true" and (not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true'):
+        scheduler.add_job(
+            func=_update_job_fair_statuses_task,
+            args=[app],
+            trigger="interval",
+            minutes=5,
+            id='update_job_fair_statuses',
+            name='Update Job Fair Statuses',
+            replace_existing=True
+        )
+
+        scheduler.add_job(
+            func=_interview_reminders_task,
+            args=[app],
+            trigger="interval",
+            minutes=10,
+            id='interview_reminders',
+            name='Interview Reminders',
+            replace_existing=True
+        )
+
+    @app.context_processor
+    def inject_notifications():
+
+        if current_user.is_authenticated:
+
+            notifications = (
+                Notification.query
+                .filter_by(user_id=current_user.user_id)
+                .order_by(Notification.created_at.desc())
+                .limit(20)
+                .all()
+            )
+
+            unread_notifications = (
+                Notification.query
+                .filter_by(
+                    user_id=current_user.user_id,
+                    is_read=False
+                )
+                .count()
+            )
+
+        else:
+            notifications = []
+            unread_notifications = 0
+
+        return dict(
+            notifications=notifications,
+            unread_notifications=unread_notifications
+        )
+
+    @app.get("/notifications/live")
+    @login_required
+    def live_notifications():
+        rows = (Notification.query.filter_by(user_id=current_user.user_id)
+                .order_by(Notification.created_at.desc()).limit(20).all())
+        unread = Notification.query.filter_by(user_id=current_user.user_id, is_read=False).count()
+        result = jsonify({
+            "unread": unread,
+            "items": [{
+                "id": row.notification_id, "title": row.title or "",
+                "message": row.message or "",
+                "created": row.created_at.strftime("%b %d, %Y %I:%M %p") if row.created_at else "",
+                "is_read": bool(row.is_read),
+            } for row in rows]
+        })
+        result.headers["Cache-Control"] = "no-store, private"
+        return result
+
+    @app.route("/notifications/<int:notification_id>/read", methods=["POST"])
+    def read_notification(notification_id):
+        if not current_user.is_authenticated:
+            return redirect(url_for("auth.login"))
+
+        notification = Notification.query.get_or_404(notification_id)
+        if notification.user_id != current_user.user_id:
+            abort(403)
+
+        notification.is_read = True
+        db.session.commit()
+
+        notification_type = (notification.notification_type or "").strip()
+
+        if current_user.role == "admin":
+            if (
+                notification_type == "Employer Registration"
+                or notification.title == "New Employer Registration Request"
+            ):
+                return redirect(
+                    url_for(
+                        "admin.employer_registration_requests",
+                        status="Pending",
+                    )
+                )
+            if notification_type == "Employer":
+                return redirect(url_for("admin.all_employers"))
+            if notification_type == "Job Fair":
+                return redirect(url_for("admin.job_fairs"))
+            if notification_type == "Job":
+                return redirect(url_for("admin.joblist"))
+            if notification_type in ["Application", "Referral"]:
+                return redirect(url_for("admin.job_referral"))
+            if notification_type == "Announcement":
+                return redirect(url_for("admin.announcement"))
+            return redirect(url_for("admin.dashboard"))
+
+        if current_user.role == "employer":
+            if notification_type == "Job":
+                return redirect(url_for("employer.joblisting"))
+            if notification_type == "Job Fair":
+                return redirect(url_for("employer.job_fairs"))
+            if notification_type in ["Application", "Referral"]:
+                return redirect(url_for("employer.jobseekerlist"))
+            return redirect(url_for("employer.dashboard"))
+
+        if current_user.role == "jobseeker":
+            if notification_type in ["Application", "Referral"]:
+                return redirect(url_for("jobseeker.application"))
+            if notification_type in ["Job Fair", "Announcement"]:
+                return redirect(url_for("jobseeker.announcement"))
+            return redirect(url_for("jobseeker.dashboard"))
+
+        return redirect(url_for("home.index"))
+
+    @app.route("/notifications/mark_all_read", methods=["POST"])
+    def mark_all_notifications():
+        """Mark all notifications for the authenticated user as read."""
+        if not current_user.is_authenticated:
+            return redirect(url_for("auth.login"))
+
+        # Bulk update unread notifications for the current user
+        Notification.query.filter_by(
+            user_id=current_user.user_id,
+            is_read=False
+        ).update(
+            {"is_read": True},
+            synchronize_session=False
+        )
+
+        db.session.commit()
+
+        # Redirect back to referrer or to dashboard based on role
+        ref = request.referrer
+
+        if ref:
+            return redirect(ref)
+
+        if current_user.role == "admin":
+            return redirect(url_for("admin.dashboard"))
+
+        if current_user.role == "employer":
+            return redirect(url_for("employer.dashboard"))
+
+        if current_user.role == "jobseeker":
+            return redirect(url_for("jobseeker.dashboard"))
+
+        return redirect(url_for("home.index"))
+
+    # --- Template filter: local_dt ---
+    def _format_local_datetime(
+        value,
+        fmt="%b %d, %Y %I:%M %p",
+        tz_name=None
+    ):
+        """Convert a datetime to the specified timezone and format for templates.
+
+        - If value is naive, treat it as UTC (this matches the prior assumption used
+          elsewhere in the codebase). If your datetimes are stored in a local zone,
+          this needs to be adjusted.
+        - Default tz_name is taken from app.config["USER_TIMEZONE"] or 'Asia/Manila'.
+        """
+
+        if value is None:
+            return ""
+
+        # Determine timezone
+        tz_name = tz_name or app.config.get(
+            "USER_TIMEZONE",
+            "Asia/Manila"
+        )
+
+        try:
+            target_tz = ZoneInfo(tz_name)
+
+        except Exception:
+            target_tz = ZoneInfo("Asia/Manila")
+
+        # Ensure value is a datetime
+        if not isinstance(value, datetime):
+
+            try:
+                # Attempt to parse string datetimes if necessary
+                value = datetime.fromisoformat(
+                    str(value)
+                )
+
+            except Exception:
+                return str(value)
+
+        # If naive, assume UTC
+        if value.tzinfo is None:
+            value = value.replace(
+                tzinfo=ZoneInfo("UTC")
+            )
+
+        local_dt = value.astimezone(
+            target_tz
+        )
+
+        return local_dt.strftime(fmt)
+
+    app.jinja_env.filters["local_dt"] = (
+        _format_local_datetime
+    )
+
+    app.register_blueprint(home)
+    app.register_blueprint(auth)
+    app.register_blueprint(admin)
+    app.register_blueprint(jobseeker)
+    app.register_blueprint(employer)
+    app.register_blueprint(kiosk)
+    app.register_blueprint(supervised_registration)
+
+    # =========================================================
+    # STANDARDIZED HTML ERROR PAGES
+    # =========================================================
+    # Explicit JSON responses from API/AJAX routes remain unchanged.
+    # These handlers cover Flask/Werkzeug browser errors, including
+    # Flask-Limiter's HTTP 429 response.
+
+    @app.errorhandler(400)
+    def bad_request(error):
+        message = getattr(error, "description", None)
+        default_description = (
+            "The browser (or proxy) sent a request that this server "
+            "could not understand."
+        )
+        if not message or message == default_description:
+            message = None
+
+        try:
+            return render_template(
+                "errors/400.html",
+                error_message=message,
+            ), 400
+        except Exception:
+            app.logger.warning(
+                "Unable to render HTTP 400 template for host=%r path=%r",
+                request.host,
+                request.path,
+                exc_info=True,
+            )
+            return Response(
+                "400 Bad Request: The request could not be processed.\n",
+                status=400,
+                mimetype="text/plain",
+            )
+
+    @app.errorhandler(403)
+    def forbidden(error):
+        return render_template("errors/403.html"), 403
+
+    @app.errorhandler(404)
+    def not_found(error):
+        return render_template("errors/404.html"), 404
+
+    @app.errorhandler(429)
+    def too_many_requests(error):
+        return render_template("errors/429.html"), 429
+
+    @app.errorhandler(500)
+    def internal_server_error(error):
+        # Recover the SQLAlchemy session if the error occurred mid-transaction.
+        try:
+            db.session.rollback()
+        except Exception:
+            app.logger.exception(
+                "Unable to roll back database session after 500 error"
+            )
+        return render_template("errors/500.html"), 500
+
+    return app

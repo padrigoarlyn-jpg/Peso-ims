@@ -1,0 +1,4 @@
+# Install alongside requirements.txt for Redis-backed hosting features.
+# Pin exact tested versions in a deployment lockfile before public launch.
+redis>=5,<7
+rq>=1.16,<3
