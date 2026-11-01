@@ -1,0 +1,272 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}PESO: Admin Dashboard{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/admin_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard-main admin-page-shell">
+
+    <!-- WELCOME SECTION -->
+    <section class="welcome-section">
+        <div>
+            <p class="eyebrow">ADMIN OVERVIEW</p>
+            <h1>Welcome back, Admin {{ current_user.username }}</h1>
+            <p class="welcome-subtext">Here is a quick snapshot of the latest activity and pending actions.</p>
+        </div>
+    </section>
+
+    <!-- STATISTICS GRID -->
+    <section class="stats-grid">
+        <article class="stat-card">
+            <div class="stat-icon">
+                <i class="fa-solid fa-user-clock"></i>
+            </div>
+            <div class="stat-info">
+                <h2>{{ pending_registration_requests }}</h2>
+                <p>Pending Requests</p>
+            </div>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-icon">
+                <i class="fa-solid fa-users"></i>
+            </div>
+            <div class="stat-info">
+                <h2>{{ jobseeker_count }}</h2>
+                <p>Job Seekers</p>
+            </div>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-icon">
+                <i class="fa-solid fa-briefcase"></i>
+            </div>
+            <div class="stat-info">
+                <h2>{{ active_jobs }}</h2>
+                <p>Active Job Listings</p>
+            </div>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-icon">
+                <i class="fa-solid fa-gears"></i>
+            </div>
+            <div class="stat-info">
+                <h2>{{ total_employers }}</h2>
+                <p>Employers</p>
+            </div>
+        </article>
+    </section>
+
+    <!-- DASHBOARD CARDS GRID -->
+    <section class="dashboard-grid">
+
+        <!-- 1. EMPLOYER REGISTRATION REQUESTS -->
+        <article class="card employer-requests-card">
+            <div class="card-header">
+                <div class="card-icon card-icon-danger">
+                    <i class="fa-solid fa-user-clock"></i>
+                </div>
+                <div>
+                    <h3 class="card-title">Employer Registration Requests</h3>
+                    <p class="card-subtitle">Review initial walk-in or submitted requests</p>
+                </div>
+            </div>
+
+            <div class="card-content">
+                {% if pending_registration_requests > 0 %}
+                <div class="list-item">
+                    <div>
+                        <strong>{{ pending_registration_requests }} Pending Request(s)</strong>
+                        <p class="list-subtext">New employer sign-ups waiting for verification.</p>
+                    </div>
+                    <span class="badge badge-pending">
+                        Action Needed
+                    </span>
+                </div>
+                {% else %}
+                <div class="list-item">
+                    <div>
+                        <strong>No pending requests</strong>
+                        <p class="list-subtext">All registration requests are up to date.</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="button-container">
+                <a href="{{ url_for('admin.employer_registration_requests') }}" class="btn-action">
+                    View All Requests
+                </a>
+            </div>
+        </article>
+
+        <!-- 2. SYSTEM OVERVIEW -->
+        <article class="card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fa-solid fa-chart-column"></i>
+                </div>
+                <div>
+                    <h3 class="card-title">System Overview</h3>
+                    <p class="card-subtitle">Key numbers at a glance</p>
+                </div>
+            </div>
+
+            <div class="card-content">
+                <div class="list-item">
+                    <strong>
+                        <i class="fa-solid fa-check status-ok"></i> Server Status
+                    </strong>
+                    <span>Operational</span>
+                </div>
+                <div class="list-item">
+                    <strong>Jobs</strong>
+                    <span>{{ active_jobs }}</span>
+                </div>
+                <div class="list-item">
+                    <strong>Job Seekers</strong>
+                    <span>{{ jobseeker_count }}</span>
+                </div>
+                <div class="list-item">
+                    <strong>Employers</strong>
+                    <span>{{ total_employers }}</span>
+                </div>
+            </div>
+        </article>
+
+        <!-- 3. JOB REFERRAL -->
+        <article class="card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
+                <div>
+                    <h3 class="card-title">Job Referral</h3>
+                    <p class="card-subtitle">Latest referral requests requiring PESO review</p>
+                </div>
+            </div>
+
+            <div class="card-content">
+                {% if referral_applications %}
+                {% for item in referral_applications %}
+                <div class="referral-item">
+                    {% if item.job_seeker and item.job_seeker.profile_picture %}
+                        {% if '/' in item.job_seeker.profile_picture %}
+                        <img src="{{ url_for('static', filename=item.job_seeker.profile_picture) }}" class="profile-img-large" alt="Applicant">
+                        {% else %}
+                        <img src="{{ url_for('static', filename='uploads/jobseekers/' ~ item.job_seeker.profile_picture) }}" class="profile-img-large" alt="Applicant">
+                        {% endif %}
+                    {% else %}
+                    <img src="{{ url_for('static', filename='images/pfp_placeholder.png') }}" class="profile-img-large" alt="Applicant">
+                    {% endif %}
+
+                    <div class="referral-info">
+                        <strong class="referral-name">
+                            {{ item.job_seeker.user.full_name if item.job_seeker and item.job_seeker.user else "Unknown Applicant" }}
+                        </strong>
+                        <small class="referral-location">
+                            <i class="fas fa-map-marker-alt"></i>
+                            {{ item.job.location if item.job else "Location not provided" }}
+                        </small>
+                    </div>
+
+                    <div class="referral-id">
+                        Application #{{ item.application_id }}
+                    </div>
+
+                    {% set referral = item.referrals[0] if item.referrals else none %}
+                    <span class="badge badge-pending">
+                        {{ referral.status if referral and referral.status else "Pending" }}
+                    </span>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="list-item">
+                    <div>
+                        <strong>No referral requests</strong>
+                        <p class="list-subtext">Referral requests will appear here.</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="button-container">
+                <a href="{{ url_for('admin.job_referral') }}" class="btn-action">
+                    Go to Job Referral
+                </a>
+            </div>
+        </article>
+
+        <!-- 4. ANNOUNCEMENTS -->
+        <article class="card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fa-solid fa-bullhorn"></i>
+                </div>
+                <div>
+                    <h3 class="card-title">Announcements</h3>
+                    <p class="card-subtitle">Latest Job Fair records and announcements</p>
+                </div>
+            </div>
+
+            <div class="card-content">
+                {% if announcements %}
+                {% for item in announcements %}
+                <div class="announcement-card">
+                    <div class="announcement-header">
+                        <h4 class="announcement-title">
+                            {{ item.title or item.event_name or "PESO JOB FAIR" }}
+                        </h4>
+                    </div>
+
+                    {% if item.event_date or item.location or item.venue %}
+                    <div class="announcement-meta">
+                        {% if item.event_date %}
+                        <span class="meta-item">
+                            <i class="fa-regular fa-calendar"></i> {{ item.event_date }}
+                        </span>
+                        {% endif %}
+
+                        {% if item.location or item.venue %}
+                        <span class="meta-item">
+                            <i class="fa-solid fa-location-dot"></i> {{ item.location or item.venue }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if item.description %}
+                    <p class="announcement-description">
+                        {{ item.description | truncate(110) }}
+                    </p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="list-item">
+                    <div>
+                        <strong>No active announcements</strong>
+                        <p class="list-subtext">Upcoming job fair announcements will appear here.</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </article>
+
+    </section>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/admin/admin_dashboard.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,304 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}PESO: Job Fair Attendees{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_job_fair_management.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Shared mobile filter drawer styling -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared_mobile_filter_drawers.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_job_fair_attendees_mobile_sheet.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/admin_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="admin-dashboard-main job-fair-subpage job-fair-attendees-page">
+    <section class="welcome-section">
+        <div class="welcome-copy">
+            <p class="eyebrow">Job Fair Attendees</p>
+            <h1>{{ job_fair.title }}</h1>
+            <p class="welcome-subtext">
+                Review registered job seekers and attendance records for this event.
+            </p>
+        </div>
+
+        <div class="header-actions">
+            <a href="{{ url_for('admin.supervised_registration_station', fair_id=job_fair.job_fair_id) }}"
+               class="btn-action"
+               style="background:#143d83;color:#fff;border-color:#143d83;"
+               aria-label="Open supervised registration for this job fair">
+               
+                <span>Supervised Registration</span>
+            </a>
+            {% if attendees %}
+            <a href="{{ url_for('admin.export_job_fair_attendees', fair_id=job_fair.job_fair_id) }}" class="btn-action export-btn">
+              
+                <span>Export Job Fair Report</span>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('admin.job_fairs') }}" class="btn-action return-btn">
+                
+                <span>Back to Job Fairs</span>
+            </a>
+        </div>
+    </section>
+
+    <section class="stats-grid">
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+            <div class="stat-info">
+                <h2>{{ report_summary.total_registered }}</h2>
+                <p>Total Registered</p>
+            </div>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-user-check"></i></div>
+            <div class="stat-info">
+                <h2>{{ report_summary.attended }}</h2>
+                <p>Attended</p>
+            </div>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-clipboard-check"></i></div>
+            <div class="stat-info">
+                <h2>{{ report_summary.applied }}</h2>
+                <p>Applied</p>
+            </div>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-handshake"></i></div>
+            <div class="stat-info">
+                <h2>{{ report_summary.hots }}</h2>
+                <p>Hired on the Spot</p>
+            </div>
+        </article>
+    </section>
+
+    <section class="stats-grid">
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-calendar-check"></i></div>
+            <div class="stat-info">
+                <h2>{{ report_summary.pre_registered }}</h2>
+                <p>Pre-registered</p>
+            </div>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-person-walking"></i></div>
+            <div class="stat-info">
+                <h2>{{ report_summary.on_site }}</h2>
+                <p>On-site / Walk-in</p>
+            </div>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-user-minus"></i></div>
+            <div class="stat-info">
+                <h2>{{ report_summary.did_not_apply }}</h2>
+                <p>Attended, Did Not Apply</p>
+            </div>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-star"></i></div>
+            <div class="stat-info">
+                <h2>
+                    {{ report_summary.near_hire + report_summary.qualified + report_summary.mismatched }}
+                </h2>
+                <p>Other Evaluated Outcomes</p>
+            </div>
+        </article>
+    </section>
+
+    <button type="button" class="attendee-mobile-filter-trigger" id="attendeeMobileFilterTrigger" aria-label="Open attendee search and filters" aria-expanded="false">
+        <i class="fa-solid fa-sliders"></i>
+        <span>Search &amp; Filters</span>
+    </button>
+
+    <div class="attendee-filter-overlay" id="attendeeFilterOverlay" aria-hidden="true"></div>
+
+    <section class="job-fair-filter-section attendee-filter-section" aria-label="Attendee search and filters">
+        <div class="job-fair-filter-container attendee-filter-drawer" id="attendeeFilterDrawer">
+            <div class="attendee-filter-drawer-header">
+                <div>
+                    <span class="attendee-filter-eyebrow">Job Fair Attendees</span>
+                    <h4>Search &amp; Filters</h4>
+                </div>
+                <button type="button" class="attendee-filter-close" id="attendeeFilterClose" aria-label="Close attendee filters">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="job-fair-search-box attendee-search-wrap">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <input
+                    type="text"
+                    id="attendeeSearchInput"
+                    placeholder="Search attendee..."
+                    autocomplete="off"
+                >
+            </div>
+
+            <div class="job-fair-filter-controls attendee-filter-controls">
+                <div class="job-fair-select-wrap">
+                    <select id="attendeeSourceFilter" aria-label="Registration type">
+                        <option value="">All Registration Types</option>
+                        <option value="Pre-registered">Pre-registered</option>
+                        <option value="On-site">On-site / Walk-in</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </div>
+
+                <div class="job-fair-select-wrap">
+                    <select id="attendeeStatusFilter" aria-label="Attendance status">
+                        <option value="">All Attendance</option>
+                        <option value="Registered">Registered</option>
+                        <option value="Attended">Attended</option>
+                        <option value="Absent">Absent</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </div>
+
+                <div class="job-fair-select-wrap">
+                    <select id="attendeeApplicationFilter" aria-label="Application status">
+                        <option value="">All Application Status</option>
+                        <option value="Applied">Applied</option>
+                        <option value="Did Not Apply">Did Not Apply</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </div>
+
+                <div class="job-fair-select-wrap">
+                    <select id="attendeeOutcomeFilter" aria-label="Evaluation outcome">
+                        <option value="">All Outcomes</option>
+                        <option value="Hired on the Spot (HOTS)">Hired on the Spot (HOTS)</option>
+                        <option value="Near-hire">Near-hire</option>
+                        <option value="Qualified">Qualified</option>
+                        <option value="Mismatched">Mismatched</option>
+                        <option value="Not Evaluated">Not Evaluated</option>
+                        <option value="Not Applicable">Not Applicable</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </div>
+
+                <button type="button" class="job-fair-reset-filter attendee-reset-filters" id="attendeeResetFilters">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span>Reset</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="dashboard-grid single-column-grid">
+        <article class="card job-fair-data-card">
+            <div class="card-header">
+                <div class="card-header-title-wrapper">
+                    <div class="card-icon"><i class="fa-solid fa-user-check"></i></div>
+                    <div>
+                        <h3 class="card-title">Registered Job Seekers</h3>
+                        <p class="card-subtitle">Job seekers registered for this event.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-content">
+                {% if attendees %}
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Job Seeker</th>
+                                <th>Registration Type</th>
+                                <th>Attendance</th>
+                                <th>Application</th>
+                                <th>Best Outcome</th>
+                                <th>Registered On</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendeeTableBody">
+                            {% for att in attendees %}
+                            {% set seeker = att.job_seeker %}
+                            {% set attendance = att.attendance_status or 'Registered' %}
+                            {% set row = participant_rows.get(att.registration_id, {}) %}
+                            {% set source = row.get('registration_source', 'Pre-registered') %}
+                            {% set applied = row.get('applied', false) %}
+                            {% set outcome = row.get('best_outcome', 'Not Applicable') %}
+
+                            <tr
+                                data-attendance-status="{{ attendance }}"
+                                data-registration-source="{{ source }}"
+                                data-application-status="{{ 'Applied' if applied else 'Did Not Apply' }}"
+                                data-outcome="{{ outcome }}"
+                            >
+                                <td data-label="Job Seeker">
+                                    <strong>
+                                        {{ seeker.first_name ~ ' ' ~ seeker.last_name if seeker else 'N/A' }}
+                                    </strong>
+                                    <div class="list-subtext">
+                                        {{ seeker.user.email if seeker and seeker.user else 'N/A' }}
+                                        ·
+                                        {{ seeker.contact_number if seeker and seeker.contact_number else 'N/A' }}
+                                    </div>
+                                </td>
+
+                                <td data-label="Registration Type">
+                                    <span class="badge">{{ source }}</span>
+                                </td>
+
+                                <td data-label="Attendance">
+                                    <span class="badge badge-{{ attendance | lower }}">
+                                        {{ attendance }}
+                                    </span>
+                                </td>
+
+                                <td data-label="Application">
+                                    <strong>{{ 'Applied' if applied else 'Did Not Apply' }}</strong>
+                                    {% if applied %}
+                                    <div class="list-subtext">
+                                        {{ row.get('jobs_applied_count', 0) }} job(s)
+                                    </div>
+                                    {% endif %}
+                                </td>
+
+                                <td data-label="Best Outcome">
+                                    {{ outcome }}
+                                </td>
+
+                                <td data-label="Registered On">
+                                    {{ registration_datetime_ph(att.registration_date).strftime('%b %d, %Y %I:%M %p') if att.registration_date else 'N/A' }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="noAttendeeResults" class="standard-no-results" style="display: none;">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    <strong>No attendees match your search or filters.</strong>
+                    <span>Try adjusting your search terms or filter selections.</span>
+                </div>
+                {% else %}
+                <div class="standard-no-results">
+                    <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
+                    <strong>No attendees registered yet.</strong>
+                    <span>Job seekers who register for this event will appear here.</span>
+                </div>
+                {% endif %}
+            </div>
+        </article>
+    </section>
+</main>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/admin/admin_job_fair_management.js') }}"></script>
+{% endblock %}

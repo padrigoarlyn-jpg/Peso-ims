@@ -1,0 +1,234 @@
+{% extends "layouts/auth_base.html" %}
+
+{% block title %}Complete Employer Account
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth/auth.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth/employer_registration_responsive.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth/complete_employer_registration.css', v='20261024c') }}">
+{% endblock %}
+
+{% block content %}
+<main class="auth-page employer-registration-page">
+    <div class="auth-container">
+
+        <section class="branding-panel">
+            <div class="decor-circle circle-top"></div>
+            <div class="decor-circle circle-bottom"></div>
+
+            <div class="peso-logo">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="PESO Logo">
+            </div>
+
+            <div class="branding-content">
+                <span class="organization-name">PUBLIC EMPLOYMENT SERVICE OFFICE</span>
+                <h1>COMPLETE EMPLOYER REGISTRATION</h1>
+                <p>Fill in your company information to finish the employer registration process.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fa-solid fa-building-circle-check"></i>
+                </div>
+                <div>
+                    <strong>Finish setup</strong>
+                    <span>Complete your company profile and start posting jobs.</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="form-panel">
+            <div class="form-wrapper">
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="flash-messages-container">
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'message' else 'info' }}">
+                        <i class="fa-solid 
+                                {% if category == 'success' %}fa-circle-check
+                                {% elif category == 'danger' or category == 'error' %}fa-circle-exclamation
+                                {% elif category == 'warning' %}fa-triangle-exclamation
+                                {% else %}fa-circle-info{% endif %}">
+                        </i>
+                        <span>{{ message }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                <div class="form-header">
+                    <span class="form-eyebrow">ACCOUNT SETUP</span>
+                    <h2>Complete Company Registration</h2>
+                    <p>Your documents have been verified by PESO. Please fill out your company information.</p>
+                </div>
+
+                {% if not invalid_token %}
+                <form method="POST" class="auth-form complete-employer-form">
+                    {{ form.hidden_tag() }}
+
+                    <div class="input-group">
+                        {{ form.company_name.label }}
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-building"></i>
+                            {{ form.company_name(class="form-control", placeholder="Verified company name", readonly=verified_company_name is not none) }}
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label for="province">Province</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-location-dot"></i>
+                                <select id="province" name="province" class="form-control" required
+                                    data-selected="{{ form.province.data or '' }}">
+                                    <option value="">Loading provinces...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="city">Municipality / City</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-city"></i>
+                                <select id="city" name="city" class="form-control" required
+                                    data-selected="{{ form.city.data or '' }}" disabled>
+                                    <option value="">Select province first</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label for="barangay">Barangay</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-map-pin"></i>
+                                <select id="barangay" name="barangay" class="form-control" required
+                                    data-selected="{{ form.barangay.data or '' }}" disabled>
+                                    <option value="">Select city / municipality first</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            {{ form.street.label }}
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-location-dot"></i>
+                                {{ form.street(class="form-control", placeholder="House no. / street") }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="input-group">
+                            {{ form.company_email.label }}
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-envelope"></i>
+                                {{ form.company_email(class="form-control", placeholder="Company email") }}
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            {{ form.company_phone.label }}
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-phone"></i>
+                                {{ form.company_phone(
+                                class="form-control",
+                                placeholder="09XXXXXXXXX",
+                                inputmode="numeric",
+                                maxlength="11",
+                                minlength="11",
+                                pattern="09[0-9]{9}",
+                                autocomplete="tel",
+                                data_ph_mobile="true",
+                                title="Enter an 11-digit Philippine mobile number starting with 09"
+                                ) }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <div class="label-row">
+                            {{ form.website.label }}
+                            <span class="optional-text">Optional</span>
+                        </div>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-globe"></i>
+                            {{ form.website(class="form-control", placeholder="Website") }}
+                        </div>
+                    </div>
+
+                    <section class="employer-form-section">
+                    <h3>Complete your company profile</h3>
+                    <p>Provide additional company details not collected during your verification request.</p>
+                    <div class="input-group">{{ form.company_description.label }}<div class="input-wrapper"><i class="fa-solid fa-align-left"></i>{{ form.company_description(class="form-control", minlength="20", maxlength="1000", placeholder="Describe your company, services and activities (at least 20 characters)") }}</div></div>
+                    <div class="input-group">{{ form.company_industry.label }}<div class="input-wrapper"><i class="fa-solid fa-industry"></i>{{ form.company_industry(class="form-control") }}</div></div>
+                    <div class="input-group industry-other-group" id="industryOtherGroup" {% if form.company_industry.data != 'Other' %}hidden{% endif %}>
+                        {{ form.company_industry_other.label }}
+                        <div class="input-wrapper"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>{{ form.company_industry_other(class="form-control", placeholder="Enter your industry (e.g. Printing Services)", autocomplete="organization-title", minlength="2", maxlength="100") }}</div>
+                    </div>
+                    <div class="input-group">{{ form.company_size.label }}<div class="input-wrapper"><i class="fa-solid fa-users"></i>{{ form.company_size(class="form-control") }}</div></div>
+                    <div class="input-group">{{ form.founded_year.label }}<div class="input-wrapper"><i class="fa-solid fa-calendar-days"></i>{{ form.founded_year(class="form-control", inputmode="numeric", minlength="4", maxlength="4", pattern="[0-9]{4}", placeholder="e.g. 2015") }}</div></div>
+                    <div class="input-group">{{ form.facebook_url.label }}<div class="input-wrapper"><i class="fa-brands fa-facebook"></i>{{ form.facebook_url(class="form-control", placeholder="https://www.facebook.com/yourcompany") }}</div></div>
+                    <div class="input-group">{{ form.linkedin_url.label }}<div class="input-wrapper"><i class="fa-brands fa-linkedin"></i>{{ form.linkedin_url(class="form-control", placeholder="https://www.linkedin.com/company/yourcompany") }}</div></div>
+                    </section>
+                    <section class="employer-form-section"><h3>Account security</h3><p>Create a secure password for your employer account.</p>
+                    <div class="form-grid">
+                        <div class="input-group">
+                            {{ form.password.label }}
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-lock"></i>
+                                {{ form.password(class="form-control", id="password", placeholder="Create password") }}
+                                <button type="button" class="password-toggle" data-target="password"
+                                    aria-label="Show password" title="Show password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            {{ form.confirm_password.label }}
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-lock"></i>
+                                {{ form.confirm_password(class="form-control", id="confirm_password",
+                                placeholder="Confirm password") }}
+                                <button type="button" class="password-toggle" data-target="confirm_password"
+                                    aria-label="Show password" title="Show password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    </section>
+                    <button type="submit" class="primary-btn">
+                        <span>Complete Registration</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+
+                    <div class="switch-account">
+                        <span>Already have an account?</span>
+                        <a href="{{ url_for('auth.login') }}">Login</a>
+                    </div>
+                </form>
+                {% else %}
+                <div class="alert danger">
+                    Please request a valid registration link from the PESO office.
+                </div>
+                <div class="switch-account" style="justify-content:center; margin-top:16px;">
+                    <a href="{{ url_for('auth.login') }}">Back to Login</a>
+                </div>
+                {% endif %}
+
+            </div>
+        </section>
+
+    </div>
+</main>
+{% endblock %}
+{% block javascript %}
+{{ super() }}
+<script src="{{ url_for('static', filename='javascript/shared/philippine_address.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/auth/complete_employer_live_validation.js', v='20261024c') }}"></script>
+{% endblock %}

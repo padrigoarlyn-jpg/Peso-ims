@@ -1,0 +1,196 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}PESO: Registered Employers{% endblock %}
+
+{% block css %}
+<style>
+/* Keep export aligned with the search input like the Jobseeker list. */
+.admin-employers-main .search-container.dashboard-filter-section{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.admin-employers-main .search-container .dashboard-search-box{
+    flex:1 1 320px;min-width:0;
+}
+.admin-employers-main .employer-export-btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:9px;
+    flex:0 0 auto;padding:11px 17px;min-height:46px;
+    border-radius:10px;background:#1d6f42;color:#fff;text-decoration:none;
+    font-weight:700;font-size:15px;line-height:1.2;
+    box-shadow:0 4px 12px rgba(29,111,66,.12);
+    transition:background .2s ease,transform .2s ease;
+}
+.admin-employers-main .employer-export-btn:hover{
+    background:#155a35;color:#fff;transform:translateY(-1px);
+}
+.admin-employers-main .employer-export-btn:focus-visible{
+    outline:3px solid #91c6a8;outline-offset:3px;
+}
+@media(max-width:520px){
+    .admin-employers-main .employer-export-btn{width:100%}
+}
+</style>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_employers.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+
+<!-- Patch 18: mobile action buttons; scoped to employer-table only. -->
+<style id="peso-mobile-actions-patch18">
+@media screen and (max-width: 760px) {
+  .employer-table tr td[data-label="Action"] {
+    display: block !important; width: 100% !important; max-width: none !important;
+    min-width: 0 !important; box-sizing: border-box !important;
+    grid-template-columns: none !important;
+  }
+  .employer-table tr td[data-label="Action"]::before { display: none !important; }
+  .employer-table tr td[data-label="Action"] .table-actions {
+    display: block !important; width: 100% !important; max-width: none !important;
+    min-width: 0 !important; box-sizing: border-box !important;
+  }
+  .employer-table tr td[data-label="Action"] a.btn-view {
+    display: flex !important; width: 100% !important; max-width: none !important;
+    min-width: 0 !important; flex: none !important; box-sizing: border-box !important;
+    min-height: 42px !important; margin: 0 !important;
+    align-items: center !important; justify-content: center !important;
+    text-align: center !important; white-space: nowrap !important;
+  }
+}
+</style>
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/admin_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="admin-employers-main">
+    <section class="page-header">
+        <div>
+            <span class="page-eyebrow">Employer Management</span>
+            <h1>Registered Employers</h1>
+            <p>View and manage registered employer accounts.</p>
+        </div>
+        <div class="page-summary" aria-label="Employer summary">
+            <strong>{{ total_employers }}</strong>
+            <span>Total Employers</span>
+        </div>
+    </section>
+
+    <section class="search-container dashboard-filter-section" aria-label="Employer search">
+        <div class="dashboard-search-box">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="employerSearchInput" placeholder="Search company name, email, contact, or ID..."
+                autocomplete="off">
+        </div>
+        <a class="employer-export-btn" href="{{ url_for('admin.export_employers') }}"
+           aria-label="Export registered employers to Excel">
+            <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+            <span>Export</span>
+        </a>
+    </section>
+
+    <section class="employers-section">
+        <div class="table-responsive">
+            <table class="employer-table">
+                <thead>
+                    <tr>
+                        <th>Logo</th>
+                        <th>Company Name</th>
+                        <th>Employer ID</th>
+                        <th>Contact Info</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="employerTableBody">
+                    {% if employers.items %}
+                    {% for emp in employers.items %}
+                    <tr class="employer-row">
+                        <td data-label="Logo">
+                            {% set logo_file = emp.company_logo or emp.logo %}
+                            {% set default_logo = url_for('static', filename='images/pfp_placeholder.png') %}
+                            {% if logo_file %}
+                            {% set logo_src = logo_file if '/' in logo_file else 'uploads/logos/' ~ logo_file %}
+                            <img src="{{ url_for('static', filename=logo_src) }}" class="table-avatar"
+                                alt="{{ emp.company_name or 'Company logo' }}" data-fallback="{{ default_logo }}">
+                            {% else %}
+                            <img src="{{ default_logo }}" class="table-avatar"
+                                alt="{{ emp.company_name or 'Company logo' }}">
+                            {% endif %}
+                        </td>
+
+                        <td data-label="Company">
+                            <div class="company-meta">
+                                <strong>{{ emp.company_name or 'N/A' }}</strong>
+                                <span>
+                                    <i class="fa-solid fa-location-dot"></i>
+                                    {{ emp.company_address or emp.address or 'No address provided' }}
+                                </span>
+                            </div>
+                        </td>
+
+                        <td data-label="Employer ID">
+                            <span class="employer-id">{{ emp.user.public_id }}</span>
+                        </td>
+
+                        <td data-label="Contact">
+                            <div class="contact-info">
+                                <span>
+                                    <i class="fa-regular fa-envelope"></i>
+                                    {{ emp.company_email or (emp.user.email if emp.user else 'N/A') }}
+                                </span>
+                                <span>
+                                    <i class="fa-solid fa-phone"></i>
+                                    {{ emp.company_phone or (emp.user.phone_number if emp.user else 'N/A') }}
+                                </span>
+                            </div>
+                        </td>
+
+                        <td data-label="Status">
+                            <span class="status-badge">
+                                {{ emp.account_status or 'Active' }}
+                            </span>
+                        </td>
+
+                        <td data-label="Action">
+                            <a href="{{ url_for('admin.employer_profile', public_id=emp.user.public_id) }}"
+                                class="btn-view">
+                                View Profile
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                    <tr id="noResultsMsg" class="no-results-row standardized-no-results" style="display:none;">
+                        <td colspan="6">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <span>No employers matching your search query.</span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr class="empty-row standardized-no-results static-no-results">
+                        <td colspan="6" class="empty-table"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>No registered employers found.</span></td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+            {% if employers.total %}
+            <div class="pagination peso-standard-pagination">
+                <span>Showing {{ ((employers.page - 1) * employers.per_page) + 1 }}-{{ ((employers.page - 1) * employers.per_page) + employers.items|length }} of {{ employers.total }} records</span>
+                <div class="page-controls">
+                    {% if employers.has_prev %}<a class="page-num" href="{{ url_for('admin.all_employers', page=employers.prev_num, search=search) }}" aria-label="Previous page"><i class="fa-solid fa-chevron-left"></i></a>{% else %}<span class="page-num disabled" aria-disabled="true"><i class="fa-solid fa-chevron-left"></i></span>{% endif %}
+                    {% for page_num in employers.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}{% if page_num %}<a class="page-num {% if page_num == employers.page %}active{% endif %}" href="{{ url_for('admin.all_employers', page=page_num, search=search) }}">{{ page_num }}</a>{% else %}<span class="page-ellipsis">&hellip;</span>{% endif %}{% endfor %}
+                    {% if employers.has_next %}<a class="page-num" href="{{ url_for('admin.all_employers', page=employers.next_num, search=search) }}" aria-label="Next page"><i class="fa-solid fa-chevron-right"></i></a>{% else %}<span class="page-num disabled" aria-disabled="true"><i class="fa-solid fa-chevron-right"></i></span>{% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </section>
+</main>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/admin/admin_employers.js') }}" defer></script>
+{% endblock %}

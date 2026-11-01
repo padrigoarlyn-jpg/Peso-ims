@@ -1,0 +1,454 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}
+Admin - View Job Seeker Profile | PESO IMS
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_profile.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_jobseeker_profile.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/admin_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="dashboard-container view-only-mode">
+
+    <!-- ADMIN BACK NAVIGATION & ACTION BAR -->
+    <div class="admin-top-bar">
+        <div class="back-button">
+            <a href="{{ url_for('admin.jobseekers') }}" class="btn-action">
+                <i class="fa-solid fa-arrow-left"></i> Back to Job Seekers
+            </a>
+        </div>
+
+        <div class="profile-actions">
+            <!-- EXPORT JSRF EXCEL BUTTON -->
+            <a href="{{ url_for('admin.export_jobseeker_jsrf', public_id=seeker.user.public_id) }}"
+                class="btn-action btn-export">
+                <i class="fa-solid fa-file-excel"></i> Export JSRF (Excel)
+            </a>
+
+            <button type="button" class="btn-action" onclick="openApplicationsModal()">
+                <i class="fa-solid fa-share-nodes"></i> View Applications
+            </button>
+        </div>
+    </div>
+
+    <div class="profile-grid-layout">
+        <!-- LEFT COLUMN -->
+        <aside class="profile-sidebar">
+            <div class="card profile-overview-card">
+                <div class="avatar-container">
+                    {% set default_pfp = url_for('static', filename='images/pfp_placeholder.png') %}
+                    {% if seeker.profile_picture %}
+                    {% set photo_src = seeker.profile_picture if '/' in seeker.profile_picture else
+                    'uploads/jobseekers/' ~ seeker.profile_picture %}
+                    <img src="{{ url_for('static', filename=photo_src) }}"
+                        alt="{{ seeker.first_name }} {{ seeker.last_name }}" class="large-avatar"
+                        data-fallback="{{ default_pfp }}">
+                    {% else %}
+                    <img src="{{ default_pfp }}" alt="{{ seeker.first_name }} {{ seeker.last_name }}"
+                        class="large-avatar">
+                    {% endif %}
+                </div>
+
+                <div class="overview-info">
+                    <h2>
+                        {{ seeker.last_name or '—' }}, {{ seeker.first_name or '—' }} {{ seeker.middle_name or '' }} {{
+                        seeker.suffix or '' }}
+                        {% if seeker.is_verified %}
+                        <i class="fa-solid fa-circle-check verified-icon" title="Verified Account"></i>
+                        {% endif %}
+                    </h2>
+
+                    <div class="badge-group">
+                        {% set employment_label = (seeker.employment_status or '') | trim | lower %}
+                        <span class="role-tag" title="Employment status recorded in the Job Seeker Registration Form">
+                            {% if employment_label == 'employed' %}Employed{% elif employment_label == 'unemployed' %}Unemployed{% else %}Not Specified{% endif %}
+                        </span>
+                        {% if seeker.jsrf_completed %}
+                        <span class="badge badge-jsrf-complete" title="JSRF / NSRP Form 1 completed">JSRF Complete</span>
+                        {% else %}
+                        <span class="badge badge-jsrf-incomplete" title="JSRF / NSRP Form 1 is incomplete">JSRF Incomplete</span>
+                        {% endif %}
+                        {% if seeker.fourps_beneficiary %}
+                        <span class="badge badge-4ps" title="4Ps Household ID: {{ seeker.masked_fourps_id }}">4Ps
+                            Member</span>
+                        {% endif %}
+                        {% if seeker.is_pwd %}<span class="badge">PWD — {{ seeker.disability }}{% if seeker.disability_other %}: {{ seeker.disability_other }}{% endif %}</span>{% endif %}
+                        {% if seeker.is_senior_citizen %}<span class="badge">Senior Citizen</span>{% endif %}
+                        {% if seeker.ofw_status == 'yes' or seeker.former_ofw == 'yes' %}
+                        <span class="badge badge-ofw">OFW</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="meta-row">
+                        <span class="meta-label">Location</span>
+                        <span class="meta-val">
+                            {% if seeker.city and seeker.province %}
+                            {{ seeker.city }}, {{ seeker.province }}
+                            {% elif seeker.street %}
+                            {{ seeker.street }}, {{ seeker.barangay }}
+                            {% else %}
+                            —
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="meta-row">
+                        <span class="meta-label">Job Seeker ID</span>
+                        <span class="meta-val">{{ seeker.user.public_id if seeker.user else 'N/A' }}</span>
+                    </div>
+
+                    <div class="summary-section">
+                        <div class="section-header-row">
+                            <h3>Professional Summary</h3>
+                        </div>
+                        <p id="summaryText">
+                            {{ seeker.summary or 'No professional summary provided yet.' }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- RIGHT COLUMN -->
+        <section class="profile-main-content">
+            <!-- PERSONAL INFORMATION -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <div>
+                        <h3>Personal Information</h3>
+                        <small class="text-muted"><i class="fa-solid fa-eye"></i> Viewing official identity & contact
+                            details.</small>
+                    </div>
+                </div>
+
+                <div class="contact-grid">
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">Full Name</span>
+                        <span class="field-value">{{ seeker.last_name }}, {{ seeker.first_name }} {{ seeker.middle_name
+                            or '' }} {{ seeker.suffix or '' }}</span>
+                    </div>
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">Date of Birth</span>
+                        <span class="field-value">
+                            {{ seeker.birthdate.strftime('%B %d, %Y') if seeker.birthdate else '—' }}
+                        </span>
+                    </div>
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">Sex</span>
+                        <span class="field-value">{{ seeker.sex or '—' }}</span>
+                    </div>
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">Civil Status</span>
+                        <span class="field-value">{{ seeker.civil_status or '—' }}</span>
+                    </div>
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">TIN</span>
+                        <span class="field-value">{{ seeker.tin or '—' }}</span>
+                    </div>
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">Religion</span>
+                        <span class="field-value">{{ seeker.religion or '—' }}</span>
+                    </div>
+
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">Email Address</span>
+                        <span class="field-value">{{ seeker.email or (seeker.user.email if seeker.user else '—')
+                            }}</span>
+                    </div>
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">Phone Number</span>
+                        <span class="field-value">{{ seeker.contact_number or '—' }}</span>
+                    </div>
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">Barangay</span>
+                        <span class="field-value">{{ seeker.barangay or '—' }}</span>
+                    </div>
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">City / Municipality</span>
+                        <span class="field-value">{{ seeker.city or '—' }}</span>
+                    </div>
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">Province</span>
+                        <span class="field-value">{{ seeker.province or '—' }}</span>
+                    </div>
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">House No. / Street Address</span>
+                        <span class="field-value">{{ seeker.street or '—' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- JOB PREFERENCES & SALARY -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3>Job Preferences & Target Salary</h3>
+                </div>
+                <div class="details-list">
+                    <div class="detail-row">
+                        <div>
+                            <span class="d-label">Preferred Occupations</span>
+                            <span class="d-value">
+                                1st: {{ seeker.pref_occupation_1 or 'None' }}
+                                {% if seeker.pref_occupation_2 %} | 2nd: {{ seeker.pref_occupation_2 }}{% endif %}
+                                {% if seeker.pref_occupation_3 %} | 3rd: {{ seeker.pref_occupation_3 }}{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div>
+                            <span class="d-label">Preferred Employment Type</span>
+                            <span class="d-value">{{ seeker.pref_job_type | join(', ') if seeker.pref_job_type is
+                                iterable and seeker.pref_job_type is not string else (seeker.pref_job_type or 'Any')
+                                }}</span>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div>
+                            <span class="d-label">Target Preferred Locations</span>
+                            <span class="d-value">
+                                Local: {{ [seeker.local_location_1, seeker.local_location_2, seeker.local_location_3] |
+                                select | join(', ') or 'N/A' }}
+                                {% if seeker.overseas_location_1 %}
+                                | Overseas: {{ [seeker.overseas_location_1, seeker.overseas_location_2,
+                                seeker.overseas_location_3] | select | join(', ') }}
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-two-col">
+                <!-- SKILLS -->
+                <div class="card">
+                    <div class="card-header-flex">
+                        <h3>Skills & Competencies</h3>
+                    </div>
+                    <div class="skills-tags">
+                        {% set skill_list = seeker.skills.split(',') if seeker.skills is string else (seeker.skills or []) %}
+                        {% set custom_skills = seeker.skills_other.split(',') if seeker.skills_other else [] %}
+                        {% for skill in skill_list %}
+                            {% if skill.strip() and not (skill.strip()|lower == 'others' and custom_skills) %}
+                            <span class="tag">{{ skill.strip() }}</span>
+                            {% endif %}
+                        {% endfor %}
+                        {% for skill in custom_skills %}
+                            {% if skill.strip() %}<span class="tag">{{ skill.strip() }}</span>{% endif %}
+                        {% endfor %}
+                        {% if not skill_list and not custom_skills %}
+                            <p class="text-muted">No skills listed.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- EDUCATION -->
+                <div class="card">
+                    <div class="card-header-flex">
+                        <h3>Educational Background</h3>
+                    </div>
+                    <div class="timeline">
+                        {% if seeker.tertiary_school %}
+                        <div class="timeline-item">
+                            <h4>{{ seeker.tertiary_course or 'Tertiary Education' }}</h4>
+                            <p class="text-muted">{{ seeker.tertiary_school }}</p>
+                            <small>Graduated: {{ seeker.tertiary_year_grad or 'N/A' }}</small>
+                        </div>
+                        {% endif %}
+
+                        {% if seeker.sec_school %}
+                        <div class="timeline-item">
+                            <h4>Secondary: {{ seeker.senior_high_strand or 'General High School' }}</h4>
+                            <p class="text-muted">{{ seeker.sec_school }}</p>
+                            <small>Graduated: {{ seeker.sec_year_grad or 'N/A' }}</small>
+                        </div>
+                        {% endif %}
+
+                        {% if not seeker.tertiary_school and not seeker.sec_school %}
+                        <p class="text-muted">No detailed education background specified.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- WORK EXPERIENCE -->
+            <!-- WORK EXPERIENCE -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3>Work Experience</h3>
+                </div>
+
+                <div class="timeline">
+                    {% if seeker.work_history %}
+                    {% for work in seeker.work_history %}
+                    <div class="timeline-item">
+                        <h4>{{ work.position or 'Position not specified' }}</h4>
+
+                        <p class="text-muted">
+                            {{ work.company or 'Company not specified' }}
+                        </p>
+                        <small>{{ work.company_address or 'Address not yet supplied' }}{% if work.number_of_months is not none %} · {{ work.number_of_months }} month{% if work.number_of_months != 1 %}s{% endif %}{% endif %}</small>
+
+                        {% if work.appointment_status %}
+                        <div class="work-status-wrapper">
+                            <span class="work-status">{{ work.appointment_status }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted">No work experience specified.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- RESUME ATTACHMENT -->
+            <div class="card resume-card">
+                <div class="card-header-flex">
+                    <h3>Resume Attachment</h3>
+                </div>
+                <div class="resume-container">
+                    {% if seeker.resume or seeker.resume_filename %}
+                    <div class="resume-icon">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <div class="resume-info">
+                        <h4>{{ seeker.resume_filename or "Resume File" }}</h4>
+                        <span>Uploaded Resume</span>
+                    </div>
+                    <a href="{{ url_for('admin.view_jobseeker_resume', public_id=seeker.user.public_id) }}"
+                        class="btn-action" target="_blank" rel="noopener">
+                        <i class="fa-solid fa-eye"></i> View File
+                    </a>
+                    {% else %}
+                    <div class="resume-info">
+                        <h4>No resume uploaded</h4>
+                        <span>No PDF or DOC file provided by applicant</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- REFERRAL HISTORY (ADMIN EXCLUSIVE) -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3><i class="fa-solid fa-clock-rotate-left"></i> Referral History</h3>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="referral-history-table">
+                        <thead>
+                            <tr>
+                                <th>Referral Date</th>
+                                <th>Employer</th>
+                                <th>Status</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if referrals %}
+                            {% for ref in referrals %}
+                            <tr>
+                                <td data-label="Referral Date">{{ ref.referral_date.strftime('%B %d, %Y') if
+                                    ref.referral_date else 'N/A' }}</td>
+                                <td data-label="Employer">
+                                    <strong>{{ ref.company_name }}</strong>
+                                    {% if ref.job %}
+                                    <span class="referral-position">Position: {{ ref.job_title }}</span>
+                                    {% else %}
+                                    <span class="referral-position referral-position-muted">{{ ref.job_title }}</span>
+                                    {% endif %}
+                                </td>
+                                <td data-label="Status">
+                                    <span class="badge {{ ref.status | lower }}">
+                                        {{ ref.status }}
+                                    </span>
+                                </td>
+                                <td data-label="Remarks">{{ ref.remarks or 'None' }}</td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="empty-referral-cell">
+                                    No referral history found.
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+
+<!-- APPLICATIONS MODAL -->
+<div id="applicationsModal" class="modal" aria-hidden="true">
+    <div class="modal-content applications-modal-content" role="dialog" aria-modal="true"
+        aria-labelledby="applicationsModalTitle">
+        <div class="modal-header">
+            <div>
+                <span class="modal-eyebrow">Application History</span>
+                <h2 id="applicationsModalTitle">Applications Submitted</h2>
+                <p>Review the jobs this applicant has applied to.</p>
+            </div>
+            <button type="button" class="close-modal" onclick="closeApplicationsModal()"
+                aria-label="Close">&times;</button>
+        </div>
+
+        <div class="applications-list">
+            {% if applications %}
+            {% for app in applications %}
+            <a href="{{ url_for('admin.job_rankings', job_id=app.job_id) }}" class="application-item-link">
+                <div class="application-item">
+                    <div class="application-info">
+                        <strong>{{ app.job_title }}</strong>
+                        <div class="company-name">
+                            <i class="fa-solid fa-building"></i> {{ app.company_name }}
+                        </div>
+                        <div class="applied-date">
+                            Applied on: {{ app.applied_on }}
+                        </div>
+                    </div>
+                    <div class="application-status-group">
+                        <span class="badge
+                        {% if app.source == 'Referred' %}
+                            referred
+                        {% elif app.source == 'Rejected' %}
+                            rejected
+                        {% else %}
+                            pending
+                        {% endif %}">
+                            {{ app.source }}
+                        </span>
+                        <small>
+                            Application: {{ app.status or 'Pending' }}
+                        </small>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+            {% else %}
+            <div class="empty-state standardized-empty-state">
+                <p>No job applications found for this job seeker.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" onclick="closeApplicationsModal()">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/admin/admin_jobseeker_profile.js') }}" defer></script>
+{% endblock %}

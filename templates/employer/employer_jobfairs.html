@@ -1,0 +1,269 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}employer-app{% endblock %}
+
+{% block title %}
+PESO: Job Fairs
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_shared_safe.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_jobfair.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Shared mobile filter drawer styling -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared_mobile_filter_drawers.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_mobile_filter_sheet.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_jobfair_filter_responsive.css', v='20261024b') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/employer_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+
+<!-- FLASH MESSAGES -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="flash-container">
+    {% for category, message in messages %}
+    <div class="flash {{ category }}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<div class="main-content employer-jobfair-page">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+        <p class="page-eyebrow">Event Management</p>
+        <h1>Job Fairs</h1>
+        <p>Discover upcoming employment events and connect with jobseekers through PESO.</p>
+    </div>
+
+    <!-- MOBILE SEARCH / FILTER TRIGGER -->
+    <button type="button" class="jobfair-mobile-filter-trigger" id="jobFairMobileFilterTrigger"
+        aria-label="Open job fair search and filters" aria-expanded="false">
+        <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+        <span>Search &amp; Filters</span>
+    </button>
+
+    <div class="jobfair-mobile-filter-overlay" id="jobFairMobileFilterOverlay" aria-hidden="true"></div>
+
+    <!-- SEARCH & FILTER TOOLBAR -->
+    <section class="job-fair-toolbar" id="jobFairFilters" aria-label="Job fair search and filters">
+
+        <div class="jobfair-mobile-filter-header">
+            <div>
+                <span class="mobile-filter-eyebrow">Event Management</span>
+                <h2>Search &amp; Filters</h2>
+            </div>
+
+            <button type="button" class="jobfair-mobile-filter-close" id="jobFairMobileFilterClose"
+                aria-label="Close job fair filters">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <div class="job-fair-search">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input type="text" id="jobFairSearchInput" placeholder="Search job fairs..." autocomplete="off">
+        </div>
+
+        <div class="job-fair-filters">
+            <div class="job-fair-select-wrap">
+                <select id="jobFairStatusFilter" aria-label="Filter job fairs by status">
+                    <option value="all">All Statuses</option>
+                    <option value="upcoming">Upcoming</option>
+                    <option value="ongoing">Ongoing</option>
+                    <option value="finished">Finished</option>
+                </select>
+                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </div>
+        </div>
+    </section>
+
+    <!-- JOB FAIR GRID -->
+    <section class="job-fair-grid" id="jobFairGrid">
+
+        {% if job_fairs %}
+        {% for job_fair in job_fairs %}
+        {% set registration = registrations.get(job_fair.job_fair_id) %}
+
+        <article class="job-fair-card" data-title="{{ (job_fair.title or '') | lower }}"
+            data-description="{{ (job_fair.description or '') | lower }}"
+            data-status="{{ (job_fair.status or '') | lower }}">
+            <!-- FULL-BLEED POSTER CONTAINER -->
+            <div class="job-fair-poster">
+
+                <img src="{{ url_for('static', filename='uploads/posters/' + job_fair.poster_image) if job_fair.poster_image else (url_for('static', filename='uploads/' + (job_fair.banner_image or job_fair.image_url)) if (job_fair.banner_image or job_fair.image_url) else url_for('static', filename='images/announcement_banner.jpg')) }}"
+                    alt="{{ job_fair.title }}">
+
+                <span class="fair-status poster-status {{ job_fair.status | lower }}">
+                    {{ job_fair.status }}
+                </span>
+
+            </div>
+
+            <!-- HEADER -->
+            <div class="job-fair-header">
+                <h2>{{ job_fair.title }}</h2>
+
+                <div class="fair-card-statuses">
+
+                    {% if registration %}
+                    <span class="employer-registration-status {{ registration.status|lower }}">
+                        {% if registration.status == "Approved" %}
+                        <i class="fa-solid fa-circle-check"></i>
+                        {% elif registration.status == "Pending" %}
+                        <i class="fa-solid fa-clock"></i>
+                        {% elif registration.status == "Rejected" %}
+                        <i class="fa-solid fa-circle-xmark"></i>
+                        {% else %}
+                        <i class="fa-solid fa-circle-info"></i>
+                        {% endif %}
+                        Registration {{ registration.status }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- DESCRIPTION -->
+            {% if job_fair.description %}
+            <p class="job-fair-description">
+                {{ job_fair.description | truncate(200, False, '...') }}
+            </p>
+            {% endif %}
+
+            <!-- INFORMATION LIST -->
+            <div class="job-fair-info">
+                <p>
+                    <i class="fa-regular fa-calendar"></i>
+                    <span>
+                        {{ job_fair.start_datetime.strftime('%B %d, %Y') }}
+                        {% if job_fair.end_datetime %}
+                        - {{ job_fair.end_datetime.strftime('%B %d, %Y') }}
+                        {% endif %}
+                    </span>
+                </p>
+
+                {% if job_fair.start_datetime %}
+                <p>
+                    <i class="fa-regular fa-clock"></i>
+                    <span>
+                        {{ job_fair.start_datetime.strftime('%I:%M %p') }}
+                        {% if job_fair.end_datetime %}
+                        - {{ job_fair.end_datetime.strftime('%I:%M %p') }}
+                        {% endif %}
+                    </span>
+                </p>
+                {% endif %}
+
+                {% if job_fair.venue %}
+                <p>
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>{{ job_fair.venue }}</span>
+                </p>
+                {% endif %}
+
+                {% if job_fair.registration_deadline %}
+                <p>
+                    <i class="fa-solid fa-calendar-xmark"></i>
+                    <span>
+                        Registration Deadline: {{ job_fair.registration_deadline.strftime('%B %d, %Y') }}
+                    </span>
+                </p>
+                {% elif job_fair.status == "Ongoing" %}
+                <p>
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>Registration is currently open</span>
+                </p>
+                {% elif job_fair.status == "Finished" %}
+                <p>
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>Job Fair completed</span>
+                </p>
+                {% endif %}
+            </div>
+
+            <!-- ACTION BUTTON -->
+            <div class="job-fair-action">
+
+                {% if job_fair.status == "Ongoing" %}
+
+                {% if registration and registration.status == "Approved" %}
+                <a href="{{ url_for('employer.queue_management') }}" class="job-fair-btn queue job-fair-clickable">
+                    <i class="fa-solid fa-list-ol"></i>
+                    Queue Management
+                </a>
+
+                {% elif registration %}
+                <a href="{{ url_for('employer.job_fair_details', job_fair_id=job_fair.job_fair_id) }}"
+                    class="job-fair-btn registered job-fair-clickable">
+                    <i class="fa-solid fa-eye"></i>
+                    View Registration
+                </a>
+
+                {% else %}
+                <button type="button" class="job-fair-btn not-registered" disabled>
+                    <i class="fa-solid fa-ban"></i>
+                    Not Registered
+                </button>
+                {% endif %}
+
+                {% elif job_fair.status == "Finished" %}
+
+                <a href="{{ url_for('employer.job_fair_details', job_fair_id=job_fair.job_fair_id) }}"
+                    class="job-fair-btn not-registered job-fair-clickable">
+                    <i class="fa-solid fa-eye"></i>
+                    View Details
+                </a>
+
+                {% elif registration %}
+
+                <a href="{{ url_for('employer.job_fair_details', job_fair_id=job_fair.job_fair_id) }}"
+                    class="job-fair-btn registered job-fair-clickable">
+                    {% if registration.status == "Approved" %}
+                    <i class="fa-solid fa-circle-check"></i>
+                    Registration Approved
+                    {% elif registration.status == "Pending" %}
+                    <i class="fa-solid fa-clock"></i>
+                    Registration Pending
+                    {% elif registration.status == "Rejected" %}
+                    <i class="fa-solid fa-circle-xmark"></i>
+                    Registration Rejected
+                    {% else %}
+                    <i class="fa-solid fa-eye"></i>
+                    View Registration
+                    {% endif %}
+                </a>
+
+                {% else %}
+
+                <a href="{{ url_for('employer.job_fair_details', job_fair_id=job_fair.job_fair_id) }}"
+                    class="job-fair-btn primary job-fair-clickable">
+                    View Job Fair
+                </a>
+
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+        {% endif %}
+
+
+    </section>
+
+    <!-- Independent full-width empty-state card, outside the job-card grid. -->
+    <style>#emptyJobFairsContainer[hidden] { display: none !important; }</style>
+    <div class="empty-job-fairs" id="emptyJobFairsContainer" {% if job_fairs %}hidden{% endif %} style="box-sizing:border-box; width:100%; min-height:190px; margin-top:18px; padding:34px 22px; background:#ffffff !important; border:1px solid #dce3ec !important; border-radius:14px; box-shadow:0 5px 18px rgba(15,23,42,.045); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+        <div class="empty-job-fairs-icon"><i class="fa-regular fa-calendar"></i></div>
+        <h3>No Job Fairs Available</h3>
+        <p>There are currently no job fairs matching your search criteria or selection.</p>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='javascript/employer/employer_jobfair.js') }}"></script>
+{% endblock %}

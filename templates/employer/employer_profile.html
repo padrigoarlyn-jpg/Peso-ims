@@ -1,0 +1,364 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}employer-app{% endblock %}
+
+{% block title %}Company Profile - PESO{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_shared_safe.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_profile.css') }}">
+
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/employer_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Flash Messages -->
+
+<!-- MAIN DASHBOARD CONTENT -->
+<main class="dashboard-container">
+
+    <header class="page-header">
+        <h1>Company Profile</h1>
+        <p>Manage your organization details, media, and public appearance.</p>
+    </header>
+
+    <div class="profile-grid-layout">
+
+        <!-- LEFT COLUMN: Overview Card -->
+        <aside class="profile-sidebar">
+            <div class="card company-overview-card">
+
+                <!-- Avatar & Logo Upload -->
+                <div class="avatar-container">
+                    <img src="{{ url_for('static', filename='uploads/logos/' + (employer.company_logo or employer.logo)) if employer and (employer.company_logo or employer.logo) else url_for('static', filename='images/pfp_placeholder.png') }}"
+                        alt="{{ employer.company_name if employer and employer.company_name else 'Company Logo' }}"
+                        class="large-avatar" id="profileImage">
+
+                    <form id="logoForm" action="{{ url_for('employer.profile') }}" method="POST"
+                        enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="upload_logo">
+
+                        <button class="camera-badge" id="changePhotoBtn" type="button" title="Change photo"
+                            onclick="document.getElementById('photoInput').click();">
+                            <i class="fa-solid fa-camera"></i>
+                        </button>
+
+                        <input type="file" id="photoInput" name="company_logo" accept="image/*" hidden
+                            onchange="document.getElementById('logoForm').submit();">
+                    </form>
+                </div>
+
+                <div class="overview-info">
+                    <h2>
+                        {{ employer.company_name if employer and employer.company_name else "Company Name" }}
+                        {% set status_val = employer.verification_status or employer.status if employer else '' %}
+                        {% if status_val == 'Verified' or (employer and employer.is_verified) %}
+                        <i class="fa-solid fa-circle-check verified-icon" title="Verified Account"></i>
+                        {% endif %}
+                    </h2>
+
+                    <span class="role-tag" title="Company status">
+                        {{ status_val if status_val else "Employer" }}
+                    </span>
+
+                    <div class="meta-row">
+                        <span class="meta-label">Industry</span>
+                        <span class="meta-val">
+                            {{ employer.company_industry if employer and employer.company_industry else
+                            (employer.industry if employer and employer.industry else "Not Provided") }}
+                        </span>
+                    </div>
+
+                    <div class="meta-row">
+                        <span class="meta-label">Website</span>
+                        {% if employer and employer.website %}
+                        <span class="website-link">{{ employer.website }}</span>
+                        {% else %}
+                        <span class="website-link">Not Provided</span>
+                        {% endif %}
+                        <button class="btn-edit-sm" id="editWebsiteBtn" data-modal="website" type="button">Edit</button>
+                    </div>
+
+                    <div class="summary-section">
+                        <div class="section-header-row">
+                            <h3>Company Summary</h3>
+                            <button class="btn-edit-sm" id="editSummaryBtn" data-modal="summary"
+                                type="button">Edit</button>
+                        </div>
+                        <p>
+                            {{ employer.company_description if employer and employer.company_description else
+                            (employer.summary if employer and employer.summary else "No summary provided yet.") }}
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- RIGHT COLUMN: Details, Contacts, Socials & Workplace Media -->
+        <section class="profile-main-content">
+
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3>Company Contact Details</h3>
+                    <button class="btn-edit-sm" id="editContactBtn" data-modal="contact" type="button">Edit</button>
+                </div>
+
+                <div class="contact-grid">
+                    <!-- Full Address & Map Link -->
+                    <div class="contact-item full-width">
+                        <span class="field-label">Full Address</span>
+                        <span class="field-value">
+                            {% if employer and (employer.street or employer.barangay or employer.city or
+                            employer.province) %}
+                            {{ employer.street }}{% if employer.street %}, {% endif %}
+                            {{ employer.barangay }}{% if employer.barangay %}, {% endif %}
+                            {{ employer.city }}{% if employer.city %}, {% endif %}
+                            {{ employer.province }}
+                            {% elif employer and employer.address %}
+                            {{ employer.address }}
+                            {% else %}
+                            Not Provided
+                            {% endif %}
+                        </span>
+
+                        <!-- Google Maps Link -->
+                        {% set map_url = employer.google_map_url or employer.google_maps_link or employer.map_link if
+                        employer else None %}
+                        {% if map_url %}
+                        <div style="margin-top: 8px;">
+                            <span class="field-label"
+                                style="font-size: 0.8rem; display: block; margin-bottom: 2px;">Google Maps
+                                Location</span>
+                            <a href="{{ map_url }}" target="_blank" rel="noopener noreferrer" class="map-link">
+                                <i class="fa-solid fa-location-dot"></i> View Location on Google Maps
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Read-Only Registration Email -->
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">
+                            Company Email <i class="fa-solid fa-lock" title="Email cannot be edited"></i>
+                        </span>
+                        <span class="field-value">
+                            {{ employer.company_email if employer and employer.company_email else (employer.email if
+                            employer and employer.email else "Not Provided") }}
+                        </span>
+                    </div>
+
+                    <!-- Contact Number -->
+                    <div class="contact-item">
+                        <span class="field-label">Contact Number</span>
+                        <span class="field-value">
+                            {{ employer.company_phone if employer and employer.company_phone else (employer.phone if
+                            employer and employer.phone else "Not Provided") }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Two Column Row: Social Media & Company Details -->
+            <div class="grid-two-col">
+
+                <!-- Social Media Card -->
+                <div class="card">
+                    <div class="card-header-flex">
+                        <h3>Company Social Media</h3>
+                        <button class="btn-edit-sm" id="editSocialBtn" data-modal="social" type="button">Edit</button>
+                    </div>
+
+                    <div class="social-icons-wrapper">
+                        {% if employer and employer.linkedin_url %}
+                        <a href="{{ employer.linkedin_url }}" target="_blank" rel="noopener noreferrer"
+                            class="social-pill linkedin">
+                            <i class="fa-brands fa-linkedin-in"></i>
+                        </a>
+                        {% endif %}
+
+                        {% if employer and employer.facebook_url %}
+                        <a href="{{ employer.facebook_url }}" target="_blank" rel="noopener noreferrer"
+                            class="social-pill facebook">
+                            <i class="fa-brands fa-facebook-f"></i>
+                        </a>
+                        {% endif %}
+
+                        {% if employer and employer.instagram_url %}
+                        <a href="{{ employer.instagram_url }}" target="_blank" rel="noopener noreferrer"
+                            class="social-pill instagram">
+                            <i class="fa-brands fa-instagram"></i>
+                        </a>
+                        {% endif %}
+
+                        {% if employer and employer.twitter_url %}
+                        <a href="{{ employer.twitter_url }}" target="_blank" rel="noopener noreferrer"
+                            class="social-pill twitter">
+                            <i class="fa-brands fa-x-twitter"></i>
+                        </a>
+                        {% endif %}
+
+                        {% if not (employer and (employer.linkedin_url or employer.facebook_url or
+                        employer.instagram_url or employer.twitter_url)) %}
+                        <span style="color: #888; font-size: 0.9rem;">No social media links provided.</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Company Details Card -->
+                <div class="card">
+                    <div class="card-header-flex">
+                        <h3>Company Details</h3>
+                        <button class="btn-edit-sm" id="editDetailsBtn" data-modal="details" type="button">Edit</button>
+                    </div>
+
+                    <ul class="details-list">
+                        <li>
+                            <span class="d-label">Founded</span>
+                            <span class="d-val">{{ employer.founded_year if employer and employer.founded_year else
+                                "N/A" }}</span>
+                        </li>
+                        <li>
+                            <span class="d-label">Company Size</span>
+                            <span class="d-val">{{ employer.company_size if employer and employer.company_size else
+                                "N/A" }}</span>
+                        </li>
+                        <li>
+                            <span class="d-label">Industry</span>
+                            <span class="d-val">
+                                {{ employer.company_industry if employer and employer.company_industry else
+                                (employer.industry if employer and employer.industry else "N/A") }}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+
+            <!-- Legal & Verification Documents -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3>Legal & Verification Permits</h3>
+                    <span style="font-size: 0.85rem; color: #64748b; font-weight: 500;">
+                        <i class="fa-solid fa-lock" style="margin-right: 4px;"></i> Verified Documents
+                    </span>
+                </div>
+
+                <ul class="details-list">
+                    <li class="readonly-field" style="margin-top: 10px; border-bottom: none;">
+                        <span class="field-label">
+                            Business Permit No. <i class="fa-solid fa-lock" title="Verified field"></i>
+                        </span>
+                        <span class="field-value">
+                            {{ employer.business_permit_no if employer and employer.business_permit_no else "N/A" }}
+                        </span>
+                    </li>
+
+                    <li class="readonly-field" style="margin-top: 8px; border-bottom: none;">
+                        <span class="field-label">
+                            Mayor's Permit No. <i class="fa-solid fa-lock" title="Verified field"></i>
+                        </span>
+                        <span class="field-value">
+                            {{ employer.mayor_permit_no if employer and employer.mayor_permit_no else "N/A" }}
+                        </span>
+                    </li>
+
+                    <li class="readonly-field" style="margin-top: 8px; border-bottom: none;">
+                        <span class="field-label">
+                            BIR TIN / Registration <i class="fa-solid fa-lock" title="Verified field"></i>
+                        </span>
+                        <span class="field-value">
+                            {{ employer.bir_no if employer and employer.bir_no else "N/A" }}
+                        </span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Workplace Media Card -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3>Workplace Media</h3>
+                    <button class="btn-edit-sm" id="editGalleryBtn" data-modal="media" type="button">Edit</button>
+                </div>
+
+                <div class="media-gallery">
+                    {% set office_placeholder = url_for('static', filename='images/office_placeholder.png') %}
+
+                    <div class="media-thumb">
+                        <img src="{{ url_for('static', filename='uploads/gallery/' ~ employer.gallery_1) if employer and employer.gallery_1 else office_placeholder }}"
+                            alt="Workspace View 1" onerror="this.onerror=null; this.src='{{ office_placeholder }}';">
+                    </div>
+
+                    <div class="media-thumb">
+                        <img src="{{ url_for('static', filename='uploads/gallery/' ~ employer.gallery_2) if employer and employer.gallery_2 else office_placeholder }}"
+                            alt="Workspace View 2" onerror="this.onerror=null; this.src='{{ office_placeholder }}';">
+                    </div>
+
+                    <div class="media-thumb">
+                        <img src="{{ url_for('static', filename='uploads/gallery/' ~ employer.gallery_3) if employer and employer.gallery_3 else office_placeholder }}"
+                            alt="Workspace View 3" onerror="this.onerror=null; this.src='{{ office_placeholder }}';">
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </div>
+
+</main>
+
+<!-- UNIVERSAL EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+    <div class="edit-modal">
+
+        <!-- Modal Header -->
+        <div class="modal-header">
+            <div>
+                <h2 id="modalTitle">Edit Information</h2>
+                <p id="modalSubtitle">Update your company information.</p>
+            </div>
+            <button class="modal-close" id="modalClose" type="button">&times;</button>
+        </div>
+
+        <!-- Dynamic Form Submission -->
+        <form id="universalModalForm" action="{{ url_for('employer.profile') }}" method="POST"
+            enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" id="modalActionInput" value="">
+
+            <!-- Modal Body (JS populates fields dynamically) -->
+            <div class="modal-body" id="modalBody">
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer">
+                <button class="modal-cancel" id="modalCancel" type="button">Cancel</button>
+                <button class="modal-save" id="modalSave" type="submit">Save Changes</button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<!-- HIDDEN DATA BRIDGE FOR JS MODALS -->
+<div id="employerProfileData" style="display: none;" data-website="{{ employer.website or '' }}"
+    data-summary="{{ employer.company_description or employer.summary or '' }}"
+    data-street="{{ employer.street or '' }}" data-barangay="{{ employer.barangay or '' }}"
+    data-city="{{ employer.city or '' }}" data-province="{{ employer.province or '' }}"
+    data-phone="{{ employer.company_phone or employer.phone or '' }}"
+    data-map-link="{{ employer.google_map_url or employer.google_maps_link or employer.map_link or '' }}"
+    data-linkedin="{{ employer.linkedin_url or '' }}" data-facebook="{{ employer.facebook_url or '' }}"
+    data-instagram="{{ employer.instagram_url or '' }}" data-twitter="{{ employer.twitter_url or '' }}"
+    data-founded="{{ employer.founded_year or '' }}" data-size="{{ employer.company_size or '' }}"
+    data-industry="{{ employer.company_industry or employer.industry or '' }}">
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/employer/employer_profile.js') }}"></script>
+{% endblock %}

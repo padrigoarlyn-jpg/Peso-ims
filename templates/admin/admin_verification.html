@@ -1,0 +1,271 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}Employer Registration Requests{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_verification.css', v='20261024note') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/admin_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="verification-page">
+    <header class="page-header">
+        <div>
+            <p class="page-eyebrow">Employer Management</p>
+            <h1>Employer Registration Requests</h1>
+            <p>Review employer registration requests and issue approval or rejection decisions.</p>
+        </div>
+    </header>
+
+    <section class="filter-card verification-filter-card" aria-label="Search and filter employer registration requests">
+        <div class="filter-grid verification-filter-grid">
+            <div class="dashboard-search-box verification-search-box">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input
+                    type="text"
+                    id="employerSearchInput"
+                    placeholder="Search by email, contact, or request ID..."
+                    autocomplete="off"
+                >
+            </div>
+
+            <div class="verification-select-wrapper">
+                <select
+                    id="verificationFilter"
+                    class="dashboard-filter-select status-filter"
+                    aria-label="Filter registration requests by status"
+                >
+                    <option value="all">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </div>
+        </div>
+    </section>
+
+    <section class="verification-list" id="employerListContainer">
+        {% for req in requests %}
+        <article
+            class="employer-verification-card"
+            data-request-id="{{ req.request_id }}"
+            data-email="{{ req.email }}"
+            data-contact="{{ req.contact_number }}"
+            data-company-name="{{ req.company_name or '' | e }}"
+            data-business-type="{{ req.business_type or '' | e }}"
+            data-registration-number="{{ req.registration_number or '' | e }}"
+            data-bir-no="{{ req.bir_no or '' | e }}"
+            data-business-permit-no="{{ req.business_permit_no or '' | e }}"
+            data-company-address="{{ req.company_address or '' | e }}"
+            data-representative-name="{{ req.representative_name or '' | e }}"
+            data-representative-position="{{ req.representative_position or '' | e }}"
+
+            data-status="{{ req.status | lower }}"
+            data-date="{{ req.created_at.strftime('%B %d, %Y %I:%M %p') if req.created_at else 'N/A' }}"
+        >
+            <div class="card-top-row">
+                <span class="review-status-tag status-{{ req.status | lower }}">
+                    {{ req.status }}
+                </span>
+
+                <span class="submission-timeline">
+                    <i class="fa-regular fa-calendar"></i>
+                    {{ req.created_at.strftime('%B %d, %Y') if req.created_at else 'N/A' }}
+                </span>
+            </div>
+
+            <div class="employer-card-body">
+                <div class="employer-avatar-circle" aria-hidden="true">
+                    <span class="fallback-txt">{{ req.email[:2] | upper }}</span>
+                </div>
+
+                <div class="employer-card-details">
+                    <h3 class="employer-company-title">{{ req.company_name or req.email }}</h3>
+
+                    <p class="employer-industry-subtitle">
+                        {{ req.contact_number or 'No contact number' }}
+                    </p>
+
+                    <div class="request-meta">
+                        <span>
+                            <i class="fa-solid fa-hashtag"></i>
+                            Request {{ req.request_id }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-action-row">
+                <button type="button" class="btn-review-docs">
+                   
+                    <span>View Details</span>
+                </button>
+            </div>
+        </article>
+        {% endfor %}
+    </section>
+
+    <div id="noResultsMsg" class="empty-state standardized-request-empty" style="display: {{ 'flex' if not requests.items else 'none' }};">
+        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        <strong id="requestEmptyTitle">{{ 'No employer registration requests yet' if not requests.items and not search and (not current_status or current_status|lower in ['all', '']) else 'No matching employer registration requests found' }}</strong>
+        <p id="requestEmptyDescription">{{ 'New employer registration requests will appear here.' if not requests.items and not search and (not current_status or current_status|lower in ['all', '']) else 'Try adjusting your search or status filter.' }}</p>
+    </div>
+
+    {% if requests.total %}
+    <div class="pagination peso-standard-pagination">
+        <span>Showing {{ ((requests.page - 1) * requests.per_page) + 1 }}-{{ ((requests.page - 1) * requests.per_page) + requests.items|length }} of {{ requests.total }} records</span>
+        <div class="page-controls">
+            {% if requests.has_prev %}<a class="page-num" href="{{ url_for('admin.employer_registration_requests', page=requests.prev_num, status=current_status, search=search) }}" aria-label="Previous page"><i class="fa-solid fa-chevron-left"></i></a>{% else %}<span class="page-num disabled" aria-disabled="true"><i class="fa-solid fa-chevron-left"></i></span>{% endif %}
+            {% for page_num in requests.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}{% if page_num %}<a class="page-num {% if page_num == requests.page %}active{% endif %}" href="{{ url_for('admin.employer_registration_requests', page=page_num, status=current_status, search=search) }}">{{ page_num }}</a>{% else %}<span class="page-ellipsis">&hellip;</span>{% endif %}{% endfor %}
+            {% if requests.has_next %}<a class="page-num" href="{{ url_for('admin.employer_registration_requests', page=requests.next_num, status=current_status, search=search) }}" aria-label="Next page"><i class="fa-solid fa-chevron-right"></i></a>{% else %}<span class="page-num disabled" aria-disabled="true"><i class="fa-solid fa-chevron-right"></i></span>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+</main>
+
+<!-- =========================================================
+     EMPLOYER REQUEST DETAILS MODAL
+========================================================= -->
+<div
+    class="modal-overlay"
+    id="verificationModal"
+    aria-hidden="true"
+>
+    <div
+        class="verification-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="verificationModalTitle"
+    >
+        <div class="modal-header">
+            <div>
+                <p class="modal-eyebrow">Employer Registration Request</p>
+                <h2 id="verificationModalTitle">Employer Details</h2>
+                <p class="modal-subtitle">Review the submitted employer registration information.</p>
+            </div>
+
+            <button
+                type="button"
+                class="modal-close"
+                id="closeVerificationModal"
+                aria-label="Close details"
+            >
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <section class="employer-summary">
+                <div class="modal-avatar" id="modalAvatar">
+                    <span id="modalInitials">EM</span>
+                </div>
+
+                <div class="employer-summary-copy">
+                    <h3 id="modalEmployerEmail">Select a request</h3>
+                    <span class="modal-status-badge" id="modalStatusBadge">Pending</span>
+                </div>
+            </section>
+
+            <section class="details-card">
+                <div class="details-card-header">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <h3>Registration Information</h3>
+                </div>
+
+                <div class="details-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Request ID</span>
+                        <strong class="detail-value" id="modalRequestId">—</strong>
+                    </div>
+
+                    <div class="detail-item">
+                        <span class="detail-label">Status</span>
+                        <strong class="detail-value" id="modalStatusText">—</strong>
+                    </div>
+
+                    <div class="detail-item">
+                        <span class="detail-label">Email Address</span>
+                        <strong class="detail-value" id="modalEmail">—</strong>
+                    </div>
+
+                    <div class="detail-item">
+                        <span class="detail-label">Contact Number</span>
+                        <strong class="detail-value" id="modalContact">—</strong>
+                    </div>
+
+                    <div class="detail-item detail-item-full">
+                        <span class="detail-label">Submitted Date</span>
+                        <strong class="detail-value" id="modalDate">—</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="details-card"><div class="details-card-header"><h3>Business Verification Information</h3></div><div class="details-grid" id="modalBusinessDetails"></div><div class="verification-document-note" role="note">
+                    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                    <p><strong>Verification reminder:</strong> Check the submitted business identifiers against official supporting documents before approval. Entered numbers alone do not confirm authenticity.</p>
+                </div></section>
+            <section
+                id="panelActionContainer"
+                class="decision-section"
+                style="display: none;"
+            >
+                <div class="decision-section-header">
+                    <i class="fa-solid fa-user-check"></i>
+                    <div>
+                        <h3>Verification Decision</h3>
+                        <p>Approve the request or provide a reason for rejection.</p>
+                    </div>
+                </div>
+
+                <form id="approveForm" method="POST" class="decision-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <button type="submit" class="btn-decision btn-approve">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Approve Request</span>
+                    </button>
+                </form>
+
+                <form id="rejectForm" method="POST" class="decision-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="form-group">
+                        <label for="remarks">Remarks / Reason for Rejection</label>
+                        <textarea
+                            id="remarks"
+                            class="form-control"
+                            name="remarks"
+                            maxlength="1000"
+                            rows="4"
+                            placeholder="Enter reason for rejection..."
+                        ></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-decision btn-decline">
+                        <i class="fa-solid fa-xmark"></i>
+                        <span>Reject Request</span>
+                    </button>
+                </form>
+            </section>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-close-modal" id="footerCloseVerificationModal">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/admin/admin_verification.js') }}"></script>
+{% endblock %}

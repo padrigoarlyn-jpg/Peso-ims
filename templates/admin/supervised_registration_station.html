@@ -1,0 +1,82 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Supervised Registration Station | PESO</title><link rel="stylesheet" href="{{ url_for('static', filename='css/supervised_registration/supervised_ui.css') }}"><style>
+:root{--blue:#2056ad;--navy:#102f60;--muted:#60738d;--line:#dce5f1}
+html{min-height:100%}body.peso-station-admin{max-width:none!important;margin:0!important;padding:0!important;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f3f6fb!important;color:#183354;font-family:Inter,'Segoe UI',Arial,sans-serif!important}
+.station-shell{width:min(100%,800px);padding:clamp(16px,4vw,36px);margin:auto}.station-card{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 16px 48px rgba(20,52,94,.07);padding:clamp(22px,5vw,42px);min-width:0}
+
+.station-mark {
+    width: 50px;
+    height: 50px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    background: #edf4ff;
+    color: var(--blue);
+    font-size: 25px;
+    margin: 0 auto 20px;
+}
+
+.station-kicker {
+    color: var(--blue);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    margin: 0 0 7px;
+    text-align: center;
+}
+
+
+
+.station-card h1 {
+    font-size: clamp(25px, 4vw, 33px);
+    line-height: 1.18;
+    letter-spacing: -.035em;
+    margin: 0 0 12px;
+    color: var(--navy);
+    text-align: center;
+}
+
+.station-card h2{font-size:18px;color:var(--navy);margin:0 0 10px}.station-card p{line-height:1.65;margin:0 0 18px}.station-sub{color:var(--muted)}.station-fair{border:1px solid #d9e6f7;background:#f5f9ff;border-radius:12px;padding:13px 16px;margin:20px 0}.station-fair span{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}.station-fair strong{color:var(--navy);overflow-wrap:anywhere}.station-notice{background:#f4f8ff;border-left:3px solid var(--blue);padding:13px 15px;border-radius:0 10px 10px 0;color:#344b6b;font-size:14px;margin:18px 0}.station-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:20px}.station-actions .station-btn{width:auto;max-width:100%}.station-btn{box-sizing:border-box;appearance:none;display:inline-flex;justify-content:center;align-items:center;gap:8px;min-height:44px;padding:10px 18px;border-radius:9px;font-family:inherit;font-weight:600;font-size:14px;line-height:1.4;text-align:center;white-space:normal;text-decoration:none;border:1px solid transparent;cursor:pointer;transition:background .15s,border-color .15s}.station-btn-primary{background:var(--blue)!important;color:#fff!important;border-color:var(--blue)!important}.station-btn-primary:hover{background:#174487!important;border-color:#174487!important}.station-btn-outline{background:#fff!important;border-color:#cbdaf0!important;color:var(--blue)!important}.station-btn-outline:hover{background:#eef5ff!important;border-color:#9bb9e3!important}.station-btn:focus-visible,.station-card a:focus-visible,.station-card input:focus-visible{outline:3px solid #93bdf5;outline-offset:3px}.station-result{margin-top:24px;border-top:1px solid var(--line);padding-top:22px}.station-link{display:block;overflow-wrap:anywhere;word-break:break-word;background:#f5f8fc;border:1px solid var(--line);border-radius:10px;padding:14px;color:var(--blue)}.station-card label{display:block;font-size:14px;font-weight:700;color:#263e5c;margin:16px 0 7px}.station-card input[type=text]{width:100%;min-height:46px;border:1px solid #cbd8e8;border-radius:10px;padding:11px 13px;font:inherit;box-sizing:border-box}.station-check{display:flex!important;gap:10px;align-items:flex-start;font-weight:500!important;line-height:1.5}.station-check input{margin-top:4px;accent-color:var(--blue);width:17px;height:17px;flex:none}.station-secret{border:1px solid #cbdaf0;border-radius:12px;padding:18px;background:#f6f9ff;margin:18px 0}.station-code{display:block;overflow-wrap:anywhere;word-break:break-word;font-size:clamp(16px,2.7vw,22px);letter-spacing:.035em;color:var(--navy);margin:5px 0 15px}.station-foot{margin-top:22px;color:var(--muted);font-size:13px}.station-alert{background:#fff4f2;border:1px solid #f0c9c2;color:#9c3526;padding:12px;border-radius:10px;margin:12px 0}
+
+@media(max-width:520px){body.peso-station-admin{align-items:flex-start}.station-shell{padding:14px}.station-card{padding:22px 18px;border-radius:14px}.station-actions{flex-direction:column;align-items:stretch}.station-actions>*{width:100%;box-sizing:border-box;text-align:center}.station-actions .station-btn{width:100%;max-width:none}}
+
+.station-flash-overlay{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:18px;background:rgba(15,29,52,.52);backdrop-filter:blur(3px)}
+.station-flash-dialog{position:relative;box-sizing:border-box;width:min(100%,450px);padding:30px 28px 26px;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(15,30,60,.2);text-align:center;font-family:Inter,'Segoe UI',Arial,sans-serif}
+.station-flash-icon{display:grid;place-items:center;width:60px;height:60px;margin:0 auto 16px;border-radius:50%;background:#fff4e0;color:#a35e00;font-size:29px;font-weight:800}
+.station-flash-dialog[data-category="success"] .station-flash-icon{background:#eaf9f1;color:#078653}
+.station-flash-dialog[data-category="error"] .station-flash-icon,.station-flash-dialog[data-category="danger"] .station-flash-icon{background:#fff0f0;color:#c72f2f}
+.station-flash-dialog h2{margin:0 0 10px;color:#17233a;font-size:21px}
+.station-flash-dialog p{margin:0 0 24px;color:#60738d;line-height:1.55;overflow-wrap:anywhere}
+.station-flash-ok{display:block;width:100%;min-height:46px;border:0;border-radius:9px;background:#143d83;color:#fff;font:600 15px Inter,'Segoe UI',Arial,sans-serif;cursor:pointer}
+.station-flash-ok:hover{background:#0e2f69}
+.station-flash-ok:focus-visible{outline:3px solid #92baff;outline-offset:3px}
+</style></head><body class="peso-station-admin"><main class="station-shell"><section class="station-card"><div class="station-mark" aria-hidden="true">&#9679;</div><p class="station-kicker">PESO · Job Fair Services</p><h1>Supervised Registration Station</h1><p class="station-sub">Authorize a supervised applicant registration session for the selected job fair.</p><div class="station-fair"><span>Selected job fair</span><strong>{{ fair.title }}</strong></div><div class="station-notice">Generate a one-time station setup link, then open it in a separate browser profile or device where no administrator account is signed in.</div><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="station-actions"><button class="station-btn station-btn-primary" type="submit">Generate Station Link</button><a class="station-btn station-btn-outline" href="{{ url_for('admin.view_jobfair_attendees', fair_id=fair.job_fair_id) }}">Back to Job Fair Attendees</a></div></form>{% if station_url %}<div class="station-result" role="status"><h2>Station link generated</h2><p class="station-sub">This one-time authorization link expires in <strong>15 minutes</strong>.</p><a class="station-link" href="{{ station_url }}" target="_blank" rel="noopener noreferrer">{{ station_url }}</a><p class="station-foot">Keep this link private. Open it only on the intended registration station. The applicant session begins after station activation.</p></div>{% endif %}</section></main>{% with station_messages = get_flashed_messages(with_categories=true) %}
+{% if station_messages %}
+<div class="station-flash-overlay" id="stationFlashOverlay">
+  {% for category, message in station_messages[:1] %}
+  <section class="station-flash-dialog" role="alertdialog" aria-modal="true" aria-labelledby="stationFlashTitle" aria-describedby="stationFlashMessage" data-category="{{ category|e }}">
+    <div class="station-flash-icon" aria-hidden="true">{% if category == 'success' %}&#10003;{% elif category in ['danger','error'] %}!{% else %}&#9888;{% endif %}</div>
+    <h2 id="stationFlashTitle">{% if category == 'success' %}Success{% elif category in ['danger','error'] %}Error{% else %}Attention{% endif %}</h2>
+    <p id="stationFlashMessage">{{ message }}</p>
+    <button type="button" class="station-flash-ok" id="stationFlashClose" autofocus>OK</button>
+  </section>
+  {% endfor %}
+</div>
+<script>
+(function () {
+  const overlay = document.getElementById('stationFlashOverlay');
+  const close = document.getElementById('stationFlashClose');
+  if (!overlay || !close) return;
+  close.focus();
+  close.addEventListener('click', () => { overlay.remove(); });
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && document.getElementById('stationFlashOverlay')) {
+      event.preventDefault();
+      close.focus();
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endwith %}
+</body></html>

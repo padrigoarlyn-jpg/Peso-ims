@@ -1,0 +1,452 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}PESO | Admin - Employer Profile{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_employer_profile.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/admin_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+
+<!-- MAIN DASHBOARD CONTENT -->
+<main class="dashboard-container">
+<header class="page-header">
+        <a href="{{ url_for('admin.all_employers') }}" class="back-link">
+            <i class="fa-solid fa-arrow-left"></i> Back to Employers
+        </a>
+        <h1>Employer Profile</h1>
+        <p>Admin view for company details and posted job records.</p>
+    </header>
+
+    <div class="profile-grid-layout">
+
+        <!-- LEFT COLUMN: Overview Card -->
+        <aside class="profile-sidebar">
+            <div class="card company-overview-card">
+
+                <!-- Avatar & Logo -->
+                <div class="avatar-container">
+                    {% set logo_file = employer.company_logo or employer.logo if employer else none %}
+                    {% set default_logo = url_for('static', filename='images/pfp_placeholder.png') %}
+                    {% if logo_file %}
+                        {% set logo_src = logo_file if '/' in logo_file else 'uploads/logos/' ~ logo_file %}
+                        <img
+                            src="{{ url_for('static', filename=logo_src) }}"
+                            alt="{{ employer.company_name or 'Company Logo' }}"
+                            class="large-avatar"
+                            id="profileImage"
+                            data-fallback="{{ default_logo }}"
+                        >
+                    {% else %}
+                        <img
+                            src="{{ default_logo }}"
+                            alt="{{ employer.company_name if employer and employer.company_name else 'Company Logo' }}"
+                            class="large-avatar"
+                            id="profileImage"
+                        >
+                    {% endif %}
+                </div>
+
+                <div class="overview-info">
+                    <h2>
+                        {{ employer.company_name if employer and employer.company_name else "Company Name" }}
+                        {% set status_val = employer.verification_status or employer.account_status if employer else ''
+                        %}
+                        {% if status_val == 'Verified' or (employer and employer.is_verified) %}
+                        <i class="fa-solid fa-circle-check verified-icon" title="Verified Account"></i>
+                        {% endif %}
+                    </h2>
+
+                    <span class="role-tag" title="Company status">
+                        {{ status_val if status_val else "Employer" }}
+                    </span>
+
+                    <div class="meta-row">
+                        <span class="meta-label">Industry</span>
+                        <span class="meta-val">
+                            {{ employer.company_industry if employer and employer.company_industry else
+                            (employer.industry if employer and employer.industry else "Not Provided") }}
+                        </span>
+                    </div>
+
+                    <div class="meta-row">
+                        <span class="meta-label">Company Size</span>
+                        <span class="meta-val">
+                            {{ employer.company_size if employer and employer.company_size else "Not Provided" }}
+                        </span>
+                    </div>
+
+                    <div class="summary-section">
+                        <div class="section-header-row">
+                            <h3>Company Summary</h3>
+                        </div>
+                        <p>
+                            {{ employer.company_description if employer and employer.company_description else
+                            (employer.summary if employer and employer.summary else "No summary provided yet.") }}
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- RIGHT COLUMN: Details, Contacts, Socials & Workplace Media -->
+        <section class="profile-main-content">
+
+            <!-- Company Contact Details -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3>Company Contact Details</h3>
+                </div>
+
+                <div class="contact-grid">
+                    <!-- Full Address -->
+                    <div class="contact-item full-width">
+                        <span class="field-label">Full Address</span>
+                        <span class="field-value">
+                            {% if employer and (employer.street or employer.barangay or employer.city or
+                            employer.province) %}
+                            {{ employer.street }}{% if employer.street %}, {% endif %}
+                            {{ employer.barangay }}{% if employer.barangay %}, {% endif %}
+                            {{ employer.city }}{% if employer.city %}, {% endif %}
+                            {{ employer.province }}
+                            {% elif employer and employer.address %}
+                            {{ employer.address }}
+                            {% else %}
+                            Not Provided
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <!-- Company Email -->
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">
+                            Company Email <i class="fa-solid fa-lock" title="Verified field"></i>
+                        </span>
+                        <span class="field-value">
+                            {{ employer.company_email if employer and employer.company_email else (employer.email if
+                            employer and employer.email else "Not Provided") }}
+                        </span>
+                    </div>
+
+                    <!-- Contact Number -->
+                    <div class="contact-item">
+                        <span class="field-label">Contact Number</span>
+                        <span class="field-value">
+                            {{ employer.company_phone if employer and employer.company_phone else (employer.phone if
+                            employer and employer.phone else "Not Provided") }}
+                        </span>
+                    </div>
+
+                    <!-- Website -->
+                    <div class="contact-item">
+                        <span class="field-label">Website</span>
+                        {% if employer and employer.website %}
+                        <span class="field-value">
+                            <a href="{{ employer.website if employer.website.startswith('http') else 'https://' + employer.website }}"
+                                target="_blank" rel="noopener noreferrer" class="website-link">
+                                {{ employer.website }} <i class="fa-solid fa-arrow-up-right-from-square"
+                                    style="font-size: 11px;"></i>
+                            </a>
+                        </span>
+                        {% else %}
+                        <span class="field-value">Not Provided</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Two Column Row: Social Media & Company Details -->
+            <div class="grid-two-col">
+
+                <!-- Social Media Card -->
+                <div class="card">
+                    <div class="card-header-flex">
+                        <h3>Company Social Media</h3>
+                    </div>
+
+                    <div class="social-icons-wrapper">
+                        {% if employer and employer.linkedin_url %}
+                        <a href="{{ employer.linkedin_url }}" target="_blank" rel="noopener noreferrer"
+                            class="social-pill linkedin">
+                            <i class="fa-brands fa-linkedin-in"></i>
+                        </a>
+                        {% endif %}
+
+                        {% if employer and employer.facebook_url %}
+                        <a href="{{ employer.facebook_url }}" target="_blank" rel="noopener noreferrer"
+                            class="social-pill facebook">
+                            <i class="fa-brands fa-facebook-f"></i>
+                        </a>
+                        {% endif %}
+
+                        {% if employer and employer.instagram_url %}
+                        <a href="{{ employer.instagram_url }}" target="_blank" rel="noopener noreferrer"
+                            class="social-pill instagram">
+                            <i class="fa-brands fa-instagram"></i>
+                        </a>
+                        {% endif %}
+
+                        {% if employer and employer.twitter_url %}
+                        <a href="{{ employer.twitter_url }}" target="_blank" rel="noopener noreferrer"
+                            class="social-pill twitter">
+                            <i class="fa-brands fa-x-twitter"></i>
+                        </a>
+                        {% endif %}
+
+                        {% if not (employer and (employer.linkedin_url or employer.facebook_url or
+                        employer.instagram_url or employer.twitter_url)) %}
+                        <span class="empty-note">No social media links provided.</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Company Details Card -->
+                <div class="card">
+                    <div class="card-header-flex">
+                        <h3>Company Details</h3>
+                    </div>
+
+                    <ul class="details-list">
+                        <li>
+                            <span class="d-label">Founded</span>
+                            <span class="d-val">{{ employer.founded_year if employer and employer.founded_year else
+                                "N/A" }}</span>
+                        </li>
+                        <li>
+                            <span class="d-label">Industry</span>
+                            <span class="d-val">{{ employer.company_industry if employer and employer.company_industry
+                                else (employer.industry if employer and employer.industry else "N/A") }}</span>
+                        </li>
+                        <li>
+                            <span class="d-label">Registered Date</span>
+                            <span class="d-val">{{ registered_at.strftime('%B %d, %Y') if registered_at else "N/A" }}</span>
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+
+            <!-- Legal & Verification Permits Card -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3>Legal & Verification Permits</h3>
+                    <span class="verified-documents-note">
+                        <i class="fa-solid fa-lock"></i> Verified Documents
+                    </span>
+                    <button class="btn-edit-sm" id="editPermitsBtn" data-modal="permits" type="button">Edit</button>
+                </div>
+
+                <ul class="details-list">
+                    <li class="readonly-field permit-row">
+                        <span class="field-label">
+                            Business Permit No. <i class="fa-solid fa-lock" title="Verified field"></i>
+                        </span>
+                        <span class="field-value">
+                            {{ employer.business_permit_no if employer and employer.business_permit_no else "N/A" }}
+                        </span>
+                    </li>
+
+                    <li class="readonly-field permit-row">
+                        <span class="field-label">
+                            Mayor's Permit No. <i class="fa-solid fa-lock" title="Verified field"></i>
+                        </span>
+                        <span class="field-value">
+                            {{ employer.mayor_permit_no if employer and employer.mayor_permit_no else "N/A" }}
+                        </span>
+                    </li>
+
+                    <li class="readonly-field permit-row">
+                        <span class="field-label">
+                            BIR TIN / Registration <i class="fa-solid fa-lock" title="Verified field"></i>
+                        </span>
+                        <span class="field-value">
+                            {{ employer.bir_no if employer and employer.bir_no else "N/A" }}
+                        </span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Recent Job Postings -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3>Recent Job Postings</h3>
+                </div>
+
+                <div class="table-responsive recent-jobs-wrap">
+                    <table class="referral-history-table">
+                        <thead>
+                            <tr>
+                                <th>Job Title
+                                </th>
+                                <th>Date
+                                    Posted</th>
+                                <th>Status
+                                </th>
+                                <th>Action
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if jobs %}
+                            {% for job in jobs[:5] %}
+                            <tr>
+                                <td>
+                                    <strong>{{ job.job_title }}</strong>
+                                </td>
+                                <td>
+                                    {{ job.created_at.strftime('%m/%d/%Y') if job.created_at else "N/A" }}
+                                </td>
+                                <td>
+                                    <span
+                                        class="badge badge-{{ job.approval_status | lower if job.approval_status else 'active' }}">
+                                        {{ job.approval_status or 'Active' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('admin.job_rankings', job_id=job.job_id) }}" class="btn-action">
+                                        View Applicants
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="empty-table">
+                                    No jobs posted by this employer yet.
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if jobs and jobs|length > 5 %}
+                <div class="view-all-jobs">
+                    <a href="#" onclick="openJobModal(); return false;">
+                        View All ({{ jobs|length }}) &rarr;
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Workplace Media Card -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3>Workplace Media</h3>
+                </div>
+
+                <div class="media-gallery">
+                    <div class="media-thumb">
+                        {% if employer and employer.gallery_1 %}
+                            {% if '/' in employer.gallery_1 %}
+                                <img src="{{ url_for('static', filename=employer.gallery_1) }}" alt="Workspace View 1" data-fallback="{{ url_for('static', filename='images/office_placeholder.png') }}">
+                            {% else %}
+                                <img src="{{ url_for('static', filename='uploads/gallery/' ~ employer.gallery_1) }}" alt="Workspace View 1" data-fallback="{{ url_for('static', filename='images/office_placeholder.png') }}">
+                            {% endif %}
+                        {% else %}
+                            <img src="{{ url_for('static', filename='images/office_placeholder.png') }}" alt="Workspace View 1">
+                        {% endif %}
+                    </div>
+                    <div class="media-thumb">
+                        {% if employer and employer.gallery_2 %}
+                            {% if '/' in employer.gallery_2 %}
+                                <img src="{{ url_for('static', filename=employer.gallery_2) }}" alt="Workspace View 2" data-fallback="{{ url_for('static', filename='images/office_placeholder.png') }}">
+                            {% else %}
+                                <img src="{{ url_for('static', filename='uploads/gallery/' ~ employer.gallery_2) }}" alt="Workspace View 2" data-fallback="{{ url_for('static', filename='images/office_placeholder.png') }}">
+                            {% endif %}
+                        {% else %}
+                            <img src="{{ url_for('static', filename='images/office_placeholder.png') }}" alt="Workspace View 2">
+                        {% endif %}
+                    </div>
+                    <div class="media-thumb">
+                        {% if employer and employer.gallery_3 %}
+                            {% if '/' in employer.gallery_3 %}
+                                <img src="{{ url_for('static', filename=employer.gallery_3) }}" alt="Workspace View 3" data-fallback="{{ url_for('static', filename='images/office_placeholder.png') }}">
+                            {% else %}
+                                <img src="{{ url_for('static', filename='uploads/gallery/' ~ employer.gallery_3) }}" alt="Workspace View 3" data-fallback="{{ url_for('static', filename='images/office_placeholder.png') }}">
+                            {% endif %}
+                        {% else %}
+                            <img src="{{ url_for('static', filename='images/office_placeholder.png') }}" alt="Workspace View 3">
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </div>
+</main>
+
+<!-- Legal & Verification Permits Edit Modal -->
+<div class="modal-overlay" id="editPermitsModal">
+    <div class="edit-modal">
+
+        <!-- Modal Header -->
+        <div class="modal-header">
+            <div>
+                <h2 id="modalTitle">Edit Legal & Verification Permits</h2>
+                <p id="modalSubtitle">Update business registration and tax identification details.</p>
+            </div>
+            <button class="modal-close" id="modalClose" type="button">&times;</button>
+        </div>
+
+        <!-- Form Submission -->
+        <form id="permitsModalForm"
+            action="{{ url_for('admin.update_employer_permits', public_id=employer.user.public_id) }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="update_permits">
+
+            <!-- Modal Body -->
+            <div class="modal-body" id="modalBody">
+
+                <div class="form-group">
+                    <label for="business_permit">
+                        Business Permit No.
+                    </label>
+                    <input type="text" id="business_permit" name="business_permit" maxlength="100"
+                        value="{{ employer.business_permit_no if employer and employer.business_permit_no else '' }}"
+                        placeholder="Enter Business Permit No.">
+                </div>
+
+                <div class="form-group">
+                    <label for="mayors_permit">
+                        Mayor's Permit No.
+                    </label>
+                    <input type="text" id="mayors_permit" name="mayors_permit" maxlength="100"
+                        value="{{ employer.mayor_permit_no if employer and employer.mayor_permit_no else '' }}"
+                        placeholder="Enter Mayor's Permit No.">
+                </div>
+
+                <div class="form-group">
+                    <label for="bir_tin">
+                        BIR TIN / Registration
+                    </label>
+                    <input type="text" id="bir_tin" name="bir_tin" maxlength="100"
+                        value="{{ employer.bir_no if employer and employer.bir_no else '' }}"
+                        placeholder="Enter BIR TIN No.">
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer">
+                <button class="modal-cancel" id="modalCancel" type="button">Cancel</button>
+                <button class="modal-save" id="modalSave" type="submit">Save Changes</button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/admin/admin_employer_profile.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends "layouts/auth_base.html" %}
+
+{% block title %}Admin Verification{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth/auth.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="auth-page">
+    <div class="auth-container">
+        <section class="branding-panel">
+            <div class="decor-circle circle-top"></div>
+            <div class="decor-circle circle-bottom"></div>
+            <div class="peso-logo">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="PESO Logo">
+            </div>
+            <div class="branding-content">
+                <span class="organization-name">PUBLIC EMPLOYMENT SERVICE OFFICE</span>
+                <h1>SECURE ADMIN<br>ACCESS</h1>
+                <p>A second verification step helps protect administrator accounts and sensitive PESO records.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                <div>
+                    <strong>Two-Step Verification</strong>
+                    <span>Enter the one-time code sent to your administrator email{% if sms_sent %} and mobile number{% endif %}.</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="form-panel">
+            <div class="form-wrapper">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="flash-messages-container">
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'message' else 'info' }}">
+                        <i class="fa-solid {% if category == 'success' %}fa-circle-check{% elif category == 'danger' or category == 'error' %}fa-circle-exclamation{% elif category == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                <div class="form-header">
+                    <span class="form-eyebrow">ADMIN SECURITY</span>
+                    <h2>Verify your sign-in</h2>
+                    <p>Enter the 6-digit code sent to <strong>{{ masked_email }}</strong>{% if sms_sent and masked_phone %} and <strong>{{ masked_phone }}</strong>{% endif %}. The code expires in 10 minutes.</p>
+                    {% if masked_phone and not sms_sent %}
+                    <p class="form-note"><i class="fa-solid fa-circle-info"></i> SMS delivery is currently unavailable, so use the code sent to your email.</p>
+                    {% endif %}
+                </div>
+
+                <form method="POST" action="{{ url_for('auth.verify_mfa') }}" class="auth-form otp-form" autocomplete="off">
+                    {{ form.hidden_tag() }}
+                    <div class="input-group otp-group">
+                        {{ form.code.label }}
+                        <div class="otp-inputs" data-otp-inputs aria-label="6-digit verification code">
+                            {% for index in range(6) %}
+                            <input
+                                type="text"
+                                class="otp-box"
+                                inputmode="numeric"
+                                pattern="[0-9]*"
+                                maxlength="1"
+                                autocomplete="{% if index == 0 %}one-time-code{% else %}off{% endif %}"
+                                aria-label="Digit {{ index + 1 }} of 6"
+                                {% if index == 0 %}autofocus{% endif %}
+                            >
+                            {% endfor %}
+                        </div>
+                        {{ form.code(class="otp-hidden-code", type="hidden") }}
+                    </div>
+                    <button type="submit" class="primary-btn">
+                        <span>Verify and Continue</span>
+                       
+                    </button>
+                </form>
+
+                <form method="POST" action="{{ url_for('auth.resend_mfa') }}" class="verification-actions">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="secondary-btn"><span>Resend verification code</span></button>
+                </form>
+
+                <form method="POST" action="{{ url_for('auth.cancel_mfa') }}" class="verification-cancel-wrap">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="verification-cancel">Cancel and return to sign in</button>
+                </form>
+            </div>
+        </section>
+    </div>
+</main>
+
+<script src="{{ url_for('static', filename='javascript/mfa_otp.js') }}" defer></script>
+{% endblock %}

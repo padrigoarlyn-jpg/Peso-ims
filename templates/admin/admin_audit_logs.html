@@ -1,0 +1,160 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+{% block title %}PESO: Audit Logs{% endblock %}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_audit_logs.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+{% block navbar %}{% include "layouts/admin_navbar.html" %}{% endblock %}
+{% block content %}
+<main class="audit-page">
+  <section class="audit-header">
+    <div>
+      <span class="audit-eyebrow">Security & Accountability</span>
+      <h1>Audit Logs</h1>
+      <p>Read-only history of important authentication and system actions.</p>
+    </div>
+    <div class="audit-count" aria-label="Audit log result count">
+      <strong id="auditResultCount">{{ logs|length }}</strong>
+      <span id="auditResultLabel">{{ 'Matching Record' if logs|length == 1 else 'Matching Records' }}</span>
+    </div>
+  </section>
+
+  <section class="list-toolbar" aria-label="Audit log search and filters">
+    <div class="filter-container">
+      <div class="dashboard-search-box">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input type="text" id="auditSearchInput" placeholder="Search actor, action, ID, or IP address..."
+          autocomplete="off">
+      </div>
+
+      <div class="filter-controls">
+        <div class="select-wrapper role-filter">
+          <select id="auditRoleFilter" aria-label="Filter by role">
+            <option value="all">All Roles</option>
+            <option value="admin">Admin</option>
+            <option value="employer">Employer</option>
+            <option value="jobseeker">Jobseeker</option>
+          </select>
+          <i class="fa-solid fa-chevron-down"></i>
+        </div>
+
+        <div class="select-wrapper action-filter">
+          <select id="auditActionFilter" aria-label="Filter by action">
+            <option value="all">All Actions</option>
+            {% for item in action_types %}
+            <option value="{{ item }}">{{ action_labels.get(item, item.replace('_', ' ')|title) }}</option>
+            {% endfor %}
+          </select>
+          <i class="fa-solid fa-chevron-down"></i>
+        </div>
+
+        <label class="audit-period-label" for="auditYearFilter">Year</label>
+        <select id="auditYearFilter" aria-label="Audit log year">
+          <option value="">All years</option>
+          {% for year in years %}<option value="{{ year }}">{{ year }}</option>{% endfor %}
+        </select>
+        <label class="audit-period-label" for="auditMonthFilter">Month</label>
+        <select id="auditMonthFilter" aria-label="Audit log month">
+          <option value="">All months</option>
+          {% for month in range(1, 13) %}<option value="{{ month }}">{{ '%02d'|format(month) }}</option>{% endfor %}
+        </select>
+        <a id="auditExportBtn" class="btn-export" href="{{ url_for('admin.export_audit_logs') }}">
+         <span>Export Audit Logs</span>
+        </a>
+
+      </div>
+    </div>
+  </section>
+
+  <div class="audit-delete-toolbar">
+    <button type="button" id="auditDeleteOpen" class="audit-delete-open" aria-haspopup="dialog" aria-controls="auditDeletePanel" aria-expanded="false">
+      <i class="fa-solid fa-trash-can" aria-hidden="true"></i> Delete Logs
+    </button>
+  </div>
+
+  <div id="auditDeletePanel" class="audit-modal-backdrop" hidden>
+    <section class="audit-modal" role="dialog" aria-modal="true" aria-labelledby="auditDeleteTitle" aria-describedby="auditDeleteDescription" tabindex="-1">
+      <header class="audit-modal-header">
+        <div>
+          <span class="audit-modal-eyebrow">Security &amp; Accountability</span>
+          <h2 id="auditDeleteTitle">Delete historical audit logs</h2>
+        </div>
+        <button type="button" id="auditDeleteClose" class="audit-modal-close" aria-label="Close dialog"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      </header>
+      <div class="audit-modal-body">
+    <p id="auditDeleteDescription">Only authenticated PESO Administrators can delete eligible logs after password confirmation. The most recent 30 days are protected. Export a backup first.</p>
+    <p id="auditDeletePreview" role="status">Choose a year to preview eligible records.</p>
+    <form method="POST" action="{{ url_for('admin.delete_audit_logs') }}" id="auditDeleteForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="year" id="auditDeleteYear">
+      <input type="hidden" name="month" id="auditDeleteMonth">
+      <label for="auditDeletePassword">Confirm your account password</label>
+      <input type="password" id="auditDeletePassword" name="password" autocomplete="current-password" required maxlength="128">
+      <label for="auditDeleteConfirmation">Type DELETE AUDIT LOGS</label>
+      <input id="auditDeleteConfirmation" name="confirmation" autocomplete="off" required maxlength="17">
+      <div class="audit-delete-actions">
+        <button type="button" id="auditDeleteCancel">Cancel</button>
+        <button type="submit" id="auditDeleteSubmit" disabled>Delete selected period</button>
+      </div>
+    </form>
+      </div>
+    </section>
+  </div>
+
+  <section class="audit-card">
+    <div class="audit-table-wrap">
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Date & Time</th>
+            <th>Actor</th>
+            <th>Action</th>
+            <th>IP Address</th>
+          </tr>
+        </thead>
+        <tbody id="auditTableBody">
+          {% for log in logs %}
+          {% set action = action_display.get(log.log_id) %}
+          <tr class="audit-row" data-year="{{ log.created_at.strftime('%Y') if log.created_at else '' }}" data-month="{{ log.created_at.strftime('%m') if log.created_at else '' }}" data-role="{{ log.user.role|lower if log.user and log.user.role else 'system' }}"
+            data-action="{{ action.event or '' }}"
+            data-search="{{ ((log.user.username if log.user else '') ~ ' ' ~ (log.user.email if log.user else '') ~ ' ' ~ (log.action or '') ~ ' ' ~ (log.ip_address or '') ~ ' ' ~ action.title ~ ' ' ~ (action.job_title or '') ~ ' ' ~ (action.job_id|string if action.job_id else ''))|lower|e }}">
+            <td class="audit-time">{{ log.created_at | local_dt }}</td>
+            <td>
+              {% if log.user %}
+              <strong>{{ log.user.username }}</strong>
+              <span class="actor-role">{{ log.user.role|capitalize }} · ID {{ log.user.public_id }}</span>
+              {% else %}
+              <span class="system-actor">System / unavailable</span>
+              {% endif %}
+            </td>
+            <td class="audit-action-cell">
+              {% if action.transition %}
+              <div class="audit-action-text">{{ action.title }} from <strong>{{ action.transition.from }}</strong> to
+                <strong>{{ action.transition.to }}</strong></div>
+              {% else %}
+              <div class="audit-action-text">{{ action.title }}</div>
+              {% endif %}
+              {% if action.job_id %}
+              <div class="audit-job-reference">
+                {{ action.job_title or 'Job' }} · Job #{{ action.job_id }}
+              </div>
+              {% endif %}
+            </td>
+            <td class="audit-ip">{{ log.ip_address or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div id="auditNoResults" class="audit-empty" {% if logs %}style="display:none" {% endif %}>
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <h2>No matching audit records</h2>
+      <p>Try changing the current search or filters.</p>
+    </div>
+  </section>
+</main>
+<script src="{{ url_for('static', filename='javascript/admin/admin_audit_logs.js') }}"></script>
+{% endblock %}

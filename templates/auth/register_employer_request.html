@@ -1,0 +1,142 @@
+{% extends "layouts/auth_base.html" %}
+
+{% block title %}Employer Registration Request
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth/auth.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth/employer_registration_responsive.css') }}">
+{% endblock %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth/employer_request_live_validation.css') }}">
+{% block content %}
+<main class="auth-page employer-registration-page">
+    <div class="auth-container">
+
+        <section class="branding-panel">
+            <div class="decor-circle circle-top"></div>
+            <div class="decor-circle circle-bottom"></div>
+
+            <div class="peso-logo">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="PESO Logo">
+            </div>
+
+            <div class="branding-content">
+                <span class="organization-name">PUBLIC EMPLOYMENT SERVICE OFFICE</span>
+                <h1>EMPLOYER REGISTRATION REQUEST</h1>
+                <p>Submit your request, then send your documentary requirements to PESO by email or in person.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fa-solid fa-building"></i>
+                </div>
+                <div>
+                    <strong>Request access</strong>
+                    <span>Begin the employer registration process with PESO.</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="form-panel">
+            <div class="form-wrapper">
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="flash-messages-container">
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'message' else 'info' }}">
+                        <i class="fa-solid 
+                                {% if category == 'success' %}fa-circle-check
+                                {% elif category == 'danger' or category == 'error' %}fa-circle-exclamation
+                                {% elif category == 'warning' %}fa-triangle-exclamation
+                                {% else %}fa-circle-info{% endif %}">
+                        </i>
+                        <span>{{ message }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                <div class="form-header">
+                    <span class="form-eyebrow">REGISTER</span>
+                    <h2>Employer Registration Request</h2>
+                    <p>Provide your legal business identity and authorized representative details for PESO verification. After submitting, you can send your documents to pesoimscsjdm@gmail.com or visit the PESO office.</p>
+                </div>
+
+                <form novalidate method="POST" class="auth-form">
+                    {{ form.hidden_tag() }}
+
+                    <section class="employer-form-section"><h3>Contact information</h3><p>We will use these details to contact your authorized representative.</p>
+                    <div class="input-group">
+                        <div class="field-label-row">{{ form.email.label }} <span class="required-indicator">Required</span></div>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-envelope"></i>
+                            {{ form.email(class="form-control", placeholder="Enter your email address") }}
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <div class="field-label-row">{{ form.contact_number.label }} <span class="required-indicator">Required</span></div>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-phone"></i>
+                            {{ form.contact_number(
+                            class="form-control",
+                            placeholder="09XXXXXXXXX",
+                            inputmode="numeric",
+                            maxlength="11",
+                            minlength="11",
+                            pattern="09[0-9]{9}",
+                            autocomplete="tel",
+                            data_ph_mobile="true",
+                            title="Enter an 11-digit Philippine mobile number starting with 09"
+                            ) }}
+                        </div>
+                    </div>
+
+                    </section>
+                    <section class="employer-form-section">
+                    <h3>Company verification details</h3>
+                    <p>These details must match your official documents. Submission does not constitute approval.</p>
+                    <div class="input-group"><div class="field-label-row">{{ form.company_name.label }} <span class="required-indicator">Required</span></div><div class="input-wrapper"><i class="fa-solid fa-building"></i>{{ form.company_name(class="form-control", placeholder="Enter the company name on your registration certificate", required=true) }}</div>{% for error in form.company_name.errors %}<small class="field-error" role="alert">{{ error }}</small>{% endfor %}</div>
+                    <div class="input-group"><div class="field-label-row">{{ form.business_type.label }} <span class="required-indicator">Required</span></div><div class="input-wrapper"><i class="fa-solid fa-briefcase"></i>{{ form.business_type(class="form-control", required=true) }}</div>{% for error in form.business_type.errors %}<small class="field-error" role="alert">{{ error }}</small>{% endfor %}</div>
+                    <div class="input-group"><div class="field-label-row">{{ form.registration_number.label }} <span class="required-indicator">Required</span></div><div class="input-wrapper"><i class="fa-solid fa-id-card"></i>{{ form.registration_number(class="form-control", placeholder="e.g. SEC2024-001234", required=true, minlength="4", maxlength="100", pattern="[A-Za-z0-9][A-Za-z0-9 /._-]{3,99}", title="4–100 letters/numbers; spaces, slash, period, underscore and hyphen allowed") }}</div>{% for error in form.registration_number.errors %}<small class="field-error" role="alert">{{ error }}</small>{% endfor %}</div>
+                    <div class="input-group"><div class="field-label-row">{{ form.bir_no.label }} <span class="required-indicator">Required</span></div><div class="input-wrapper"><i class="fa-solid fa-file-invoice"></i>{{ form.bir_no(class="form-control", placeholder="e.g. 123456789 or 123456789000", required=true, inputmode="numeric", pattern="[0-9]{9}([ -]?[0-9]{3,5})?", title="9-digit TIN with optional branch code") }}</div>{% for error in form.bir_no.errors %}<small class="field-error" role="alert">{{ error }}</small>{% endfor %}</div>
+                    <div class="input-group"><div class="field-label-row">{{ form.business_permit_no.label }} <span class="required-indicator">Required</span></div><div class="input-wrapper"><i class="fa-solid fa-certificate"></i>{{ form.business_permit_no(class="form-control", placeholder="Enter your Mayor's Permit number", required=true, minlength="4", maxlength="100", pattern="[A-Za-z0-9][A-Za-z0-9 /._-]{3,99}", title="4–100 letters/numbers; spaces, slash, period, underscore and hyphen allowed") }}</div>{% for error in form.business_permit_no.errors %}<small class="field-error" role="alert">{{ error }}</small>{% endfor %}</div>
+                    <div class="input-group address-group">
+<label for="employer-street">Registered Business Address <span class="required-indicator">Required</span></label>
+
+<div class="address-grid">
+<div><label for="employer-province">Province <span class="required-indicator">Required</span></label><div class="input-wrapper"><i class="fa-solid fa-map"></i><select id="employer-province" required><option value="">Loading provinces...</option></select></div></div>
+<div><label for="employer-city">City / Municipality <span class="required-indicator">Required</span></label><div class="input-wrapper"><i class="fa-solid fa-city"></i><select id="employer-city" required disabled><option value="">Select province first</option></select></div></div>
+<div><label for="employer-barangay">Barangay <span class="required-indicator">Required</span></label><div class="input-wrapper"><i class="fa-solid fa-location-dot"></i><select id="employer-barangay" required disabled><option value="">Select city first</option></select></div></div>
+<div><label for="employer-street">Building / House No. / Street <span class="required-indicator">Required</span></label><div class="input-wrapper"><i class="fa-solid fa-road"></i><input id="employer-street" type="text" required minlength="3" maxlength="100" placeholder="e.g. Unit 2, 123 Mabini St." autocomplete="street-address"></div></div>
+</div>
+{{ form.company_address(type="hidden", id="employer-full-address") }}
+{% for error in form.company_address.errors %}<small class="field-error" role="alert">{{ error }}</small>{% endfor %}
+<small class="address-status" id="employer-address-status" role="status"></small>
+</div>
+                    <div class="input-group"><div class="field-label-row">{{ form.representative_name.label }} <span class="required-indicator">Required</span></div><div class="input-wrapper"><i class="fa-solid fa-user-tie"></i>{{ form.representative_name(class="form-control", placeholder="e.g. Juan Dela Cruz", required=true) }}</div>{% for error in form.representative_name.errors %}<small class="field-error" role="alert">{{ error }}</small>{% endfor %}</div>
+                    <div class="input-group"><div class="field-label-row">{{ form.representative_position.label }} <span class="required-indicator">Required</span></div><div class="input-wrapper"><i class="fa-solid fa-user-gear"></i>{{ form.representative_position(class="form-control", required=true) }}</div>{% for error in form.representative_position.errors %}<small class="field-error" role="alert">{{ error }}</small>{% endfor %}</div>
+                    </section>
+                    <button type="submit" class="primary-btn">
+                        <span>Submit Request</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+
+                    <div class="switch-account">
+                        <span>Already have an account?</span>
+                        <a href="{{ url_for('auth.login') }}">Login</a>
+                    </div>
+                </form>
+<script src="{{ url_for('static', filename='javascript/auth/employer_request_live_validation.js') }}" defer></script>
+<script src="{{ url_for('static', filename='javascript/auth/employer_required_indicators.js') }}" defer></script>
+<script src="{{ url_for('static', filename='javascript/auth/employer_request_address.js') }}" defer></script>
+
+            </div>
+        </section>
+
+    </div>
+</main>
+{% endblock %}

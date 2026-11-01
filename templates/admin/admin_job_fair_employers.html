@@ -1,0 +1,451 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}
+PESO: Job Fair Employers & Booths
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_job_fair_management.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/admin_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="admin-dashboard-main job-fair-subpage job-fair-employers-page">
+
+    <!-- =====================================================
+         PAGE HEADER
+    ====================================================== -->
+    <section class="welcome-section flex-header">
+        <div class="welcome-copy">
+            <p class="eyebrow">Employers and Booths</p>
+            <h1>Employers: {{ job_fair.title }}</h1>
+            <p class="welcome-subtext">
+                Manage employer booth applications, verify submitted job vacancies, and monitor company registrations
+                for this event.
+            </p>
+        </div>
+
+        <div class="page-header-actions">
+            {% if applications %}
+            <a href="{{ url_for('admin.export_job_fair_employers', fair_id=job_fair.job_fair_id) }}"
+                class="btn-action export-btn">
+                
+                <span>Export Employer & Booth Report</span>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('admin.job_fairs') }}" class="btn-action secondary-btn return-btn">
+               
+                <span>Return</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- =====================================================
+         STATISTICS
+    ====================================================== -->
+    <section class="stats-grid">
+        <!-- TOTAL EMPLOYERS -->
+        <article class="stat-card">
+            <div class="stat-icon">
+                <i class="fa-solid fa-building-user"></i>
+            </div>
+            <div class="stat-info">
+                <h2>{{ total_employers }}</h2>
+                <p>Total Employer Applications</p>
+            </div>
+        </article>
+
+        <!-- EVENT TYPE -->
+        <article class="stat-card">
+            <div class="stat-icon">
+                <i class="fa-solid fa-calendar-check"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-title-custom">
+                    {{ job_fair.event_type if job_fair else 'N/A' }}
+                </h3>
+                <p>Event Type</p>
+            </div>
+        </article>
+
+        <!-- VENUE -->
+        <article class="stat-card">
+            <div class="stat-icon">
+                <i class="fa-solid fa-location-dot"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-title-custom">
+                    {{ job_fair.venue if job_fair else 'TBD' }}
+                </h3>
+                <p>Venue</p>
+            </div>
+        </article>
+
+        <!-- CAPACITY -->
+        <article class="stat-card">
+            <div class="stat-icon">
+                <i class="fa-solid fa-chair"></i>
+            </div>
+            <div class="stat-info">
+                <h2>{{ max_capacity }}</h2>
+                <p>Maximum Capacity</p>
+            </div>
+        </article>
+    </section>
+
+    <div class="job-fair-management-note job-fair-info-note">
+        <div class="job-fair-info-icon" aria-hidden="true">
+            <i class="fa-solid fa-circle-info"></i>
+        </div>
+        <div class="job-fair-info-copy">
+            <strong>Employer approval guideline</strong>
+            <p>
+                Approve an employer only after all submitted vacancies are approved.
+                A booth number is required and must be unique within this Job Fair.
+            </p>
+        </div>
+    </div>
+
+    <!-- =====================================================
+         SEARCH & FILTERS
+    ====================================================== -->
+    <section class="job-fair-filter-section" aria-label="Employer search and filters">
+        <div class="job-fair-filter-container">
+            <div class="job-fair-search-box">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <input type="text" id="employerSearchInput" placeholder="Search company, booth, job, or email..."
+                    autocomplete="off">
+            </div>
+
+            <div class="job-fair-filter-controls">
+                <div class="job-fair-select-wrap">
+                    <select id="employerStatusFilter" aria-label="Employer application status">
+                        <option value="">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Confirmed">Confirmed</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </div>
+
+                <button type="button" id="employerResetFilters" class="job-fair-reset-filter">
+                    <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                    <span>Reset</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- =====================================================
+         REGISTERED EMPLOYERS TABLE
+    ====================================================== -->
+    <section class="dashboard-grid single-column-grid">
+        <article class="card job-fair-data-card">
+            <!-- CARD HEADER -->
+            <div class="card-header job-fair-table-header">
+                <div class="card-header-title-wrapper">
+                    <div class="card-icon">
+                        <i class="fa-solid fa-store"></i>
+                    </div>
+                    <div>
+                        <h3 class="card-title">Registered Employers & Vacancies</h3>
+                        <p class="card-subtitle">
+                            Review company applications, assigned booths, and listed job openings.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD CONTENT -->
+            <div class="card-content">
+                {% if applications %}
+                <div class="table-responsive">
+                    <table class="admin-table employer-registration-table">
+                        <thead>
+                            <tr>
+                                <th>Company</th>
+                                <th>Booth</th>
+                                <th>Job Vacancies</th>
+                                <th>Status</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employerTableBody">
+                            {% for app in applications %}
+                            {% set app_status = (app.status | trim | title) if app.status else 'Pending' %}
+                            <tr class="employer-registration-row" data-status="{{ app_status }}">
+                                <!-- COMPANY -->
+                                <td data-label="Company">
+                                    <strong class="company-name-text">
+                                        {{ app.employer.company_name if app.employer else app.company_name }}
+                                    </strong>
+                                    <span class="company-subtext">
+                                        {{ app.employer.email if app.employer else 'N/A' }}
+                                    </span>
+                                </td>
+
+                                <!-- BOOTH -->
+                                <td data-label="Booth">
+                                    {% if app.booth_number %}
+                                    <span class="badge badge-booth">
+                                        Booth {{ app.booth_number }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted-italics">Unassigned</span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- VACANCIES -->
+                                <td data-label="Job Vacancies">
+                                    {% if app.job_vacancies %}
+                                    <div class="simple-job-list">
+                                        {% for job in app.job_vacancies %}
+                                        {% set slots = job.slots_available | default(job.vacancies) | default(1) | int
+                                        %}
+                                        <div class="simple-job-item">
+                                            <span class="job-title-simple">{{ job.job_title }}</span>
+                                            <span class="job-meta-simple">
+                                                {{ slots }} slot{% if slots != 1 %}s{% endif %}
+                                            </span>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted-italics">None</span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- STATUS -->
+                                <td data-label="Status">
+                                    {% if app_status in ['Approved', 'Confirmed'] %}
+                                    <span class="badge badge-ready">{{ app_status }}</span>
+                                    {% elif app_status == 'Pending' %}
+                                    <span class="badge badge-pending">Pending</span>
+                                    {% elif app_status == 'Rejected' %}
+                                    <span class="badge badge-rejected">Rejected</span>
+                                    {% else %}
+                                    <span class="badge badge-custom-status">{{ app_status }}</span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- ACTIONS -->
+                                <td class="text-right action-links" data-label="Actions">
+                                    <button type="button" class="text-btn open-modal-btn"
+                                        data-modal-target="modal-{{ app.registration_id }}">
+                                        Manage
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- NO SEARCH RESULTS -->
+                <div id="noEmployerResults" class="standard-no-results" style="display: none;">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    <strong>No employers match your search or filters.</strong>
+                    <span>Try adjusting your search terms or status filter.</span>
+                </div>
+
+                {% else %}
+                <!-- NO APPLICATIONS -->
+                <div class="standard-no-results">
+                    <i class="fa-solid fa-building-circle-xmark" aria-hidden="true"></i>
+                    <strong>No employer applications registered for this job fair yet.</strong>
+                    <span>Employers who register for this event will appear here.</span>
+                </div>
+                {% endif %}
+            </div>
+        </article>
+    </section>
+</main>
+
+<!-- =========================================================
+     EMPLOYER APPLICATION MODALS
+========================================================= -->
+{% for app in applications %}
+<div id="modal-{{ app.registration_id }}" class="modal-overlay" aria-hidden="true">
+    <div class="modal-container employer-management-modal" role="dialog" aria-modal="true"
+        aria-labelledby="modalTitle-{{ app.registration_id }}">
+
+        <!-- MODAL HEADER -->
+        <div class="modal-header-custom">
+            <div>
+                <span class="modal-eyebrow">Employer Application</span>
+                <h3 class="modal-title-heading" id="modalTitle-{{ app.registration_id }}">
+                    {{ app.employer.company_name if app.employer else app.company_name }}
+                </h3>
+                <span class="modal-subtitle-text">Application Details & Management</span>
+            </div>
+            <button type="button" class="close-modal-icon close-modal-btn"
+                aria-label="Close employer application">&times;</button>
+        </div>
+
+        <!-- APPLICATION FORM -->
+        <form action="{{ url_for('admin.update_employer_reg_status', reg_id=app.registration_id) }}" method="POST"
+            class="employer-registration-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="status" id="status-input-{{ app.registration_id }}" value="{{ app.status }}">
+
+            <!-- MODAL BODY -->
+            <div class="modal-body-custom">
+                <div class="modal-body-stack">
+
+                    <!-- REPRESENTATIVE -->
+                    <!-- REPRESENTATIVE & CONTACT -->
+                    <section class="modal-section-card">
+                        <h4 class="modal-section-title">Representative &amp; Contact</h4>
+
+                        <div class="modal-details-grid">
+
+                            <div class="modal-detail-item">
+                                <span class="modal-detail-label">Email Address</span>
+                                <span class="modal-detail-value">
+                                    {{ app.employer.email if app.employer else 'N/A' }}
+                                </span>
+                            </div>
+
+                            <div class="modal-detail-item">
+                                <span class="modal-detail-label">Representatives Attending</span>
+                                <span class="modal-detail-value">
+                                    {{ app.representatives | default('N/A') }}
+                                </span>
+                            </div>
+
+                            <div class="modal-detail-item">
+                                <span class="modal-detail-label">Requested Interview Capacity</span>
+                                <span class="modal-detail-value">
+                                    {{ app.simultaneous_interview_capacity or 1 }}
+                                </span>
+                            </div>
+
+                            <div class="modal-detail-item full-width">
+                                <span class="modal-detail-label">Special Requests</span>
+                                <span class="modal-detail-value modal-detail-request">
+                                    {{ app.special_requests if app.special_requests else 'None' }}
+                                </span>
+                            </div>
+
+                        </div>
+                    </section>
+
+                    <!-- BOOTH ASSIGNMENT -->
+                    <section class="modal-section-card">
+                        <h4 class="modal-section-title">Booth Assignment</h4>
+                        <div class="booth-assignment-field">
+                            <label for="booth_number_{{ app.registration_id }}">Booth Number</label>
+                            <input type="text" id="booth_number_{{ app.registration_id }}" name="booth_number" maxlength="50"
+                                value="{{ app.booth_number or '' }}" class="form-control booth-number-input"
+                                placeholder="e.g. A-12" autocomplete="off" {% if app.status !='Pending' %}readonly{%
+                                endif %}>
+                        </div>
+                        <div id="booth-error-{{ app.registration_id }}" class="booth-error" role="alert"
+                            style="display: none;"></div>
+
+                        <div class="booth-assignment-field" style="margin-top: 14px;">
+                            <label for="capacity_{{ app.registration_id }}">Simultaneous Interview Capacity</label>
+                            <input type="number" id="capacity_{{ app.registration_id }}"
+                                name="simultaneous_interview_capacity" min="1" max="{{ app.representatives or 1 }}"
+                                value="{{ app.simultaneous_interview_capacity or 1 }}"
+                                class="form-control booth-number-input" required>
+                            <small>Allowed range: 1–{{ app.representatives or 1 }} based on representatives attending.</small>
+                        </div>
+                    </section>
+
+                    <!-- JOB VACANCIES -->
+                    <section class="modal-section-card">
+                        <h4 class="modal-section-title">Submitted Job Vacancies</h4>
+                        {% if app.job_vacancies %}
+                        <div class="modal-jobs-list">
+                            {% for job in app.job_vacancies %}
+                            {% set approval = job.approval_status | default('Pending') %}
+                            {% set approval_class = 'text-approved' if approval == 'Approved' else ('text-pending' if
+                            approval == 'Pending' else 'text-rejected') %}
+                            <div class="modal-job-item">
+                                <div class="modal-job-info">
+                                    <strong class="modal-job-title">{{ job.job_title }}</strong>
+                                    <span class="modal-job-slots">
+                                        {{ "Job Fair Exclusive" if job.job_type == "Job Fair" else "Referral Job" }}
+                                        ·
+                                        Slots: {{ job.slots_available | default(job.vacancies) | default('N/A') }}
+                                    </span>
+                                </div>
+                                <span class="badge badge-modal-approval {{ approval_class }}">
+                                    {{ approval }}
+                                </span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="modal-no-jobs">No job vacancies listed.</p>
+                        {% endif %}
+                    </section>
+
+                </div>
+            </div>
+
+            <!-- MODAL FOOTER -->
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-action secondary-btn close-modal-btn modal-close-footer-btn"
+                    id="closeBtn-{{ app.registration_id }}">
+                    Close
+                </button>
+
+                {% if app.status == 'Pending' %}
+                <div class="modal-action-buttons" id="actionBtns-{{ app.registration_id }}">
+                    <!-- REJECT -->
+                    <button type="button" class="btn-action btn-danger modal-reject-footer-btn reject-registration-btn"
+                        id="rejectBtn-{{ app.registration_id }}" data-registration-id="{{ app.registration_id }}">
+                        <span id="rejectText-{{ app.registration_id }}">Reject</span>
+                        <span id="rejectSpinner-{{ app.registration_id }}" class="button-spinner"
+                            style="display: none;">
+                            <i class="fa-solid fa-spinner fa-spin"></i> Processing...
+                        </span>
+                    </button>
+
+                    <!-- APPROVE -->
+                    <button type="button"
+                        class="btn-action primary-btn modal-approve-footer-btn approve-registration-btn"
+                        id="approveBtn-{{ app.registration_id }}" data-registration-id="{{ app.registration_id }}">
+                        <span id="approveText-{{ app.registration_id }}">Approve Booth</span>
+                        <span id="approveSpinner-{{ app.registration_id }}" class="button-spinner"
+                            style="display: none;">
+                            <i class="fa-solid fa-spinner fa-spin"></i> Processing...
+                        </span>
+                    </button>
+                </div>
+                {% else %}
+                <div class="registration-status-display">
+                    {% if app.status == 'Approved' %}
+                    <button type="submit" class="btn-action primary-btn"
+                        formaction="{{ url_for('admin.update_employer_interview_capacity', reg_id=app.registration_id) }}"
+                        formmethod="POST">
+                        Save Capacity
+                    </button>
+                    <span class="badge badge-ready">Approved</span>
+                    {% elif app.status == 'Rejected' %}
+                    <span class="badge badge-rejected">Rejected</span>
+                    {% else %}
+                    <span class="badge badge-custom-status">{{ app.status }}</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </form>
+
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/admin/admin_job_fair_employers.js') }}"></script>
+{% endblock %}

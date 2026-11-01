@@ -1,0 +1,94 @@
+{% extends "layouts/auth_base.html" %}
+
+{% block title %}Create Account{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth/auth.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="auth-page">
+    <div class="auth-container">
+
+        <section class="branding-panel">
+            <div class="decor-circle circle-top"></div>
+            <div class="decor-circle circle-bottom"></div>
+
+            <div class="peso-logo">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="PESO Logo">
+            </div>
+
+            <div class="branding-content">
+                <span class="organization-name">
+                    PUBLIC EMPLOYMENT SERVICE OFFICE
+                </span>
+
+                <h1>
+                    CONNECTING PEOPLE<br>
+                    WITH OPPORTUNITIES
+                </h1>
+
+                <p>
+                    Register as a job seeker or employer and start using PESO to manage opportunities.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
+
+                <div>
+                    <strong>Choose your path</strong>
+                    <span>
+                        Create an account tailored to how you work with PESO.
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <section class="form-panel">
+            <a href="{{ url_for('home.index') }}"
+   class="auth-back-btn"
+   aria-label="Back to Home"
+   title="Back to Home">
+    <i class="fa-solid fa-arrow-left"></i>
+</a>
+
+            <div class="form-wrapper">
+
+                <div class="form-header">
+                    <span class="form-eyebrow">NEW ACCOUNT</span>
+                    <h2>Create Account</h2>
+                    <p>Select the type of account you would like to create.</p>
+                </div>
+
+                <div class="register-card">
+                    <a href="{{ url_for('auth.register_jobseeker') }}" class="register-option">
+                        <i class="fa-solid fa-user"></i>
+                        <div>
+                            <h3>Job Seeker</h3>
+                            <p>Apply for jobs and manage your applications.</p>
+                        </div>
+                    </a>
+
+                    <a href="{{ url_for('auth.register_employer') }}" class="register-option">
+                        <i class="fa-solid fa-building"></i>
+                        <div>
+                            <h3>Employer</h3>
+                            <p>Post jobs and manage applicants.</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="switch-account">
+                    <span>Already have an account?</span>
+                    <a href="{{ url_for('auth.login') }}">Login</a>
+                </div>
+
+            </div>
+        </section>
+
+    </div>
+</main>
+{% endblock %}

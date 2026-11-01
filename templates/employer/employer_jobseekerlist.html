@@ -1,0 +1,74 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}employer-app{% endblock %}
+{% block title %}PESO: Job Seekers{% endblock %}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_shared_safe.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_jobseekerlist.css') }}">
+<!-- Shared mobile filter drawer styling -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared_mobile_filter_drawers.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_mobile_filter_sheet.css') }}">{% endblock %}
+{% block navbar %}{% include "layouts/employer_navbar.html" %}{% endblock %}
+{% block content %}
+<main class="applicants-page" data-directory-source="{{ source }}">
+    <section class="page-header">
+        <div>
+            <span class="page-eyebrow">Job Seeker Management</span>
+            <h1>{{ 'Job Fair Applicants' if source == 'jobfair' else 'Referred Job Seekers' }}</h1>
+            <p>{{ 'View job seekers who applied to your company during PESO job fairs.' if source == 'jobfair' else 'View job seekers officially referred by PESO to your company.' }}</p>
+        </div>
+        <div class="applicant-count-card" aria-label="Job seeker summary">
+            <strong id="applicantCountNumber">{{ (jobfair_seekers if source == 'jobfair' else referred_seekers)|length }}</strong>
+            <span>{{ 'Job Fair Applicants' if source == 'jobfair' else 'Referred Job Seekers' }}</span>
+            <span id="applicantCount" class="applicant-count-sr" aria-live="polite"></span>
+        </div>
+    </section>
+
+    <nav class="source-tabs" aria-label="Job seeker source">
+        <a class="source-tab {{ 'active' if source == 'referred' else '' }}" href="{{ url_for('employer.jobseekerlist', source='referred') }}">
+           <span>Referred Job Seekers</span><strong>{{ referred_seekers|length }}</strong>
+        </a>
+        <a class="source-tab {{ 'active' if source == 'jobfair' else '' }}" href="{{ url_for('employer.jobseekerlist', source='jobfair') }}">
+           <span>Job Fair Applicants</span><strong>{{ jobfair_seekers|length }}</strong>
+        </a>
+    </nav>
+
+    <button type="button" class="mobile-filter-trigger" id="mobileFilterTrigger" aria-expanded="false"><i class="fa-solid fa-sliders"></i><span>Search & Filters</span></button>
+    <div class="mobile-filter-overlay" id="mobileFilterOverlay" aria-hidden="true"></div>
+
+    <section class="filter-section dashboard-filter-section referred-directory-filters" id="applicantFilters">
+        <div class="mobile-filter-drawer-header"><div><span class="mobile-filter-eyebrow">Job Seeker Management</span><h2>Search & Filters</h2></div><button type="button" class="mobile-filter-close" id="mobileFilterClose" aria-label="Close filters"><i class="fa-solid fa-xmark"></i></button></div>
+        <div class="search-box dashboard-search-box"><i class="fa-solid fa-magnifying-glass search-icon"></i><input type="text" id="searchInput" placeholder="{{ 'Search name, contact, job fair, or applied job...' if source == 'jobfair' else 'Search name, email, contact, skill, or referred job...' }}" autocomplete="off"></div>
+        <div class="filter-group dashboard-filter-group"><select id="roleFilter" class="dashboard-filter-select"><option value="">{{ 'All Applied Jobs' if source == 'jobfair' else 'All Referred Jobs' }}</option></select><button type="button" class="reset-filter-btn" id="resetApplicantFilters"><i class="fa-solid fa-rotate-left"></i><span>Reset</span></button></div>
+    </section>
+
+    <section class="applicants-container"><div class="table-wrapper">
+        {% if source == 'jobfair' %}
+        <table class="applicants-table jobfair-applicants-table"><thead><tr><th>Job Seeker</th><th>Contact</th><th>Applied Job</th><th>Job Fair</th><th>Evaluation</th><th>Action</th></tr></thead><tbody>
+        {% for item in jobfair_seekers %}{% set seeker = item.job_seeker %}
+        <tr data-search="{{ [seeker.first_name,seeker.middle_name,seeker.last_name,seeker.user.email if seeker.user else '',seeker.contact_number,item.job_titles|join(' '),item.latest_job_fair.title if item.latest_job_fair else '',item.latest_evaluation_status]|select|join(' ')|lower }}" data-jobs="{{ item.job_titles|join('|')|lower }}" data-job-titles="{{ item.job_titles|join('|') }}">
+            <td data-label="Job Seeker"><div class="candidate-info">{% if seeker.profile_picture %}{% set img_path = seeker.profile_picture if '/' in seeker.profile_picture else 'uploads/jobseekers/' ~ seeker.profile_picture %}<img src="{{ url_for('static', filename=img_path) }}" alt="{{ seeker.full_name }}">{% else %}<img src="{{ url_for('static', filename='images/pfp_placeholder.png') }}" alt="{{ seeker.full_name }}">{% endif %}<div><span class="candidate-name">{{ seeker.full_name }}</span><span class="candidate-email">{{ seeker.user.public_id }}</span></div></div></td>
+            <td data-label="Contact"><div class="contact-cell"><span>{{ seeker.user.email if seeker.user else '—' }}</span><small>{{ seeker.contact_number or 'No contact number' }}</small></div></td>
+            <td data-label="Applied Job"><div class="referred-jobs-cell"><strong>{{ item.jobs|length }} {{ 'job' if item.jobs|length == 1 else 'jobs' }}</strong><div class="referred-job-chips">{% for applied_job in item.jobs[:2] %}<span>{{ applied_job.job_title }}</span>{% endfor %}{% if item.jobs|length > 2 %}<span class="more-jobs">+{{ item.jobs|length - 2 }} more</span>{% endif %}</div></div></td>
+            <td data-label="Job Fair"><strong class="fair-name">{{ item.latest_job_fair.title if item.latest_job_fair else 'Job Fair' }}</strong>{% if item.latest_job_fair and item.latest_job_fair.start_datetime %}<small class="table-subtext">{{ item.latest_job_fair.start_datetime.strftime('%B %d, %Y') }}</small>{% endif %}</td>
+            <td data-label="Evaluation"><span class="evaluation-badge">{{ item.latest_evaluation_status or 'Pending' }}</span>{% if item.latest_attendance_status %}<small class="table-subtext">Attendance: {{ item.latest_attendance_status }}</small>{% endif %}</td>
+            <td data-label="Action"><a class="btn-view" href="{{ url_for('employer.applicant_details', application_id=item.representative_application_id, source='jobfair') }}"><span>View Profile</span></a></td>
+        </tr>{% endfor %}
+        <tr id="noResultsRow" class="no-results-row"><td colspan="6"><div class="no-results-state"><i class="fa-solid fa-magnifying-glass"></i><span>No matching job fair applicants found.</span></div></td></tr>
+        </tbody></table>
+        {% else %}
+        <table class="applicants-table referred-jobseekers-table"><thead><tr><th>Job Seeker</th><th>Contact</th><th>Experience</th><th>Referred Jobs</th><th>Latest Referral</th><th>Action</th></tr></thead><tbody>
+        {% for item in referred_seekers %}{% set seeker = item.job_seeker %}
+        <tr data-search="{{ [seeker.first_name,seeker.middle_name,seeker.last_name,seeker.user.email if seeker.user else '',seeker.contact_number,seeker.skills,item.job_titles|join(' ')]|select|join(' ')|lower }}" data-jobs="{{ item.job_titles|join('|')|lower }}" data-job-titles="{{ item.job_titles|join('|') }}">
+            <td data-label="Job Seeker"><div class="candidate-info">{% if seeker.profile_picture %}{% set img_path = seeker.profile_picture if '/' in seeker.profile_picture else 'uploads/jobseekers/' ~ seeker.profile_picture %}<img src="{{ url_for('static', filename=img_path) }}" alt="{{ seeker.full_name }}">{% else %}<img src="{{ url_for('static', filename='images/pfp_placeholder.png') }}" alt="{{ seeker.full_name }}">{% endif %}<div><span class="candidate-name">{{ seeker.full_name }}</span><span class="candidate-email">{{ seeker.user.public_id }}</span></div></div></td>
+            <td data-label="Contact"><div class="contact-cell"><span>{{ seeker.user.email if seeker.user else '—' }}</span><small>{{ seeker.contact_number or 'No contact number' }}</small></div></td>
+            <td data-label="Experience">{{ seeker.experience_display }}</td>
+            <td data-label="Referred Jobs"><div class="referred-jobs-cell"><strong>{{ item.jobs|length }} {{ 'job' if item.jobs|length == 1 else 'jobs' }}</strong><div class="referred-job-chips">{% for referred_job in item.jobs[:2] %}<span>{{ referred_job.job_title }}</span>{% endfor %}{% if item.jobs|length > 2 %}<span class="more-jobs">+{{ item.jobs|length - 2 }} more</span>{% endif %}</div></div></td>
+            <td data-label="Latest Referral">{{ item.latest_referral_date.strftime('%B %d, %Y') if item.latest_referral_date else '—' }}</td>
+            <td data-label="Action"><a class="btn-view" href="{{ url_for('employer.applicant_details', application_id=item.representative_application_id) }}"><i class="fa-solid fa-user"></i><span>View Profile</span></a></td>
+        </tr>{% endfor %}
+        <tr id="noResultsRow" class="no-results-row"><td colspan="6"><div class="no-results-state"><i class="fa-solid fa-magnifying-glass"></i><span>No matching referred job seekers found.</span></div></td></tr>
+        </tbody></table>
+        {% endif %}
+    </div><div class="pagination" aria-label="Job seeker pages"><span id="paginationSummary"></span><div id="paginationButtons" class="pagination-buttons"></div></div></section>
+</main>
+<script src="{{ url_for('static', filename='javascript/employer/employer_jobseeker.js') }}"></script>
+{% endblock %}

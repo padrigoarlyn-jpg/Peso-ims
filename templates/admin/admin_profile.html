@@ -1,0 +1,219 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}Admin Profile | PESO IMS{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_profile.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/admin_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="dashboard-container">
+    <header class="page-header">
+        <p class="page-eyebrow">Account Management</p>
+        <h1>Administrator Profile</h1>
+        <p>Manage your administrator account information and profile photo.</p>
+    </header>
+
+    <div class="profile-layout">
+        <aside class="profile-sidebar">
+            <div class="card profile-card">
+                <div class="avatar-container">
+                    {% set profile_fallback = url_for('static', filename='images/pfp_placeholder.png') %}
+                    {% set profile_src = url_for('static', filename='uploads/profiles/' +
+                    current_user.admin.profile_picture) if current_user.admin and current_user.admin.profile_picture
+                    else profile_fallback %}
+
+                    <img src="{{ profile_src }}" data-fallback="{{ profile_fallback }}"
+                        alt="{{ current_user.admin.first_name }} {{ current_user.admin.last_name }}"
+                        class="large-avatar" id="profileImage">
+
+                    <form id="logoForm" action="{{ url_for('admin.profile') }}" method="POST"
+                        enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="upload_photo">
+
+                        <button class="camera-badge" id="changePhotoBtn" type="button" title="Change profile photo"
+                            aria-label="Change profile photo">
+                            <i class="fa-solid fa-camera"></i>
+                        </button>
+
+                        <input type="file" id="photoInput" name="profile_picture" accept="image/*" hidden>
+                    </form>
+                </div>
+
+                <div class="overview-info">
+                    <h2 id="profileName">
+                        {{ current_user.admin.first_name }} {{ current_user.admin.last_name }}
+                    </h2>
+
+                    <span class="role-tag" id="profileRole">Administrator</span>
+
+                    <div class="profile-meta">
+                        <div class="meta-row">
+                            <span class="meta-label">Admin ID</span>
+                            <strong class="meta-value" id="profileAdminID">
+                                {{ current_user.public_id }}
+                            </strong>
+                        </div>
+
+                        <div class="meta-row">
+                            <span class="meta-label">Email</span>
+                            <span class="meta-value profile-email">{{ current_user.email }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <section class="profile-main-content">
+            <article class="card information-card">
+                <div class="card-header">
+                    <div>
+                        <p class="section-eyebrow">Profile Details</p>
+                        <h2>Personal Information</h2>
+                        <p>Your personal and contact information.</p>
+                    </div>
+
+                    <button type="button" class="btn-edit" data-modal="personal">
+                        <i class="fa-solid fa-pen"></i>
+                        <span>Edit</span>
+                    </button>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="personal-grid">
+                    <div class="info-item">
+                        <span class="field-label">First Name</span>
+                        <span class="field-value" id="displayFirstName">{{ current_user.admin.first_name }}</span>
+                    </div>
+
+                    <div class="info-item">
+                        <span class="field-label">Last Name</span>
+                        <span class="field-value" id="displayLastName">{{ current_user.admin.last_name }}</span>
+                    </div>
+
+                    <div class="info-item">
+                        <span class="field-label">Date of Birth</span>
+                        <span class="field-value" id="displayDOB">{{ current_user.admin.date_of_birth.strftime('%B %d, %Y') if current_user.admin and current_user.admin.date_of_birth else 'Not provided' }}</span>
+                    </div>
+
+                    <div class="info-item">
+                        <span class="field-label">Email Address</span>
+                        <span class="field-value" id="displayEmail">{{ current_user.email }}</span>
+                    </div>
+
+                    <div class="info-item">
+                        <span class="field-label">Phone Number</span>
+                        <span class="field-value" id="displayPhone">{{ current_user.admin.contact_number }}</span>
+                    </div>
+
+                    <div class="info-item">
+                        <span class="field-label">Postal Code</span>
+                        <span class="field-value" id="displayPostal">{{ current_user.admin.postal_code or 'Not provided' }}</span>
+                    </div>
+
+                    <div class="info-item">
+                        <span class="field-label">Country</span>
+                        <span class="field-value" id="displayCountry">{{ current_user.admin.country or 'Not provided' }}</span>
+                    </div>
+
+                    <div class="info-item">
+                        <span class="field-label">City</span>
+                        <span class="field-value" id="displayCity">{{ current_user.admin.city or 'Not provided' }}</span>
+                    </div>
+                </div>
+            </article>
+
+            <article class="card information-card">
+                <div class="card-header">
+                    <div>
+                        <p class="section-eyebrow">System Account</p>
+                        <h2>Account Details</h2>
+                        <p>Information about your PESO administrator account.</p>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="account-grid">
+                    <div class="info-item">
+                        <span class="field-label">User Role</span>
+                        <span class="field-value" id="displayRole">Administrator</span>
+                    </div>
+
+                    <div class="info-item">
+                        <span class="field-label">Registered Since</span>
+                        <span class="field-value" id="displayRegistered">{{ current_user.created_at.strftime('%B %d, %Y') if current_user.created_at else 'Not available' }}</span>
+                    </div>
+
+                    <div class="info-item">
+                        <span class="field-label">Admin ID</span>
+                        <span class="field-value" id="displayAdminID">{{ current_user.public_id }}</span>
+                    </div>
+                </div>
+            </article>
+        </section>
+    </div>
+</main>
+
+<div id="adminProfileData" hidden data-dob="{{ current_user.admin.date_of_birth.isoformat() if current_user.admin and current_user.admin.date_of_birth else '' }}"></div>
+<div class="modal-overlay" id="modal" aria-hidden="true">
+    <div class="edit-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-header">
+            <div>
+                <p class="modal-eyebrow">Edit Profile</p>
+                <h2 id="modalTitle">Edit Information</h2>
+                <p id="modalSubtitle">Update your information.</p>
+            </div>
+
+            <button type="button" class="modal-close" id="modalClose" aria-label="Close modal">
+                &times;
+            </button>
+        </div>
+
+        <div class="modal-body" id="modalBody"></div>
+
+        <div class="modal-footer">
+            <button type="button" class="modal-cancel" id="modalCancel">Cancel</button>
+            <button type="button" class="modal-save" id="modalSave">
+                <i class="fa-solid fa-check"></i>
+                Save Changes
+            </button>
+        </div>
+    </div>
+</div>
+<div class="modal-overlay" id="emailVerificationModal" aria-hidden="true" style="display:none;z-index:9998;">
+    <div class="edit-modal email-verify-dialog" role="dialog" aria-modal="true" aria-labelledby="emailVerifyTitle" aria-describedby="emailVerifyDescription">
+        <div class="modal-header email-verify-header">
+            <div>
+                <p class="modal-eyebrow">Account security</p>
+                <h2 id="emailVerifyTitle">Verify New Email</h2>
+                <p id="emailVerifyDescription">Enter the six-digit code sent to your new email address.</p>
+            </div>
+        </div>
+        <div class="modal-body email-verify-body">
+            <div class="email-verify-field">
+                <label for="adminEmailCode">Verification code</label>
+                <input id="adminEmailCode" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" placeholder="Enter 6-digit code" aria-describedby="emailCodeHint">
+                <p id="emailCodeHint" class="email-verify-hint">Use the latest code sent to your new email. It expires after 10 minutes.</p>
+            </div>
+        </div>
+        <div class="modal-footer email-verify-footer">
+            <button type="button" class="modal-cancel" id="cancelAdminEmailVerify">Cancel</button>
+            <button type="button" class="modal-save" id="confirmAdminEmailVerify">Verify Email</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/admin/admin_profile.js') }}" defer></script>
+{% endblock %}

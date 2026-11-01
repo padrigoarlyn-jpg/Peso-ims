@@ -1,0 +1,296 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}PESO: Admin Management{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_management.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/admin_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="admin-management-main">
+    <!-- Page Header -->
+    <section class="page-header">
+        <div>
+            <h1>Admin Management</h1>
+            <p>Create, view, and manage administrator accounts for system control.</p>
+        </div>
+
+        <div class="page-header-actions">
+            <button type="button" class="btn-primary" id="openCreateAdminModal">
+                <i class="fa-solid fa-user-plus"></i>
+                Create Admin Account
+            </button>
+        </div>
+    </section>
+
+    <!-- Search Box -->
+    <div class="search-container dashboard-filter-section">
+        <div class="dashboard-search-box">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="searchInput" placeholder="Search name, username, or email...">
+        </div>
+    </div>
+
+    <!-- Section Title -->
+    <div class="section-heading">
+        <div>
+            <h2 class="section-subtitle">Administrator Accounts</h2>
+            <p class="section-description">Manage system personnel and access permissions.</p>
+        </div>
+    </div>
+
+    <!-- Admin Table -->
+    <div class="table-responsive">
+        <table class="jobseeker-table">
+            <thead>
+                <tr>
+                    <th style="width: 10%;">ID</th>
+                    <th style="width: 25%;">Full Name</th>
+                    <th style="width: 20%;">Username</th>
+                    <th style="width: 20%;">Email</th>
+                    <th style="width: 10%;">Status</th>
+                    <th style="width: 15%;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if admins %}
+                {% for admin in admins %}
+                <tr class="admin-account-row">
+                    <td data-label="Admin ID">{{ admin.user.public_id }}</td>
+                    <td data-label="Full Name">
+                        <div class="applicant-meta">
+                            <strong class="name-text">
+                                {{ admin.first_name }} {{ admin.last_name }}
+                            </strong>
+                            <span class="location-text">{{ admin.contact_number or 'N/A' }}</span>
+                        </div>
+                    </td>
+                    <td data-label="Username">{{ admin.user.username }}</td>
+                    <td data-label="Email">{{ admin.user.email }}</td>
+                    <td data-label="Status">
+                        {% if admin.user.status == "active" %}
+                        <span class="badge-referred">Active</span>
+                        {% else %}
+                        <span class="badge-disabled">Disabled</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Actions">
+                        <div class="table-actions">
+                            <!-- Table Action Button Update -->
+                            <button type="button" class="btn-edit open-edit-modal" data-admin-id="{{ admin.user.public_id }}"
+                                data-username="{{ admin.user.username }}" data-email="{{ admin.user.email }}"
+                                data-contact="{{ admin.contact_number or '' }}">
+                                <i class="fa-solid fa-pen"></i> Edit
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                <tr id="adminSearchNoResults" class="admin-no-results-row" style="display: none;">
+                    <td colspan="6">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <strong>No matching administrator accounts found</strong>
+                        <p>Try a different name, username, email, contact number, or ID.</p>
+                    </td>
+                </tr>
+                {% else %}
+                <tr class="admin-static-empty-row">
+                    <td colspan="6">
+                        <i class="fa-solid fa-user-shield"></i>
+                        <strong>No administrator accounts found</strong>
+                        <p>Use Create Admin Account to add the first administrator.</p>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<!-- Create Admin Modal -->
+<div class="modal" id="createAdminModal" aria-hidden="true">
+    <div class="kiosk-modal">
+        <div class="modal-header">
+            <div>
+                <div class="modal-title-container">
+                    <h2>Create Admin Account</h2>
+                    <p>Grant administrative permissions to a new user account.</p>
+                </div>
+            </div>
+            <button type="button" class="close-modal" id="closeCreateAdminModal" aria-label="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form method="POST" action="{{ url_for('admin.create_admin') }}" id="createAdminForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="modal-body">
+                <!-- Personal Info -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <span>Personal Details</span>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="first_name">First Name <span class="required">*</span></label>
+                            <input type="text" id="first_name" name="first_name" maxlength="100" placeholder="e.g. Juan" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="last_name">Last Name <span class="required">*</span></label>
+                            <input type="text" id="last_name" name="last_name" maxlength="100" placeholder="e.g. Dela Cruz" required>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group"><label for="date_of_birth">Date of Birth (Optional)</label><input type="date" id="date_of_birth" name="date_of_birth" max="2099-12-31"></div>
+                        <div class="form-group"><label for="postal_code">Postal Code (Optional)</label><input type="text" id="postal_code" name="postal_code" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="e.g. 3022"></div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group"><label for="country">Country (Optional)</label><input type="text" id="country" name="country" maxlength="100" placeholder="Philippines"></div>
+                        <div class="form-group"><label for="city">City (Optional)</label><input type="text" id="city" name="city" maxlength="100" placeholder="San Jose del Monte"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact_number">Contact Number</label>
+                        <input type="text" id="contact_number" name="contact_number" maxlength="13" inputmode="tel" autocomplete="tel" pattern="(?:09[0-9]{9}|\+639[0-9]{9})" title="Use 09XXXXXXXXX or +639XXXXXXXXX." placeholder="e.g. 09123456789">
+                    </div>
+                </div>
+
+                <!-- Account Credentials -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <span>Account Credentials</span>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="username">Username <span class="required">*</span></label>
+                            <input type="text" id="username" name="username" maxlength="50" placeholder="e.g. admin_juan"
+                                    autocomplete="off" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Email Address <span class="required">*</span></label>
+                            <input type="email" id="email" name="email" maxlength="100" placeholder="e.g. admin@peso.gov.ph"
+                                    autocomplete="off" required>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="password">Password <span class="required">*</span></label>
+                            <div class="password-input">
+                                <input type="password" id="password" name="password" placeholder="Enter password"
+                                    autocomplete="new-password" minlength="8" maxlength="128"
+                                    pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&amp;*(),.?&quot;:{}|&lt;&gt;]).{8,128}"
+                                    title="8–128 characters with uppercase, lowercase, number, and special character."
+                                    required>
+                                <button type="button" class="password-toggle" id="toggleAdminPassword"
+                                    aria-label="Show password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirm_password">Confirm Password <span class="required">*</span></label>
+                            <div class="password-input">
+                                <input type="password" id="confirm_password" name="confirm_password"
+                                    placeholder="Confirm password" autocomplete="new-password"
+                                    minlength="8" maxlength="128" required>
+                                <button type="button" class="password-toggle" id="toggleConfirmAdminPassword"
+                                    aria-label="Show confirm password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="password-requirements" aria-live="polite">
+                        <span>
+                            Password must be 8–128 characters and contain at least
+                            one uppercase letter, one lowercase letter, one number,
+                            and one special character.
+                        </span>
+                    </div>
+                </div>
+
+                <div class="kiosk-notice">
+                    <div>
+                        <strong>Administrator Access</strong>
+                        <p>This account will be granted elevated permissions across the system.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" id="cancelCreateAdmin">Cancel</button>
+                <button type="submit" class="btn-submit" id="submitCreateAdmin">
+                    <i class="fa-solid fa-user-plus"></i> Create Admin
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Admin Modal -->
+<div class="modal" id="editAdminModal" aria-hidden="true">
+    <div class="kiosk-modal">
+        <div class="modal-header">
+            <div>
+                <div class="modal-title-container">
+                    <h2>Edit Admin Account</h2>
+                    <p>Update user credentials and contact information.</p>
+                </div>
+            </div>
+            <button type="button" class="close-modal" id="closeEditAdminModal" aria-label="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form method="POST" id="editAdminForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="modal-body">
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <span> Account Information</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit_username">Username <span class="required">*</span></label>
+                        <input type="text" id="edit_username" name="username" maxlength="50" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit_email">Email Address <span class="required">*</span></label>
+                        <input type="email" id="edit_email" name="email" maxlength="100" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit_contact_number">Contact Number</label>
+                        <input type="text" id="edit_contact_number" name="contact_number" maxlength="13" inputmode="tel" autocomplete="tel" pattern="(?:09[0-9]{9}|\+639[0-9]{9})" title="Use 09XXXXXXXXX or +639XXXXXXXXX.">
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" id="cancelEditAdmin">Cancel</button>
+                <button type="submit" class="btn-submit">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/admin/admin_management.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,254 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}employer-app{% endblock %}
+
+{% block title %}PESO: Employer Dashboard{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_shared_safe.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_ui_consistency.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_ui_refinement.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/employer_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="employer-dashboard-main employer-page-shell">
+
+    <!-- =====================================================
+         PAGE HEADER
+    ====================================================== -->
+    <section class="dashboard-welcome">
+        <div>
+            <p class="dashboard-eyebrow">EMPLOYER OVERVIEW</p>
+            <h1>Welcome back, {{ welcome_name }}</h1>
+            <p class="dashboard-subtitle">
+                Here is a quick snapshot of your recruitment activity and recent applicant updates.
+            </p>
+        </div>
+    </section>
+
+    <!-- =====================================================
+         STATISTICS
+    ====================================================== -->
+    <section class="dashboard-stats" aria-label="Recruitment statistics">
+
+        <article class="dashboard-stat-card">
+            <div class="dashboard-stat-icon">
+                <i class="fa-solid fa-briefcase"></i>
+            </div>
+            <div class="dashboard-stat-copy">
+                <strong>{{ active_jobs }}</strong>
+                <span>Active Jobs</span>
+            </div>
+        </article>
+
+        <article class="dashboard-stat-card">
+            <div class="dashboard-stat-icon">
+                <i class="fa-solid fa-user-clock"></i>
+            </div>
+            <div class="dashboard-stat-copy">
+                <strong>{{ pending_applications }}</strong>
+                <span>Pending Applications</span>
+            </div>
+        </article>
+
+        <article class="dashboard-stat-card">
+            <div class="dashboard-stat-icon dashboard-stat-icon-success">
+                <i class="fa-solid fa-user-check"></i>
+            </div>
+            <div class="dashboard-stat-copy">
+                <strong>{{ accepted_applications }}</strong>
+                <span>Accepted Applicants</span>
+            </div>
+        </article>
+
+        <article class="dashboard-stat-card">
+            <div class="dashboard-stat-icon dashboard-stat-icon-muted">
+                <i class="fa-solid fa-user-xmark"></i>
+            </div>
+            <div class="dashboard-stat-copy">
+                <strong>{{ rejected_applications }}</strong>
+                <span>Rejected Applicants</span>
+            </div>
+        </article>
+
+    </section>
+
+    <!-- =====================================================
+         APPLICATIONS + RECENT APPLICANTS
+    ====================================================== -->
+    <section class="dashboard-primary-grid">
+
+        <article class="dashboard-panel chart-panel">
+            <header class="dashboard-panel-header">
+                <div class="dashboard-panel-title">
+                    <span class="dashboard-panel-icon">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </span>
+                    <div>
+                        <h2>Applications Overview</h2>
+                        <p>Application activity based on your recent recruitment data.</p>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-panel-body chart-panel-body">
+                <div class="chart-container">
+                    <canvas
+                        id="applicationsChart"
+                        data-labels='{{ chart_labels | tojson | forceescape }}'
+                        data-values='{{ chart_data | tojson | forceescape }}'
+                        aria-label="Applications overview chart"
+                    ></canvas>
+                </div>
+            </div>
+        </article>
+
+        <article class="dashboard-panel applicants-panel">
+            <header class="dashboard-panel-header">
+                <div class="dashboard-panel-title">
+                    <span class="dashboard-panel-icon">
+                        <i class="fa-solid fa-users"></i>
+                    </span>
+                    <div>
+                        <h2>Recent Applicants</h2>
+                        <p>Latest candidates connected to your job listings.</p>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-panel-body applicant-list">
+                {% for application in recent_applications %}
+                {% set application_status = application.status or "Pending" %}
+
+                <a
+                    class="applicant-item"
+                    href="{{ url_for('employer.applicant_details', application_id=application.application_id) }}"
+                >
+                    {% if application.job_seeker.profile_picture %}
+                        {% if '/' in application.job_seeker.profile_picture %}
+                        <img
+                            src="{{ url_for('static', filename=application.job_seeker.profile_picture) }}"
+                            alt="{{ application.job_seeker.full_name }}"
+                        >
+                        {% else %}
+                        <img
+                            src="{{ url_for('static', filename='uploads/jobseekers/' ~ application.job_seeker.profile_picture) }}"
+                            alt="{{ application.job_seeker.full_name }}"
+                        >
+                        {% endif %}
+                    {% else %}
+                    <img
+                        src="{{ url_for('static', filename='images/pfp_placeholder.png') }}"
+                        alt="{{ application.job_seeker.full_name }}"
+                    >
+                    {% endif %}
+
+                    <div class="applicant-info">
+                        <h3>{{ application.job_seeker.full_name }}</h3>
+                        <p>{{ application.job.job_title }}</p>
+                    </div>
+
+                    <span class="status-badge
+                        {% if application_status in ['Pending', 'Reviewed', 'Interview'] %}
+                            status-pending
+                        {% elif application_status == 'Accepted' %}
+                            status-approved
+                        {% else %}
+                            status-rejected
+                        {% endif %}
+                    ">
+                        {{ application_status }}
+                    </span>
+                </a>
+
+                {% else %}
+                <div class="dashboard-empty-state">
+                    <span class="dashboard-empty-icon">
+                        <i class="fa-regular fa-user"></i>
+                    </span>
+                    <strong>No recent applicants</strong>
+                    <p>New applicants will appear here once PESO referrals or Job Fair applications are available.</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <footer class="dashboard-panel-footer">
+                <a href="{{ url_for('employer.jobseekerlist') }}" class="dashboard-primary-link">
+                    View All Applicants
+                    <i class="fa-solid fa-arrow-right"></i>
+                </a>
+            </footer>
+        </article>
+
+    </section>
+
+    <!-- =====================================================
+         RECENT JOB LISTINGS
+    ====================================================== -->
+    <section class="dashboard-panel jobs-panel">
+        <header class="dashboard-panel-header">
+            <div class="dashboard-panel-title">
+                <span class="dashboard-panel-icon">
+                    <i class="fa-solid fa-list-check"></i>
+                </span>
+                <div>
+                    <h2>Recent Job Listings</h2>
+                    <p>Monitor the latest positions posted by your company.</p>
+                </div>
+            </div>
+
+            <a href="{{ url_for('employer.joblisting') }}" class="dashboard-secondary-link">
+                View All
+                <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </header>
+
+        <div class="dashboard-panel-body job-list">
+
+            {% for job in recent_jobs %}
+            <div class="job-item">
+
+                <div class="job-info">
+                    <h3>{{ job.job_title }}</h3>
+                    <p>
+                        {{ job.employment_type }}
+                        <span aria-hidden="true">•</span>
+                        Posted {{ job.created_at.strftime("%b %d") }}
+                    </p>
+                </div>
+
+                <div class="job-actions">
+                    <span class="status-badge {% if job.status == 'Open' %}status-approved{% else %}status-rejected{% endif %}">
+                        {{ job.status }}
+                    </span>
+
+                    <a href="{{ url_for('employer.joblisting') }}" class="manage-link">
+                        Manage
+                    </a>
+                </div>
+            </div>
+
+            {% else %}
+            <div class="dashboard-empty-state dashboard-empty-state-wide">
+                <span class="dashboard-empty-icon">
+                    <i class="fa-solid fa-briefcase"></i>
+                </span>
+                <strong>No job listings yet</strong>
+                <p>Your most recent job listings will appear here after you create one.</p>
+            </div>
+            {% endfor %}
+
+        </div>
+    </section>
+
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='javascript/employer/employer_dashboard.js') }}"></script>
+{% endblock %}

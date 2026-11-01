@@ -1,0 +1,763 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}employer-app{% endblock %}
+
+{% block title %}PESO: Applicant Shortlist{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_shared_safe.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_shortlist.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/employer_navbar.html" %}
+{% endblock %}
+
+{% macro render_application_row(application, show_rank=true) %}
+    {% set application_status = application.status or "Pending" %}
+    {% set evaluation = application.job_fair_evaluation %}
+    {% set referral = application.referrals[0] if application.referrals else none %}
+    {% set is_referred = referral and referral.status == "Referred" %}
+    {% set has_evaluation = evaluation is not none %}
+
+    {% if is_referred %}
+        {% set application_source = "Referred" %}
+    {% elif has_evaluation %}
+        {% set application_source = "Job Fair" %}
+    {% else %}
+        {% set application_source = "Unavailable" %}
+    {% endif %}
+
+    {% set can_hire = false %}
+    {% if remaining_vacancies > 0 %}
+        {% if application_source == "Job Fair" and application_status not in ["Accepted", "Rejected"] %}
+            {% set can_hire = true %}
+        {% elif application_source == "Referred"
+            and application_status == "Interview"
+            and application.interview_date
+            and application.interview_date <= current_date %}
+            {% set can_hire = true %}
+        {% endif %}
+    {% endif %}
+
+    <tr class="shortlist-row">
+        <td class="select-cell" data-label="Select">
+            {% if application_source == "Referred" and application_status not in ["Accepted", "Rejected"] %}
+            <input
+                type="checkbox"
+                class="applicant-checkbox"
+                value="{{ application.application_id }}"
+                data-source="Referred"
+                aria-label="Select {{ application.job_seeker.full_name }} for bulk interview scheduling"
+            >
+            {% else %}
+            <input
+                type="checkbox"
+                class="applicant-checkbox"
+                value="{{ application.application_id }}"
+                data-source="{{ application_source }}"
+                disabled
+                aria-label="Applicant is not eligible for bulk interview scheduling"
+            >
+            {% endif %}
+        </td>
+
+        <td class="rank-cell" data-label="Rank">
+            {% if show_rank and application.rank %}
+                {% if application.rank == 1 %}
+                <span class="rank-badge rank-gold"><i class="fa-solid fa-medal"></i> #1</span>
+                {% elif application.rank == 2 %}
+                <span class="rank-badge rank-silver"><i class="fa-solid fa-medal"></i> #2</span>
+                {% elif application.rank == 3 %}
+                <span class="rank-badge rank-bronze"><i class="fa-solid fa-medal"></i> #3</span>
+                {% else %}
+                <span class="rank-badge">#{{ application.rank }}</span>
+                {% endif %}
+            {% else %}
+            <span class="rank-badge rank-unranked">—</span>
+            {% endif %}
+        </td>
+
+        <td class="applicant-cell" data-label="Applicant">
+            <div class="candidate-summary">
+                {% if application.job_seeker.profile_picture %}
+                    {% set img_src = application.job_seeker.profile_picture if '/' in application.job_seeker.profile_picture else 'uploads/jobseekers/' ~ application.job_seeker.profile_picture %}
+                    <img src="{{ url_for('static', filename=img_src) }}" class="candidate-avatar" alt="{{ application.job_seeker.full_name }}">
+                {% else %}
+                    <img src="{{ url_for('static', filename='images/pfp_placeholder.png') }}" class="candidate-avatar" alt="{{ application.job_seeker.full_name }}">
+                {% endif %}
+
+                <div class="candidate-copy">
+                    <strong>{{ application.job_seeker.full_name }}</strong>
+                    <span>{{ application.job_seeker.pref_occupation_1 or "Jobseeker" }}</span>
+                    <small>APPL-{{ "%06d"|format(application.application_id) }}</small>
+                </div>
+            </div>
+        </td>
+
+        <td class="match-cell" data-label="Match">
+            <div class="compact-match">
+                <strong>{{ "%.0f"|format(application.match_percentage or 0) }}%</strong>
+
+                {% if application.all_required_met %}
+                <span class="compact-match-state matched">
+                    <i class="fa-solid fa-circle-check"></i>
+                    All required met
+                </span>
+                {% else %}
+                <span class="compact-match-state missing">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Missing required
+                </span>
+                {% endif %}
+            </div>
+        </td>
+
+        <td class="source-cell" data-label="Source">
+            {% if application_source == "Referred" %}
+            <span class="source-badge source-referral">
+                <i class="fa-solid fa-user-check"></i>
+                PESO Referral
+            </span>
+            {% elif application_source == "Job Fair" %}
+            <span class="source-badge source-job-fair">
+                <i class="fa-solid fa-calendar-days"></i>
+                Job Fair
+            </span>
+            {% else %}
+            <span class="source-badge source-unknown">Unavailable</span>
+            {% endif %}
+        </td>
+
+        <td class="status-cell" data-label="Status">
+            <span class="application-status status-{{ application_status|lower }}">
+                {{ application_status }}
+            </span>
+        </td>
+
+        <td class="action-cell" data-label="Action">
+            <button
+                type="button"
+                class="btn-view-details open-applicant-modal"
+                data-application-id="{{ application.application_id }}"
+                data-application-code="APPL-{{ '%06d'|format(application.application_id) }}"
+                data-rank="{{ application.rank if application.rank else 'Not Ranked' }}"
+                {% if application.job_seeker.profile_picture %}
+                    {% set modal_img_src = application.job_seeker.profile_picture if '/' in application.job_seeker.profile_picture else 'uploads/jobseekers/' ~ application.job_seeker.profile_picture %}
+                    data-photo="{{ url_for('static', filename=modal_img_src) }}"
+                {% else %}
+                    data-photo="{{ url_for('static', filename='images/pfp_placeholder.png') }}"
+                {% endif %}
+                data-status="{{ application_status }}"
+                data-source="{{ application_source }}"
+                data-can-hire="{{ 'true' if can_hire else 'false' }}"
+                data-remaining-vacancies="{{ remaining_vacancies }}"
+                data-ranking-status="{{ application.ranking_status or 'Not Ranked' }}"
+                data-ranking-reason="{{ application.ranking_reason or '' }}"
+                data-match-percentage="{{ '%.0f'|format(application.match_percentage or 0) }}"
+                data-required-matched="{{ application.required_matched or 0 }}"
+                data-required-total="{{ application.required_total or 0 }}"
+                data-preferred-matched="{{ application.preferred_matched or 0 }}"
+                data-preferred-total="{{ application.preferred_total or 0 }}"
+                data-matched-requirements='{{ (application.matched_requirements or [])|tojson|forceescape }}'
+                data-unmatched-requirements='{{ (application.unmatched_requirements or [])|tojson|forceescape }}'
+                data-evaluation-status="{{ evaluation.status if evaluation else '' }}"
+                data-evaluation-remarks="{{ evaluation.remarks if evaluation and evaluation.remarks else '' }}"
+                data-interview-response="{{ application.interview_response_status or '' }}"
+                data-interview-date="{{ application.interview_date.strftime('%Y-%m-%d') if application.interview_date else '' }}"
+                data-interview-date-display="{{ application.interview_date.strftime('%B %d, %Y') if application.interview_date else '' }}"
+                data-interview-time="{{ application.interview_time.strftime('%H:%M') if application.interview_time else '' }}"
+                data-interview-time-display="{{ application.interview_time.strftime('%I:%M %p') if application.interview_time else '' }}"
+                data-interview-location="{{ application.interview_location or '' }}"
+                data-interview-notes="{{ application.interview_notes or '' }}"
+                data-name="{{ application.job_seeker.full_name }}"
+                data-email="{{ application.job_seeker.user.email if application.job_seeker.user else 'N/A' }}"
+                data-phone="{{ application.job_seeker.contact_number or 'N/A' }}"
+                data-address="{{ [application.job_seeker.street, application.job_seeker.barangay, application.job_seeker.city, application.job_seeker.province] | select | join(', ') }}"
+                data-sex="{{ application.job_seeker.sex or 'N/A' }}"
+                data-birthdate="{{ application.job_seeker.birthdate.strftime('%B %d, %Y') if application.job_seeker.birthdate else 'N/A' }}"
+                data-civil="{{ application.job_seeker.civil_status or 'N/A' }}"
+                data-education="{{ application.normalized_education or application.job_seeker.tertiary_level_reached or 'N/A' }}"
+                data-course="{{ application.job_seeker.tertiary_course or application.job_seeker.senior_high_strand or 'N/A' }}"
+                data-skills="{{ application.job_seeker.skills or 'No skills listed' }}"
+                data-experience="{{ application.job_seeker.experience_display }}"
+                data-job="{{ application.job.job_title }}"
+                data-company="{{ application.job.employer.company_name }}"
+                data-location="{{ application.job.location or 'N/A' }}"
+                data-date="{{ application.application_date.strftime('%B %d, %Y') if application.application_date else 'N/A' }}"
+                data-resume-url="{{ url_for('employer.view_application_resume', application_id=application.application_id) if application.job_seeker.resume else '' }}"
+                data-profile-url="{{ url_for('employer.applicant_details', application_id=application.application_id, source='shortlist') }}"
+            >
+                View Details
+            </button>
+        </td>
+    </tr>
+{% endmacro %}
+
+{% block content %}
+<main class="shortlist-page">
+
+    <div class="back-row">
+        <a href="{{ url_for('employer.joblisting') }}" class="back-link">
+            <i class="fa-solid fa-arrow-left"></i>
+            Back to Job Listings
+        </a>
+    </div>
+
+    <section class="shortlist-page-header">
+        <div class="shortlist-title-section">
+            <span class="page-eyebrow">Applicant Management</span>
+            <h1>Applicant Shortlist</h1>
+            <p>
+                Job: <strong>{{ job.job_title }}</strong>
+            </p>
+            <p class="shortlist-description">
+                Review ranked candidates, inspect qualification evidence, and manage interviews and hiring decisions.
+            </p>
+        </div>
+
+        <div class="vacancy-summary">
+            <div class="vacancy-stat applicant-stat">
+                <span>Applicants</span>
+                <strong>{{ (ranked_applications|length) + (unranked_applications|length) }}</strong>
+                <small>{{ ranked_applications|length }} ranked · {{ unranked_applications|length }} not ranked</small>
+            </div>
+
+            <div class="vacancy-stat">
+                <span>Total Vacancies</span>
+                <strong>{{ job.vacancies or 0 }}</strong>
+                <small aria-hidden="true">&nbsp;</small>
+            </div>
+
+            <div class="vacancy-stat">
+                <span>Hired</span>
+                <strong>{{ accepted_count }}</strong>
+                <small aria-hidden="true">&nbsp;</small>
+            </div>
+
+            <div class="vacancy-stat {{ 'vacancy-full' if remaining_vacancies <= 0 else 'vacancy-available' }}">
+                <span>Remaining</span>
+                <strong>{{ remaining_vacancies }}</strong>
+                <small aria-hidden="true">&nbsp;</small>
+            </div>
+        </div>
+    </section>
+
+    {% if remaining_vacancies <= 0 %}
+    <div class="vacancy-warning">
+        <i class="fa-solid fa-circle-info"></i>
+        <span>
+            All vacancies for this job have been filled. Applicants can still be reviewed, but no additional hire can be completed unless a vacancy becomes available.
+        </span>
+    </div>
+    {% endif %}
+
+    <form
+        method="GET"
+        action="{{ url_for('employer.shortlist', job_id=job.job_id) }}"
+        class="search-card"
+    >
+        <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input
+                type="text"
+                name="search"
+                value="{{ search }}"
+                placeholder="Search jobseeker name or skills..."
+                autocomplete="off"
+            >
+        </div>
+    </form>
+
+    <div class="bulk-action-row">
+        <button
+            type="button"
+            id="openBulkInterviewModal"
+            class="btn-primary-action"
+            style="display:none;"
+        >
+            <i class="fa-solid fa-calendar-plus"></i>
+            Schedule Interview for Selected
+            (<span id="selectedCount">0</span>)
+        </button>
+    </div>
+
+    <section class="ranking-section">
+        <div class="ranking-section-header">
+            <div>
+                <span class="section-eyebrow">Recommended Order</span>
+                <h2>Ranked Applicants</h2>
+                <p>Applicants with structured qualification matches, sorted using the shared matching and ranking logic.</p>
+            </div>
+            <span class="ranking-count">{{ ranked_applications|length }}</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="shortlist-table">
+                <thead>
+                    <tr>
+                        <th class="select-column">
+                            <input
+                                type="checkbox"
+                                id="selectAllCheckbox"
+                                title="Select eligible referred applicants"
+                            >
+                        </th>
+                        <th class="rank-column">Rank</th>
+                        <th class="applicant-column">Applicant</th>
+                        <th class="match-column">Match</th>
+                        <th class="source-column">Source</th>
+                        <th class="status-column">Status</th>
+                        <th class="action-column">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if ranked_applications %}
+                        {% for application in ranked_applications %}
+                            {{ render_application_row(application, true) }}
+                        {% endfor %}
+                    {% else %}
+                    <tr class="empty-row">
+                        <td colspan="7">
+                            <i class="fa-solid fa-user-slash"></i>
+                            <span>No ranked applicants yet.</span>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="ranking-section">
+        <div class="ranking-section-header">
+            <div>
+                <span class="section-eyebrow">Needs Manual Review</span>
+                <h2>Not Ranked</h2>
+                <p>Applicants that did not receive a structured ranking can still be reviewed manually.</p>
+            </div>
+            <span class="ranking-count">{{ unranked_applications|length }}</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="shortlist-table unranked-table">
+                <thead>
+                    <tr>
+                        <th class="select-column">—</th>
+                        <th class="rank-column">Rank</th>
+                        <th class="applicant-column">Applicant</th>
+                        <th class="match-column">Match</th>
+                        <th class="source-column">Source</th>
+                        <th class="status-column">Status</th>
+                        <th class="action-column">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if unranked_applications %}
+                        {% for application in unranked_applications %}
+                            {{ render_application_row(application, false) }}
+                        {% endfor %}
+                    {% else %}
+                    <tr class="empty-row">
+                        <td colspan="7">
+                            <i class="fa-solid fa-circle-check"></i>
+                            <span>No unranked applicants.</span>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- =========================================================
+         APPLICANT DETAILS MODAL
+         ADMIN-RANKINGS STYLE
+    ========================================================== -->
+    <div id="applicantModal" class="modal-overlay" style="display:none;" aria-hidden="true">
+        <div class="applicant-modal-card" role="dialog" aria-modal="true" aria-labelledby="m_name">
+
+            <header class="applicant-modal-header">
+                <div class="modal-profile-header">
+                    <img
+                        id="m_photo"
+                        class="modal-profile-photo"
+                        src="{{ url_for('static', filename='images/pfp_placeholder.png') }}"
+                        data-fallback="{{ url_for('static', filename='images/pfp_placeholder.png') }}"
+                        alt="Applicant profile photo"
+                    >
+
+                    <div class="modal-profile-info">
+                        <span class="modal-eyebrow">Applicant Profile</span>
+                        <h2 id="m_name">Applicant Name</h2>
+                        <p id="m_application_id">APPL-000000</p>
+
+                        <div class="modal-profile-badges">
+                            <span id="m_source" class="modal-status-badge source-badge">—</span>
+                            <span id="m_status" class="modal-status-badge status-badge">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="modal-close close-modal" aria-label="Close applicant details">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+
+            <div class="applicant-modal-body">
+
+                <section class="application-card ranking-summary-card">
+                    <div class="application-card-header">
+                        <div class="application-card-icon">
+                            <i class="fa-solid fa-ranking-star"></i>
+                        </div>
+                        <div>
+                            <h3>Ranking Summary</h3>
+                            <span>Structured qualification matching result</span>
+                        </div>
+                    </div>
+
+                    <div class="application-card-body">
+                        <div class="ranking-summary-grid">
+                            <div class="summary-stat">
+                                <span class="modal-label">Rank</span>
+                                <strong id="m_rank" class="modal-value modal-big-value">—</strong>
+                            </div>
+
+                            <div class="summary-stat">
+                                <span class="modal-label">Match</span>
+                                <strong id="m_match_percentage" class="modal-value modal-big-value">0%</strong>
+                            </div>
+
+                            <div class="summary-stat">
+                                <span class="modal-label">Required</span>
+                                <strong id="m_required_match" class="modal-value">0 / 0</strong>
+                            </div>
+
+                            <div class="summary-stat">
+                                <span class="modal-label">Preferred</span>
+                                <strong id="m_preferred_match" class="modal-value">0 / 0</strong>
+                            </div>
+
+                            <div class="summary-stat">
+                                <span class="modal-label">Ranking Status</span>
+                                <strong id="m_ranking_status" class="modal-value">—</strong>
+                            </div>
+
+                            <div class="summary-stat">
+                                <span class="modal-label">Remaining Vacancies</span>
+                                <strong id="m_vacancies" class="modal-value">—</strong>
+                            </div>
+                        </div>
+
+                        <div class="qualification-block">
+                            <div class="qualification-block-title matched">
+                                <i class="fa-solid fa-circle-check"></i>
+                                <span>Matched Qualifications</span>
+                            </div>
+                            <div id="m_matched_requirements" class="matched-requirements"></div>
+                        </div>
+
+                        <div class="qualification-block">
+                            <div class="qualification-block-title missing">
+                                <i class="fa-solid fa-circle-xmark"></i>
+                                <span>Missing Qualifications</span>
+                            </div>
+                            <div id="m_unmatched_requirements" class="matched-requirements"></div>
+                        </div>
+
+                        <p id="m_ranking_reason" class="ranking-reason-modal" style="display:none;"></p>
+                    </div>
+                </section>
+
+                <div class="modal-content-grid">
+
+                    <section class="modal-info-card">
+                        <div class="modal-info-card-header">
+                            <div class="modal-card-icon"><i class="fa-solid fa-user"></i></div>
+                            <div>
+                                <h3>Personal Information</h3>
+                                <span>Basic applicant details</span>
+                            </div>
+                        </div>
+
+                        <div class="modal-info-card-body">
+                            <div class="modal-field">
+                                <span class="modal-label">Email</span>
+                                <span id="m_email" class="modal-value">—</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="modal-label">Phone</span>
+                                <span id="m_phone" class="modal-value">—</span>
+                            </div>
+
+                            <div class="modal-field-row">
+                                <div class="modal-field">
+                                    <span class="modal-label">Sex</span>
+                                    <span id="m_sex" class="modal-value">—</span>
+                                </div>
+                                <div class="modal-field">
+                                    <span class="modal-label">Civil Status</span>
+                                    <span id="m_civil" class="modal-value">—</span>
+                                </div>
+                            </div>
+
+                            <div class="modal-field">
+                                <span class="modal-label">Birthdate</span>
+                                <span id="m_birthdate" class="modal-value">—</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="modal-label">Address</span>
+                                <span id="m_address" class="modal-value">—</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="modal-info-card">
+                        <div class="modal-info-card-header">
+                            <div class="modal-card-icon"><i class="fa-solid fa-briefcase"></i></div>
+                            <div>
+                                <h3>Professional Profile</h3>
+                                <span>Education and career information</span>
+                            </div>
+                        </div>
+
+                        <div class="modal-info-card-body">
+                            <div class="modal-field">
+                                <span class="modal-label">Education</span>
+                                <span id="m_education" class="modal-value">—</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="modal-label">Course / Strand</span>
+                                <span id="m_course" class="modal-value">—</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="modal-label">Skills</span>
+                                <span id="m_skills" class="modal-value">—</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="modal-label">Experience</span>
+                                <span id="m_experience" class="modal-value">—</span>
+                            </div>
+                        </div>
+                    </section>
+
+                </div>
+
+                <div class="modal-content-grid process-job-grid">
+
+                    <section class="modal-info-card">
+                        <div class="modal-info-card-header">
+                            <div class="modal-card-icon"><i class="fa-solid fa-list-check"></i></div>
+                            <div>
+                                <h3>Application Process</h3>
+                                <span>Evaluation and interview status</span>
+                            </div>
+                        </div>
+
+                        <div class="modal-info-card-body">
+                            <div class="modal-field">
+                                <span class="modal-label">Job Fair Evaluation</span>
+                                <span id="m_evaluation" class="modal-value">Not Applicable</span>
+                            </div>
+
+                            <div id="m_evaluation_remarks_wrap" class="modal-field" style="display:none;">
+                                <span class="modal-label">Evaluation Remarks</span>
+                                <span id="m_evaluation_remarks" class="modal-value"></span>
+                            </div>
+
+                            <div class="modal-field">
+                                <span class="modal-label">Attendance Response</span>
+                                <span id="m_interview_status" class="modal-value">—</span>
+                            </div>
+
+                            <div id="m_interview_details" class="interview-summary-card" style="display:none;">
+                                <div class="interview-summary-title">
+                                    <i class="fa-solid fa-calendar-days"></i>
+                                    Interview Schedule
+                                </div>
+
+                                <div class="interview-detail-grid">
+                                    <div>
+                                        <span class="modal-label">Date</span>
+                                        <span id="m_interview_date" class="modal-value">—</span>
+                                    </div>
+                                    <div>
+                                        <span class="modal-label">Time</span>
+                                        <span id="m_interview_time" class="modal-value">—</span>
+                                    </div>
+                                    <div class="full-width">
+                                        <span class="modal-label">Location</span>
+                                        <span id="m_interview_location" class="modal-value">—</span>
+                                    </div>
+                                </div>
+
+                                <div id="m_interview_notes_wrap" class="interview-notes" style="display:none;">
+                                    <span class="modal-label">Notes</span>
+                                    <p id="m_interview_notes"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="modal-info-card">
+                        <div class="modal-info-card-header">
+                            <div class="modal-card-icon"><i class="fa-solid fa-building"></i></div>
+                            <div>
+                                <h3>Applied Job</h3>
+                                <span>Position and company information</span>
+                            </div>
+                        </div>
+
+                        <div class="modal-info-card-body">
+                            <div class="modal-field">
+                                <span class="modal-label">Position</span>
+                                <span id="m_job" class="modal-value">—</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="modal-label">Company</span>
+                                <span id="m_company" class="modal-value">—</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="modal-label">Location</span>
+                                <span id="m_location" class="modal-value">—</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="modal-label">Date Applied</span>
+                                <span id="m_date" class="modal-value">—</span>
+                            </div>
+                        </div>
+                    </section>
+
+                </div>
+
+                <footer class="applicant-modal-actions">
+
+                    <div class="modal-secondary-actions">
+                        <a id="fullProfileBtn" href="#" class="modal-action-btn btn-secondary-action">
+                            <i class="fa-solid fa-address-card"></i>
+                            Full Profile
+                        </a>
+
+                        <a id="resumeBtn" href="#" class="modal-action-btn btn-secondary-action">
+                            <i class="fa-solid fa-file-lines"></i>
+                            View Resume
+                        </a>
+                    </div>
+
+                    <div class="modal-primary-actions">
+                        <form id="interviewForm" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="button" id="openInterviewModal" class="modal-action-btn btn-interview-action">
+                                <i class="fa-solid fa-calendar-plus"></i>
+                                Schedule Interview
+                            </button>
+                        </form>
+
+                        <form id="hireForm" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="modal-action-btn btn-hire-action">
+                                <i class="fa-solid fa-user-check"></i>
+                                Hire
+                            </button>
+                        </form>
+
+                        <form id="rejectForm" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="modal-action-btn btn-reject-action">
+                                <i class="fa-solid fa-user-xmark"></i>
+                                Reject
+                            </button>
+                        </form>
+                    </div>
+
+                </footer>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- =========================================================
+         INTERVIEW MODAL
+    ========================================================== -->
+    <div id="interviewModal" class="modal-overlay" style="display:none;">
+        <div class="interview-modal-card" role="dialog" aria-modal="true" aria-labelledby="interviewModalTitle">
+            <button type="button" class="modal-close close-interview" id="closeInterviewBtn" aria-label="Close interview modal">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <span class="modal-eyebrow">Interview Management</span>
+            <h2 id="interviewModalTitle">Schedule Interview</h2>
+
+            <form id="scheduleInterviewForm" method="POST" data-availability-url="{{ url_for('employer.interview_availability') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="batch_application_ids" id="batchApplicationIds">
+
+                <div class="form-group">
+                    <label for="interviewDate">Interview Date</label>
+                    <input type="date" id="interviewDate" name="interview_date" required>
+                </div>
+
+                <div id="interviewAvailabilityNote" class="interview-availability-note" hidden role="status" aria-live="polite"></div>
+
+                <div class="form-group">
+                    <label for="interviewTime">Interview Time</label>
+                    <input type="time" id="interviewTime" name="interview_time" required>
+                </div>
+
+                <div class="form-group">
+                    <div class="field-label-row">
+                        <label for="interviewLocationInput">Interview Location</label>
+                        <button
+                            type="button"
+                            id="useCompanyAddress"
+                            class="company-address-toggle"
+                            data-company-address="{{ [job.employer.street, job.employer.barangay, job.employer.city, job.employer.province] | select | join(', ') }}"
+                        >
+                            Use company address
+                        </button>
+                    </div>
+
+                    <input
+                        type="text"
+                        id="interviewLocationInput"
+                        name="interview_location" maxlength="220"
+                        placeholder="Interview location address"
+                        required
+                    >
+
+                    <input type="hidden" id="interviewLocationValue">
+
+                    <input
+                        type="text"
+                        id="interviewFloorRoomInput"
+                        name="interview_floor_room" maxlength="30"
+                        placeholder="Floor / room / unit (optional)"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="interviewNotes">Notes (Optional)</label>
+                    <textarea
+                        id="interviewNotes"
+                        name="interview_notes" maxlength="5000"
+                        rows="4"
+                        placeholder="Add reminders or instructions for the applicant..."
+                    ></textarea>
+                </div>
+
+                <button type="submit" class="btn-primary-action interview-submit-button">
+                    <i class="fa-solid fa-calendar-check"></i>
+                    Save Interview Schedule
+                </button>
+            </form>
+        </div>
+    </div>
+
+</main>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/employer/employer_shortlist.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,1159 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}employer-app{% endblock %}
+
+{% block title %}PESO - Job Fair Details{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_shared_safe.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_jobfair_details.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+    .fair-requirement-card {
+        margin: 16px 0;
+        padding: 18px;
+        border: 1px solid #dbe4ef;
+        border-radius: 12px;
+        background: #f8fbff;
+    }
+
+    #fairJobSubmitBtn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    @media (max-width: 700px) {
+        .fair-standard-row {
+            grid-template-columns: 1fr !important;
+        }
+    }
+
+    #fairJobModal label .required-indicator {
+    display: inline !important;
+    color: #dc2626 !important;
+    font-weight: 700 !important;
+    margin-left: 4px;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+</style>
+
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/employer_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="page-container">
+
+    <!-- Back Link -->
+    <a href="{{ url_for('employer.job_fairs') }}" class="back-link">
+        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+        <span>Back to Job Fairs</span>
+    </a>
+
+    <!-- ================= HERO ================= -->
+    <section class="fair-hero">
+        <div class="hero-main">
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                {% if job_fair.status == "Finished" %}
+                Event Finished
+                {% elif job_fair.status == "Ongoing" %}
+                Event Ongoing
+                {% elif job_fair.status == "Upcoming" %}
+                Upcoming
+                {% else %}
+                {{ job_fair.status }}
+                {% endif %}
+            </div>
+
+            <h1>{{ job_fair.title }}</h1>
+
+            <p>
+                Connect with qualified jobseekers and explore employment opportunities through this PESO Job Fair.
+            </p>
+        </div>
+
+        {% if not registration and registration_open %}
+        <div class="hero-action">
+            <a href="#registrationSection" class="primary-btn">
+                Register for Job Fair
+            </a>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- ================= EVENT OVERVIEW ================= -->
+    <section class="event-overview">
+        <!-- DATE -->
+        <div class="overview-item">
+            <div class="overview-icon">
+                <i class="fa-regular fa-calendar"></i>
+            </div>
+            <div>
+                <span class="overview-label">DATE</span>
+                <strong>
+                    {{ job_fair.start_datetime.strftime('%B %d, %Y') }}
+                    {% if job_fair.end_datetime %}
+                    - {{ job_fair.end_datetime.strftime('%B %d, %Y') }}
+                    {% endif %}
+                </strong>
+            </div>
+        </div>
+
+        <!-- TIME -->
+        <div class="overview-item">
+            <div class="overview-icon">
+                <i class="fa-regular fa-clock"></i>
+            </div>
+            <div>
+                <span class="overview-label">TIME</span>
+                <strong>
+                    {{ job_fair.start_datetime.strftime('%I:%M %p') }}
+                    {% if job_fair.end_datetime %}
+                    - {{ job_fair.end_datetime.strftime('%I:%M %p') }}
+                    {% endif %}
+                </strong>
+            </div>
+        </div>
+
+        <!-- VENUE -->
+        <div class="overview-item">
+            <div class="overview-icon">
+                <i class="fa-solid fa-location-dot"></i>
+            </div>
+            <div>
+                <span class="overview-label">VENUE</span>
+                <strong>{{ job_fair.venue or 'To be announced' }}</strong>
+            </div>
+        </div>
+
+        <!-- REGISTRATION DEADLINE -->
+        <div class="overview-item">
+            <div class="overview-icon">
+                <i class="fa-solid fa-hourglass-half"></i>
+            </div>
+            <div>
+                <span class="overview-label">REGISTRATION DEADLINE</span>
+                <strong>
+                    {% if job_fair.registration_deadline %}
+                    {{ job_fair.registration_deadline.strftime('%B %d, %Y') }}
+                    {% else %}
+                    N/A
+                    {% endif %}
+                </strong>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= TWO COLUMN CONTENT ================= -->
+    <section class="content-grid">
+
+        <!-- ABOUT -->
+        <div class="content-card about-card">
+            <div class="section-heading">
+                <div class="heading-icon">
+                    <i class="fa-solid fa-circle-info"></i>
+                </div>
+                <div>
+                    <h2>About this Job Fair</h2>
+                    <p>Event information</p>
+                </div>
+            </div>
+
+            <div class="about-content">
+                {% if job_fair.description %}
+                <p>{{ job_fair.description }}</p>
+                {% else %}
+                <p>
+                    Join this upcoming PESO Job Fair and connect with jobseekers looking for employment opportunities.
+                    Participating employers may showcase their available positions and meet potential candidates during
+                    the event.
+                </p>
+                {% endif %}
+
+                <p>
+                    Employers are encouraged to prepare their job vacancies, company information, and representatives
+                    before the registration deadline.
+                </p>
+            </div>
+
+            <div class="event-note">
+                <div class="note-icon">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                </div>
+                <div>
+                    <strong>Important</strong>
+                    <p>
+                        Please complete your registration before the registration deadline.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- REGISTRATION -->
+        <div class="content-card registration-card" id="registrationSection">
+            <div class="section-heading">
+                <div class="heading-icon">
+                    <i class="fa-solid fa-building"></i>
+                </div>
+                <div>
+                    <h2>Registration</h2>
+                    <p>Employer participation</p>
+                </div>
+            </div>
+
+            {% if event_finished and not registration %}
+            <div class="event-note" style="background: #fde8e8; border-color: #f8b4b4;">
+                <div class="note-icon" style="color: #c81e1e;">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                </div>
+                <div>
+                    <strong style="color: #9b1c1c;">Event Ended</strong>
+                    <p style="color: #9b1c1c;">This event has ended.</p>
+                </div>
+            </div>
+
+            {% elif registration_deadline_passed and not registration %}
+            <div class="event-note">
+                <div class="note-icon">
+                    <i class="fa-solid fa-hourglass-end"></i>
+                </div>
+                <div>
+                    <strong>Deadline Passed</strong>
+                    <p>Registration deadline has passed for this event.</p>
+                </div>
+            </div>
+
+            {% elif not registration and registration_open %}
+            <form id="jobFairRegistrationForm" class="job-fair-registration-form"
+                action="{{ url_for('employer.register_job_fair', job_fair_id=job_fair.job_fair_id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <label for="companyName">Company Name</label>
+                    <input type="text" id="companyName" value="{{ employer.company_name }}" readonly>
+                </div>
+
+                {% if employer.company_phone %}
+                <div class="form-group">
+                    <label for="contactNumber">Contact Number</label>
+                    <input type="text" id="contactNumber" value="{{ employer.company_phone }}" readonly>
+                </div>
+                {% endif %}
+
+                <div class="form-group">
+                   <label for="exclusiveRepresentatives">
+    Number of Representatives <span class="required-indicator">*</span>
+</label>
+                    <input type="number" id="representatives" name="representatives" min="1" max="15" value="1" required>
+                    <small>Maximum of 15 representatives per employer.</small>
+                </div>
+
+                <div class="form-group">
+                  <label for="exclusiveInterviewCapacity">
+    Simultaneous Interview Capacity <span class="required-indicator">*</span>
+</label>
+                    <input type="number" id="simultaneousInterviewCapacity" name="simultaneous_interview_capacity" min="1" max="15" value="1" required>
+                    <small>Must not exceed the number of representatives. PESO may adjust this based on booth or venue capacity.</small>
+                </div>
+
+            </form>
+
+
+            {% elif registration %}
+            <div class="registration-summary">
+
+                <div class="registration-summary-top">
+                    <div>
+                        <span class="registration-status-label">REGISTRATION STATUS</span>
+
+                        <div class="registration-status-row">
+                            <span class="status-badge status-{{ registration.status|lower }}">
+                                {{ registration.status }}
+                            </span>
+
+                            {% if registration.status == "Approved" and registration.booth_number %}
+                            <span class="booth-badge">
+                                <i class="fa-solid fa-store"></i>
+                                Booth {{ registration.booth_number }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if registration.status == "Approved" and job_fair.status == "Ongoing" %}
+                    <a href="{{ url_for('employer.queue_management') }}" class="primary-btn queue-management-link">
+                        <i class="fa-solid fa-list-ol"></i>
+                        Queue Management
+                    </a>
+                    {% endif %}
+                </div>
+
+                {% if registration.status == "Pending" %}
+                <div class="registration-state-note pending">
+                    <i class="fa-solid fa-clock"></i>
+                    <span>
+                        PESO is still reviewing your Job Fair registration.
+                        You may update your selected jobs while registration remains editable.
+                    </span>
+                </div>
+
+                {% elif registration.status == "Approved" %}
+                <div class="registration-state-note approved">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>
+                        Your company is approved for this Job Fair.
+                        {% if registration.booth_number %}
+                        Your assigned booth is <strong>{{ registration.booth_number }}</strong>.
+                        {% endif %}
+                    </span>
+                </div>
+
+                {% elif registration.status == "Rejected" %}
+                <div class="registration-state-note rejected">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                    <span>
+                        This Job Fair registration was not approved.
+                        Review the registration details and contact PESO if clarification is needed.
+                    </span>
+                </div>
+
+                {% elif registration.status == "Cancelled" %}
+                <div class="registration-state-note rejected">
+                    <i class="fa-solid fa-ban"></i>
+                    <span>This Job Fair registration has been cancelled.</span>
+                </div>
+                {% endif %}
+
+                <div class="form-group registration-representatives">
+                    <label>Representatives Attending</label>
+                    <input type="text" value="{{ registration.representatives }}" readonly>
+                </div>
+
+                <div class="form-group registration-representatives">
+                    <label>Simultaneous Interview Capacity</label>
+                    <input type="text" value="{{ registration.simultaneous_interview_capacity or 1 }}" readonly>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- ================= JOBS SECTION ================= -->
+    <!-- ================= JOBS SECTION ================= -->
+    <section class="jobs-section">
+        <div class="section-top">
+            <div class="section-heading">
+                <div class="heading-icon">
+                    <i class="fa-solid fa-briefcase"></i>
+                </div>
+                <div>
+                    <h2>Jobs to be Offered</h2>
+                    {% if not registration %}
+                    <p>Select at least one approved job, or create a position exclusively for this Job Fair.</p>
+                    {% else %}
+                    <p>Select or view the positions your company will offer.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if not registration %}
+            {% set total_jobs = available_jobs|length %}
+            {% else %}
+            {% set total_jobs = selected_jobs|length %}
+            {% endif %}
+
+            <span class="job-count">
+                {{ total_jobs }} Position{% if total_jobs != 1 %}s{% endif %}
+            </span>
+        </div>
+
+        <!-- ================================================= -->
+        <!-- NOT YET REGISTERED -->
+        <!-- ================================================= -->
+        {% if not registration and registration_open %}
+        <div class="fair-job-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+            {% if available_jobs %}
+            {% for job in available_jobs %}
+            <div class="registration-option" style="margin-bottom: 0;">
+                <label class="checkbox-row">
+                    <input type="checkbox" name="job_ids" value="{{ job.job_id }}" form="jobFairRegistrationForm"
+                        class="pre-registration-job">
+                    <span class="custom-checkbox"></span>
+                    <span class="checkbox-text" style="width: 100%;">
+                        <strong style="font-size: 13px; color: #243044;">
+                            {{ job.job_title }}
+                            <span
+                                style="font-size: 10px; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 12px; margin-left: 6px;">
+                                Approved
+                            </span>
+                        </strong>
+                        <small>
+                            {{ job.category }} &bull; {{ job.employment_type }} &bull; ₱{{
+                            "{:,.0f}".format(job.salary_min) }} - ₱{{ "{:,.0f}".format(job.salary_max) }}
+                            {% if job.deadline %}
+                            &bull; Deadline: {{ job.deadline.strftime('%B %d, %Y') }}
+                            {% endif %}
+                        </small>
+                    </span>
+                </label>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="jobs-empty">
+                <div class="empty-icon">
+                    <i class="fa-solid fa-briefcase"></i>
+                </div>
+                <h3>No Eligible Existing Jobs</h3>
+                <p>You currently have no approved and open regular jobs that remain valid for this Job Fair. You may
+                    create a Job Fair-exclusive position instead.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- PRE-REGISTRATION ACTIONS -->
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 15px;">
+            <button type="button" class="secondary-btn open-fair-job-modal">
+                <i class="fa-solid fa-plus"></i>
+                Create Job Fair-Exclusive Position
+            </button>
+
+            <button type="submit" form="jobFairRegistrationForm" class="primary-btn" id="submitFairRegistration">
+                <span id="submitBtnText">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    Submit Registration
+                </span>
+                <span id="submitBtnSpinner" style="display: none;">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    Processing...
+                </span>
+            </button>
+        </div>
+
+        <!-- ================================================= -->
+        <!-- PENDING REGISTRATION -->
+        <!-- ================================================= -->
+        {% elif registration and registration.status == "Pending" %}
+        <form id="jobSelectionForm"
+            action="{{ url_for('employer.select_job_fair_jobs', job_fair_id=job_fair.job_fair_id) }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            {% set selected_ids = selected_jobs | map(attribute='job_id') | list if selected_jobs else [] %}
+
+            <div class="fair-job-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+                {% for job in available_jobs %}
+                <div class="registration-option" style="margin-bottom: 0;">
+                    <label class="checkbox-row">
+                        <input type="checkbox" name="job_ids" value="{{ job.job_id }}" {% if job.job_id in selected_ids
+                            %}checked{% endif %}>
+                        <span class="custom-checkbox"></span>
+                        <span class="checkbox-text" style="width: 100%;">
+                            <strong style="font-size: 13px; color: #243044;">
+                                {{ job.job_title }}
+                                <span
+                                    style="font-size: 10px; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 12px; margin-left: 6px;">
+                                    Referral Job
+                                </span>
+                            </strong>
+                            <small>
+                                {{ job.category }} &bull; {{ job.employment_type }} &bull; ₱{{
+                                "{:,.0f}".format(job.salary_min) }} - ₱{{ "{:,.0f}".format(job.salary_max) }}
+                            </small>
+                        </span>
+                    </label>
+                </div>
+                {% endfor %}
+
+                {% for job in exclusive_jobs %}
+                <div class="registration-option" style="margin-bottom: 0; background: #f8fafc; border-style: dashed;">
+                    <div class="checkbox-text">
+                        <strong style="font-size: 13px; color: #243044;">
+                            {{ job.job_title }}
+                            <span
+                                style="font-size: 10px; background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 12px; margin-left: 6px;">
+                                Job Fair Exclusive
+                            </span>
+                        </strong>
+                        <small>
+                            {{ job.category }} &bull; {{ job.employment_type }} &bull; ₱{{
+                            "{:,.0f}".format(job.salary_min) }} - ₱{{ "{:,.0f}".format(job.salary_max) }} &bull;
+                            Approval: {{ job.approval_status }}
+                        </small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 15px;">
+                {% if registration_open %}
+                <button type="button" class="secondary-btn open-fair-job-modal">
+                    <i class="fa-solid fa-plus"></i>
+                    Add Job Fair-Exclusive Position
+                </button>
+                {% endif %}
+
+                <button type="submit" class="primary-btn" {% if not registration_open %}disabled{% endif %}>
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Save Job Selection
+                </button>
+            </div>
+        </form>
+
+        <!-- ================================================= -->
+        <!-- APPROVED / REJECTED / OTHER REGISTRATION STATUS -->
+        <!-- ================================================= -->
+        {% elif registration %}
+        <div class="fair-job-list" style="display: flex; flex-direction: column; gap: 12px;">
+            {% if selected_jobs %}
+            {% for job in selected_jobs %}
+            <div class="registration-option" style="margin-bottom: 0;">
+                <div class="checkbox-text">
+                    <strong style="font-size: 13px; color: #243044;">
+                        {{ job.job_title }}
+                        {% if job.job_type == "Job Fair" %}
+                        <span
+                            style="font-size: 10px; background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 12px; margin-left: 6px;">
+                            Job Fair Exclusive
+                        </span>
+                        {% else %}
+                        <span
+                            style="font-size: 10px; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 12px; margin-left: 6px;">
+                            Referral Job
+                        </span>
+                        {% endif %}
+                    </strong>
+                    <small>
+                        {{ job.category }} &bull; {{ job.employment_type }} &bull; ₱{{ "{:,.0f}".format(job.salary_min)
+                        }} - ₱{{ "{:,.0f}".format(job.salary_max) }}
+                        {% if job.job_type == "Job Fair" %}
+                        &bull; Approval: {{ job.approval_status }}
+                        {% else %}
+                        &bull; Normal PESO Referral position
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="jobs-empty">
+                <h3>No Jobs Selected</h3>
+                <p>There are no positions attached to this Job Fair registration.</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- ================= SPECIAL REQUESTS ================= -->
+    <section class="content-card special-card">
+        <div class="section-heading">
+            <div class="heading-icon">
+                <i class="fa-regular fa-message"></i>
+            </div>
+            <div>
+                <h2>Special Requests</h2>
+                <p>Additional information for PESO</p>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="special_requests">Special Requests or Notes</label>
+            <!-- Linked to jobSelectionForm via form attribute -->
+            <textarea id="special_requests" name="special_requests" maxlength="2000" {% if not registration %}
+                form="jobFairRegistrationForm" {% elif registration.status=="Pending" %} form="jobSelectionForm" {%
+                endif %} rows="4" placeholder="Enter any special requests, requirements, or additional information..."
+                {% if registration and registration.status !="Pending" %} readonly {% endif
+                %}>{{ (registration.special_requests if registration else '') or '' }}</textarea>
+        </div>
+    </section>
+
+</main>
+
+<!-- ================= CREATE FAIR JOB MODAL ================= -->
+{% if registration_open and ( not registration or registration.status == "Pending")%}
+<div id="fairJobModal" class="modal fair-job-modal" style="display:none;">
+    <div class="modal-content fair-job-modal-content">
+
+        <div class="modal-header fair-job-modal-header">
+            <div>
+                <h2>Create Job for Job Fair</h2>
+                <p>Create a new job specifically for this Job Fair</p>
+            </div>
+            <button type="button" class="close-fair-modal" id="closeFairJobModal" aria-label="Close modal">&times;</button>
+        </div>
+
+        <form
+            action="{% if not registration %}{{ url_for('employer.create_exclusive_job_and_register', job_fair_id=job_fair.job_fair_id) }}{% else %}{{ url_for('employer.create_job_fair_job', job_fair_id=job_fair.job_fair_id) }}{% endif %}"
+            method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            {% if not registration %}
+
+            <div class="event-note" style="margin-bottom: 20px;">
+                <div class="note-icon">
+                    <i class="fa-solid fa-circle-info"></i>
+                </div>
+                <div>
+                    <strong>Register using this exclusive position</strong>
+                    <p>
+                        Creating this position will also submit
+                        your employer registration for this Job Fair.
+                    </p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="exclusiveRepresentatives">Number of Representatives</label>
+                <input type="number" id="exclusiveRepresentatives" name="representatives" min="1" max="15" value="1" required>
+            </div>
+
+            <div class="form-group">
+                <label for="exclusiveInterviewCapacity">Simultaneous Interview Capacity</label>
+                <input type="number" id="exclusiveInterviewCapacity" name="simultaneous_interview_capacity" min="1" max="15" value="1" required>
+                <small>Must not exceed the number of representatives. PESO may adjust this based on booth or venue capacity.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="exclusiveSpecialRequests">Special Requests or Notes</label>
+                <textarea id="exclusiveSpecialRequests" name="special_requests" maxlength="2000" rows="3"
+                    placeholder="Optional special requests or requirements..."></textarea>
+            </div>
+
+            {% endif %}
+
+            <div class="fair-job-form-grid">
+                <div class="form-group">
+                    <label>Company Name</label>
+                    <input type="text" value="{{ employer.company_name }}" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label>Job Title</label>
+                    <input type="text" name="job_title" maxlength="150" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="fairCategory" name="category" required>
+                        <option value="">Select Category</option>
+                        <option value="Administrative & Office Support">Administrative & Office Support</option>
+                        <option value="Agriculture & Fisheries">Agriculture & Fisheries</option>
+                        <option value="Architecture & Engineering">Architecture & Engineering</option>
+                        <option value="Arts, Design & Media">Arts, Design & Media</option>
+                        <option value="Automotive">Automotive</option>
+                        <option value="Banking & Financial Services">Banking & Financial Services</option>
+                        <option value="Beauty & Wellness">Beauty & Wellness</option>
+                        <option value="BPO / Customer Service">BPO / Customer Service</option>
+                        <option value="Construction">Construction</option>
+                        <option value="Education & Training">Education & Training</option>
+                        <option value="Food Service & Hospitality">Food Service & Hospitality</option>
+                        <option value="Healthcare & Medical">Healthcare & Medical</option>
+                        <option value="Human Resources">Human Resources</option>
+                        <option value="Information Technology (IT)">Information Technology (IT)</option>
+                        <option value="Logistics & Supply Chain">Logistics & Supply Chain</option>
+                        <option value="Manufacturing & Production">Manufacturing & Production</option>
+                        <option value="Marketing & Sales">Marketing & Sales</option>
+                        <option value="Retail & Merchandising">Retail & Merchandising</option>
+                        <option value="Science & Research">Science & Research</option>
+                        <option value="Security & Protective Services">Security & Protective Services</option>
+                        <option value="Skilled Trades & Technical">Skilled Trades & Technical</option>
+                        <option value="Telecommunications">Telecommunications</option>
+                        <option value="Tourism & Travel">Tourism & Travel</option>
+                        <option value="Transportation & Delivery">Transportation & Delivery</option>
+                        <option value="Others">Others</option>
+                    </select>
+                    <input type="text" id="fairOtherCategory" name="other_category" maxlength="100" placeholder="Enter custom category"
+                        style="display: none; margin-top: 10px;">
+                </div>
+
+                <div class="form-group">
+                    <label>Employment Type</label>
+                    <select name="employment_type" required>
+                        <option value="">Select Employment Type</option>
+                        <option value="Full Time">Full Time</option>
+                        <option value="Part Time">Part Time</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Vacancies</label>
+                    <input type="number" name="vacancies" min="1" max="100000" value="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="fairSalaryMin">Minimum Salary (₱)</label>
+                    <input type="text" id="fairSalaryMin" name="salary_min" class="salary-input" inputmode="decimal"
+                        placeholder="e.g. 15,000" autocomplete="off" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="fairSalaryMax">Maximum Salary (₱)</label>
+                    <input type="text" id="fairSalaryMax" name="salary_max" class="salary-input" inputmode="decimal"
+                        placeholder="e.g. 25,000" autocomplete="off" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Job Description</label>
+                <textarea name="description" maxlength="10000" rows="4" required></textarea>
+            </div>
+
+            <!-- ================= STRUCTURED REQUIREMENTS ================= -->
+            <details class="form-drawer form-drawer--important" open>
+                <summary>
+                    <span class="drawer-heading">
+                        <span class="drawer-title"><i class="fa-solid fa-graduation-cap"></i> Job Requirements</span>
+                        <span class="drawer-hint">Minimum education and relevant experience used for applicant matching.</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down drawer-chevron"></i>
+                </summary>
+                <div class="drawer-body">
+                    <div class="fair-job-form-grid">
+                        <div class="form-group">
+                            <label>Minimum Education</label>
+                            <select name="minimum_education" required>
+                                <option value="">Select Minimum Education</option>
+                                <option value="NONE">No Minimum Education</option>
+                                <option value="JHS">Junior High School</option>
+                                <option value="HS">High School Graduate / Equivalent</option>
+                                <option value="SHS">Senior High School Graduate</option>
+                                <option value="COLLEGE_UNDERGRAD">College Undergraduate</option>
+                                <option value="ASSOCIATE">Associate / 2-Year College Graduate</option>
+                                <option value="BACHELOR">Bachelor's Degree Graduate</option>
+                                <option value="RELEVANT_BACHELOR">Relevant Bachelor's Degree</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Minimum Relevant Experience</label>
+                            <select name="minimum_experience_months" required>
+                                <option value="">Select Experience</option>
+                                <option value="0">No Experience Required</option>
+                                <option value="6">6 Months</option>
+                                <option value="12">1 Year</option>
+                                <option value="24">2 Years</option>
+                                <option value="36">3 Years</option>
+                                <option value="60">5 Years</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <!-- ================= COMMON QUALIFICATIONS ================= -->
+            <details class="form-drawer" open>
+                <summary>
+                    <span class="drawer-heading">
+                        <span class="drawer-title"><i class="fa-solid fa-list-check"></i> Common Qualifications <span class="peso-job-required" aria-label="Required field">Required</span></span>
+                        <span class="drawer-hint">Select at least one common qualification, then mark each selection as Required or Preferred. (Select at least 1)</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down drawer-chevron"></i>
+                </summary>
+                <div class="drawer-body">
+                    <small class="peso-common-qualification-error" role="status" hidden></small>
+                    <div id="fairStandardQualifications" class="qualification-options">
+                        {% set common_qualifications = [
+                        ('SKILL_COMPUTER', 'Computer Literate'),
+                        ('SKILL_MS_OFFICE', 'Microsoft Office Proficiency'),
+                        ('SKILL_DATA_ENTRY', 'Data Entry / Typing Skills'),
+                        ('SKILL_COMMUNICATION', 'Communication Skills'),
+                        ('SKILL_CUSTOMER_SERVICE', 'Customer Service Skills'),
+                        ('SKILL_SALES', 'Sales Skills'),
+                        ('SKILL_POS_CASHIER', 'Cash Handling / POS Skills'),
+                        ('SKILL_ADMIN', 'Administrative / Clerical Skills'),
+                        ('CERT_TESDA', 'TESDA / TVET Certification'),
+                        ('CERT_PRO_LICENSE', 'Professional License'),
+                        ('CERT_DRIVER', "Driver's License"),
+                        ('CERT_CSE', 'Civil Service Eligibility')
+                        ] %}
+                        {% for code, label in common_qualifications %}
+                        <div class="fair-standard-row qualification-option">
+                            <label class="qualification-check">
+                                <input type="checkbox" name="standard_qualification[]" value="{{ code }}"
+                                    class="fair-standard-checkbox" data-code="{{ code }}">
+                                <span>{{ label }}</span>
+                            </label>
+                            <select name="importance_{{ code }}" class="fair-importance-select" data-code="{{ code }}" disabled>
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </details>
+
+            <!-- ================= ADDITIONAL QUALIFICATIONS ================= -->
+            <details class="form-drawer" open>
+                <summary>
+                    <span class="drawer-summary-copy">
+                        <span class="drawer-title"><i class="fa-solid fa-circle-plus"></i> Additional Qualifications</span>
+                        <span class="drawer-hint">Enter at least one job-specific qualification not covered above. (Add at least 1)</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down drawer-chevron" aria-hidden="true"></i>
+                </summary>
+                <div class="drawer-body">
+                    <div id="fairQualificationsList">
+                        <div class="fair-list-item">
+                            <input type="text" name="qualification[]" maxlength="500"
+                                placeholder="e.g. Knowledge of basic bookkeeping is preferred">
+                            <button type="button" class="secondary-btn remove-btn"
+                                aria-label="Remove qualification">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" class="secondary-btn" id="fairAddQualification">
+                        <i class="fa-solid fa-plus"></i> Add Qualification
+                    </button>
+                </div>
+            </details>
+
+            <!-- ================= RESPONSIBILITIES ================= -->
+            <details class="form-drawer" open>
+                <summary>
+                    <span class="drawer-summary-copy">
+                        <span class="drawer-title"><i class="fa-solid fa-list-check"></i> Responsibilities</span>
+                        <span class="drawer-hint">Enter at least one main duty or responsibility for this position. (Add at least 1)</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down drawer-chevron" aria-hidden="true"></i>
+                </summary>
+                <div class="drawer-body">
+                    <div id="fairResponsibilitiesList">
+                        <div class="fair-list-item">
+                            <input type="text" name="responsibility[]" maxlength="500" placeholder="Develop web applications">
+                            <button type="button" class="secondary-btn remove-btn"
+                                aria-label="Remove responsibility">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" class="secondary-btn" id="fairAddResponsibility">
+                        <i class="fa-solid fa-plus"></i> Add Responsibility
+                    </button>
+                </div>
+            </details>
+
+            <div class="fair-job-modal-actions">
+                <button type="button" class="secondary-btn" id="fairCancelJob">Cancel</button>
+                <button type="submit" class="primary-btn" id="fairJobSubmitBtn">
+                    {% if not registration %}
+                    <i class="fa-solid fa-paper-plane"></i>
+                    Create Position &amp; Register
+                    {% else %}
+                    <i class="fa-solid fa-plus"></i>
+                    Submit Job
+                    {% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+
+
+
+
+
+
+
+<!-- Client-side sync script -->
+<script>
+    document.getElementById('jobSelectionForm')?.addEventListener('submit', function () {
+        const textVal = document.getElementById('special_requests')?.value || '';
+        let hiddenField = this.querySelector('input[name="special_requests" maxlength="2000"]');
+        if (!hiddenField) {
+            hiddenField = document.createElement('input');
+            hiddenField.type = 'hidden';
+            hiddenField.name = 'special_requests';
+            this.appendChild(hiddenField);
+        }
+        hiddenField.value = textVal;
+    });
+</script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const registrationForm = document.getElementById("jobFairRegistrationForm");
+        const submitButton = document.getElementById("submitFairRegistration");
+        const buttonText = document.getElementById("submitBtnText");
+        const buttonSpinner = document.getElementById("submitBtnSpinner");
+
+        if (!registrationForm) return;
+
+        registrationForm.addEventListener("submit", function (event) {
+            const selectedJobs = document.querySelectorAll(".pre-registration-job:checked");
+
+            if (selectedJobs.length === 0) {
+                event.preventDefault();
+                window.showFlash(
+                    "Please select at least one approved job before submitting your registration. " +
+                    "If you do not have an eligible job, create a Job Fair-exclusive position instead.", "warning"
+                );
+                return;
+            }
+
+            if (submitButton) submitButton.disabled = true;
+            if (buttonText) buttonText.style.display = "none";
+            if (buttonSpinner) buttonSpinner.style.display = "inline";
+        });
+    });
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const fairJobModal = document.getElementById("fairJobModal");
+
+        if (!fairJobModal) return;
+
+        const fairJobForm = fairJobModal.querySelector("form");
+        const submitButton = document.getElementById("fairJobSubmitBtn");
+
+        if (!fairJobForm || !submitButton) return;
+
+        // Format Job Fair salary inputs with thousands separators while typing.
+        // The backend already removes commas before Decimal conversion.
+        function formatFairSalaryValue(value) {
+            if (!value) return "";
+
+            let cleaned = String(value)
+                .replace(/,/g, "")
+                .replace(/[^0-9.]/g, "");
+
+            const firstDecimal = cleaned.indexOf(".");
+            if (firstDecimal !== -1) {
+                cleaned =
+                    cleaned.slice(0, firstDecimal + 1) +
+                    cleaned.slice(firstDecimal + 1).replace(/\./g, "");
+            }
+
+            let [whole, decimal] = cleaned.split(".");
+            whole = whole.replace(/^0+(?=\d)/, "");
+            whole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+            if (decimal !== undefined) {
+                decimal = decimal.slice(0, 2);
+                return `${whole}.${decimal}`;
+            }
+
+            return whole;
+        }
+
+        fairJobForm.querySelectorAll(".salary-input").forEach(function (input) {
+            if (input.value) {
+                input.value = formatFairSalaryValue(input.value);
+            }
+
+            input.addEventListener("input", function () {
+                this.value = formatFairSalaryValue(this.value);
+            });
+        });
+
+        function syncImportanceState() {
+            fairJobForm
+                .querySelectorAll(".fair-standard-checkbox")
+                .forEach(function (checkbox) {
+                    const code = checkbox.dataset.code;
+
+                    const select = fairJobForm.querySelector(
+                        `.fair-importance-select[data-code="${code}"]`
+                    );
+
+                    if (!select) return;
+
+                    select.disabled = !checkbox.checked;
+                });
+        }
+
+        function normalizeDynamicFields() {
+    fairJobForm
+        .querySelectorAll(
+            'input[name="qualification[]"][maxlength="500"], input[name="responsibility[]"][maxlength="500"]'
+        
+                )
+                .forEach(function (input) {
+                    input.required = false;
+                });
+        }
+
+        function fairJobFormIsComplete() {
+            normalizeDynamicFields();
+            syncImportanceState();
+
+            if (!fairJobForm.checkValidity()) {
+                return false;
+            }
+
+            const qualificationInputs = Array.from(
+                fairJobForm.querySelectorAll(
+                   'input[name="qualification[]"][maxlength="500"]'
+                )
+            );
+
+            if (
+                qualificationInputs.length === 0
+                || !qualificationInputs.some(
+                    input => input.value.trim() !== ""
+                )
+            ) {
+                return false;
+            }
+
+            const responsibilityInputs = Array.from(
+                fairJobForm.querySelectorAll(
+                    'input[name="responsibility[]" maxlength="500"]'
+                )
+            );
+
+            if (
+                responsibilityInputs.length === 0
+                || !responsibilityInputs.some(
+                    input => input.value.trim() !== ""
+                )
+            ) {
+                return false;
+            }
+
+            if (!fairJobForm.querySelector('input[name="standard_qualification[]"]:checked')) return false;
+            return true;
+        }
+
+        // Keep the submit control available so a missing/invalid field can
+        // be reported instead of silently leaving the button disabled.
+        function updateFairJobSubmitButton() {
+            syncImportanceState();
+            submitButton.disabled = false;
+        }
+
+        function explainInvalidField() {
+            const invalid = Array.from(fairJobForm.elements).find(function (field) {
+                return field.willValidate && !field.checkValidity();
+            });
+            if (!invalid) return;
+            const label = invalid.labels && invalid.labels.length
+                ? invalid.labels[0].textContent.trim()
+                : (invalid.closest('.form-group')?.querySelector('label')?.textContent.trim()
+                    || invalid.name || 'a required field');
+            const drawer = invalid.closest('details');
+            if (drawer) drawer.open = true;
+            invalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            invalid.focus({ preventScroll: true });
+            invalid.reportValidity();
+            if (typeof window.showFlash === 'function') {
+                window.showFlash('Please check ' + label + ': ' +
+                    (invalid.validationMessage || 'Invalid value.'), 'warning');
+            }
+        }
+
+        fairJobForm.addEventListener(
+            "input",
+            updateFairJobSubmitButton
+        );
+
+        fairJobForm.addEventListener("change", function (event) {
+            if (event.target.classList.contains("fair-standard-checkbox")) {
+                const checkbox = event.target;
+                const code = checkbox.dataset.code;
+                const select = fairJobForm.querySelector(
+                    `.fair-importance-select[data-code="${code}"]`
+                );
+
+                if (select) {
+                    select.disabled = !checkbox.checked;
+                    if (!checkbox.checked) {
+                        select.value = "Required";
+                    }
+                }
+            }
+
+            updateFairJobSubmitButton();
+        });
+
+        fairJobModal.addEventListener(
+            "click",
+            function () {
+                setTimeout(
+                    updateFairJobSubmitButton,
+                    0
+                );
+            }
+        );
+
+        const observer = new MutationObserver(function () {
+            normalizeDynamicFields();
+            updateFairJobSubmitButton();
+        });
+
+        const qualificationsList =
+            document.getElementById(
+                "fairQualificationsList"
+            );
+
+        const responsibilitiesList =
+            document.getElementById(
+                "fairResponsibilitiesList"
+            );
+
+        if (qualificationsList) {
+            observer.observe(
+                qualificationsList,
+                {
+                    childList: true,
+                    subtree: true
+                }
+            );
+        }
+
+        if (responsibilitiesList) {
+            observer.observe(
+                responsibilitiesList,
+                {
+                    childList: true,
+                    subtree: true
+                }
+            );
+        }
+
+        fairJobForm.addEventListener('invalid', function (event) {
+            const drawer = event.target.closest('details');
+            if (drawer) drawer.open = true;
+        }, true);
+
+        fairJobForm.addEventListener(
+            "submit",
+            function (event) {
+                normalizeDynamicFields();
+                syncImportanceState();
+
+                if (!fairJobFormIsComplete()) {
+                    event.preventDefault();
+
+                    explainInvalidField();
+
+                    return;
+                }
+
+                submitButton.disabled = true;
+
+                submitButton.innerHTML = `
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    Submitting...
+                `;
+            }
+        );
+
+        syncImportanceState();
+        normalizeDynamicFields();
+        updateFairJobSubmitButton();
+    });
+</script>
+
+<script src="{{ url_for('static', filename='javascript/employer/employer_jobfair_details.js') }}"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_job_form_validation.css', v='20261022f') }}">
+<script src="{{ url_for('static', filename='javascript/employer/employer_job_form_validation.js', v='20261022f') }}"></script>
+{% endblock %}

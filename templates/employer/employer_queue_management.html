@@ -1,0 +1,1316 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}employer-app{% endblock %}
+
+{% block title %}
+PESO: Queue Management
+{% endblock %}
+
+{% block css %}
+
+<link rel="stylesheet" href="{{ url_for(
+        'static',
+        filename='css/employer/employer_queue_management.css'
+    ) }}">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+/* Standard Employer Job Fair back-link styling. */
+.page-header .queue-header-actions { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-left:auto; }
+.page-header .queue-back-job-fairs { display:inline-flex; align-items:center; gap:9px; color:#5d6878; text-decoration:none; font-size:13px; font-weight:500; transition:color .2s ease; }
+.page-header .queue-back-job-fairs:hover { color:#143c86; }
+.page-header .queue-back-job-fairs i { font-size:12px; }
+.page-header .queue-back-job-fairs:focus-visible { outline:2px solid #143c86; outline-offset:4px; border-radius:3px; }
+@media(max-width:800px) { .page-header .queue-header-actions { width:100%; margin-left:0; justify-content:flex-start; } }
+</style>
+
+{% endblock %}
+
+
+
+{% block navbar %}
+
+{% if not is_temporary_station %}{% include "layouts/employer_navbar.html" %}{% endif %}
+
+{% endblock %}
+
+{% block content %}
+
+<input type="hidden" id="csrfToken" value="{{ csrf_token() }}">
+{% if ongoing_job_fair %}<div id="queueAutoRefresh" data-state-url="{{ url_for('employer.queue_management_state') }}" data-signature="{{ queue_state_signature }}" hidden></div>{% endif %}
+
+<!-- =========================================================
+    PAGE HEADER
+========================================================= -->
+
+<section class="page-header">
+
+    <div class="page-header-content">
+
+        <div class="page-header-icon">
+            <i class="fa-solid fa-list-check"></i>
+        </div>
+
+        <div class="page-header-text">
+
+            <span class="page-eyebrow">
+                {% if current_station %}INTERVIEW STATION {{ current_station.station_number }}{% else %}EMPLOYER PORTAL{% endif %}
+            </span>
+
+            <h1>
+                Queue Management
+            </h1>
+
+            {% if ongoing_job_fair %}
+
+            <p>
+                Manage applicants and process your booth queue for
+                <strong>{{ ongoing_job_fair.title }}</strong>
+            </p>
+
+            {% else %}
+
+            <p>
+                Monitor and manage your applicant queue.
+            </p>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+    <div class="queue-header-actions">
+        {% if not is_temporary_station %}
+        <a class="queue-back-job-fairs back-link" href="{{ url_for('employer.job_fairs') }}">
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+            <span>Back to Job Fairs</span>
+        </a>
+        {% endif %}
+        {% if ongoing_job_fair %}
+        <div class="fair-status">
+
+        <span class="status-dot"></span>
+
+        <span>
+            Job Fair Ongoing
+        </span>
+
+        </div>
+        {% endif %}
+    </div>
+
+</section>
+
+{% if ongoing_job_fair and current_station and not is_temporary_station and station_capacity > 1 %}
+<section class="station-manager-card">
+  <div><strong>Interview Stations</strong><p>Approved simultaneous capacity: {{ station_capacity }}. Station 1 is this employer workspace.</p></div>
+  <div class="station-manager-actions">
+    {% for n in range(2, station_capacity + 1) %}
+    <button type="button" class="station-connect-btn" data-station-number="{{ n }}" data-connect-url="{{ url_for('employer.create_station_access', station_number=n) }}">
+      <i class="fa-solid fa-link"></i> Connect Station {{ n }}
+    </button>
+    <button type="button" class="station-revoke-btn" data-station-number="{{ n }}" data-revoke-url="{{ url_for('employer.revoke_station', station_number=n) }}">Disconnect</button>
+    {% endfor %}
+  </div>
+  <div id="stationAccessResult" class="station-access-result" hidden></div>
+</section>
+{% endif %}
+
+
+
+{% if ongoing_job_fair %}
+
+<section class="queue-management-grid">
+  <div class="queue-left-stack">
+
+
+    <!-- =====================================================
+    DORMANT QUEUE
+====================================================== -->
+
+    {# Classification is display-only. Both groups retain shared FCFS and queue numbers. #}
+    {% set queue_totals = namespace(pre=0, onsite=0) %}
+    {% for queue in active_queue_data %}
+      {% if queue.assigned_station_id is none %}
+        {% set reg = queue_registration_map.get(queue.job_fair_registration_id) %}
+        {% if reg and reg.registration_source == 'On-site' %}
+          {% set queue_totals.onsite = queue_totals.onsite + 1 %}
+        {% else %}
+          {% set queue_totals.pre = queue_totals.pre + 1 %}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+    <div class="queue-source-summary" aria-label="Waiting applicants by registration type"
+         style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+      <div style="flex:1;min-width:130px;padding:12px 16px;border:1px solid #dbeafe;border-radius:10px;background:#eff6ff;">
+        <div style="font-size:13px;color:#1e40af;">Pre-registered</div>
+        <strong style="font-size:21px;color:#1d4ed8;">{{ queue_totals.pre }}</strong>
+      </div>
+      <div style="flex:1;min-width:130px;padding:12px 16px;border:1px solid #dbeafe;border-radius:10px;background:#eff6ff;">
+        <div style="font-size:13px;color:#1e40af;">On-site (Walk-in)</div>
+        <strong style="font-size:21px;color:#1d4ed8;">{{ queue_totals.onsite }}</strong>
+      </div>
+    </div>
+
+    <div class="queue-card dormant-card">
+
+        <div class="queue-card-header">
+
+            <div class="queue-header-title">
+
+                <div class="queue-header-icon">
+                    <i class="fa-solid fa-hourglass-half"></i>
+                </div>
+
+                <div>
+
+                    <span class="queue-label">
+                        DORMANT QUEUE
+                    </span>
+
+                    <h2>
+                        Waiting for Activation
+                    </h2>
+
+                </div>
+
+            </div>
+
+            <div class="queue-count" id="dormantQueueCount">
+                {{ dormant_queue_data|length }}
+            </div>
+
+        </div>
+
+
+        <div class="queue-list" id="dormantQueueList">
+
+            {% if dormant_queue_data %}
+
+            {% for queue in dormant_queue_data %}
+
+            <div class="queue-item dormant-item" id="dormant-queue-{{ queue.queue_group_id }}"
+                data-queue-id="{{ queue.queue_group_id }}" data-status="{{ queue.status }}">
+
+                <div class="queue-number">
+                    {{ queue.queue_number }}
+                </div>
+                 <span class="queue-source-badge" style="font-size:12px;font-weight:600;color:#1d4ed8;">
+                   {% if registration and registration.registration_source == 'On-site' %}On-site{% else %}Pre-registered{% endif %}
+                 </span>
+
+
+                <div class="queue-person">
+
+                    {% set registration =
+                    queue_registration_map.get(
+                    queue.job_fair_registration_id
+                    )
+                    %}
+
+                    {% if registration %}
+
+                    {% set job_seeker =
+                    registration.job_seeker
+                    %}
+
+                    {% else %}
+
+                    {% set job_seeker = None %}
+
+                    {% endif %}
+
+
+                    <h3>
+                        {{ job_seeker.full_name
+                        if job_seeker
+                        else "Applicant" }}
+                    </h3>
+
+
+                    <p class="booth-name">
+                        {{ queue.company }}
+                    </p>
+
+
+                    <div class="queue-meta">
+
+                        {% if queue.employer_registration_id %}
+
+                        {% set employer_registration =
+                        employer_registration_map.get(
+                        queue.employer_registration_id
+                        )
+                        %}
+
+                        {% if employer_registration and
+                        employer_registration.booth_number %}
+
+                        <span class="booth-label">
+                            <i class="fa-solid fa-store"></i>
+                            Booth {{ employer_registration.booth_number }}
+                        </span>
+
+                        {% endif %}
+
+                        {% endif %}
+
+                    </div>
+
+
+                    {% if queue.jobs %}
+
+                    <div class="queue-jobs">
+
+                        <span class="queue-jobs-label">
+                            Selected Jobs
+                        </span>
+
+                        {% for queue_job in queue.jobs %}
+
+                        <span class="queue-job">
+                            {{ queue_job.job_title }}
+                        </span>
+
+                        {% endfor %}
+
+                    </div>
+
+                    {% endif %}
+
+                </div>
+
+
+                <div class="dormant-status">
+
+                    <i class="fa-solid fa-clock"></i>
+
+                    <span>
+                        Waiting
+                    </span>
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+            {% else %}
+
+            <div class="empty-queue">
+
+                <div class="empty-icon">
+                    <i class="fa-solid fa-clock"></i>
+                </div>
+
+                <p>
+                    No dormant applicants.
+                </p>
+
+                <span>
+                    Additional queues will appear here when they are created.
+                </span>
+
+            </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+    CURRENTLY WAITING
+====================================================== -->
+
+    <div class="queue-card active-card">
+
+        <div class="queue-card-header">
+
+            <div class="queue-header-title">
+
+                <div class="queue-header-icon">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+
+                <div>
+
+                    <span class="queue-label">
+                        CURRENTLY WAITING
+                    </span>
+
+                    <h2>
+                        Applicants in Line (Shared FCFS)
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            {% set waiting_count = active_queue_data | selectattr("assigned_station_id", "none") | list | length %}
+
+            {# Assigned applicants are already excluded above. Do not subtract
+               selected_queue again: that produces incorrect zero/negative counts. #}
+
+
+            <div class="queue-header-actions">
+                <div class="queue-count" id="activeQueueCount">
+                    {{ waiting_count }}
+                </div>
+
+                <button type="button" id="callNextBtn" class="call-next-btn"
+                    data-call-url="{{ url_for('employer.call_next_queue') }}"
+                    {% if selected_queue or waiting_count <= 0 %}disabled{% endif %}>
+                    <i class="fa-solid fa-bullhorn"></i>
+                    <span>Call Next</span>
+                </button>
+            </div>
+
+        </div>
+
+
+        <div class="queue-list" id="activeQueueList">
+
+            {% if waiting_count > 0 %}
+
+            {% for queue in active_queue_data %}
+
+            {% if queue.assigned_station_id is none and (not selected_queue or
+            queue.queue_group_id != selected_queue.queue_group_id) %}
+
+            {% set registration =
+            queue_registration_map.get(
+            queue.job_fair_registration_id
+            )
+            %}
+
+            {% if registration %}
+
+            {% set job_seeker =
+            registration.job_seeker
+            %}
+
+            {% else %}
+
+            {% set job_seeker = None %}
+
+            {% endif %}
+
+
+            {% if job_seeker %}
+
+            {% set employer_registration =
+            employer_registration_map.get(
+            queue.employer_registration_id
+            )
+            %}
+
+
+            <div class="queue-item active-item" id="queue-{{ queue.queue_group_id }}"
+                data-queue-id="{{ queue.queue_group_id }}" data-status="{{ queue.status }}">
+
+                <div class="queue-number">
+                    {{ queue.queue_number }}
+                </div>
+                 <span class="queue-source-badge" style="font-size:12px;font-weight:600;color:#1d4ed8;">
+                   {% if registration and registration.registration_source == 'On-site' %}On-site{% else %}Pre-registered{% endif %}
+                 </span>
+
+
+                <div class="queue-person">
+
+                    <h3>
+                        {{ job_seeker.full_name }}
+                    </h3>
+
+
+                    <p class="booth-name">
+                        {{ queue.company }}
+                    </p>
+
+
+                    <div class="queue-meta">
+
+                        {% if employer_registration and
+                        employer_registration.booth_number %}
+
+                        <span class="booth-label">
+                            <i class="fa-solid fa-store"></i>
+                            Booth {{ employer_registration.booth_number }}
+                        </span>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    {% if queue.jobs %}
+
+                    <div class="queue-jobs">
+
+                        <span class="queue-jobs-label">
+                            Selected Jobs
+                        </span>
+
+                        {% for queue_job in queue.jobs %}
+
+                        <span class="queue-job">
+                            {{ queue_job.job_title }}
+                        </span>
+
+                        {% endfor %}
+
+                    </div>
+
+                    {% endif %}
+
+                </div>
+
+
+                <div class="active-status">
+
+                    <i class="fa-solid fa-user-clock"></i>
+
+                    <span>
+                        Waiting
+                    </span>
+
+                </div>
+
+            </div>
+
+            {% endif %}
+
+            {% endif %}
+
+            {% endfor %}
+
+            {% else %}
+
+            <div class="empty-queue">
+
+                <div class="empty-icon">
+                    <i class="fa-solid fa-users-slash"></i>
+                </div>
+
+                <p>
+                    No applicants are currently waiting.
+                </p>
+
+                <span>
+                    The next applicant will appear here when available.
+                </span>
+
+            </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+  </div><!-- /.queue-left-stack -->
+
+    <!-- =====================================================
+    JOBSEEKER PROFILE
+====================================================== -->
+
+    <div class="queue-card profile-card">
+
+        <div class="queue-card-header">
+
+            <div class="queue-header-title">
+
+                <div class="queue-header-icon">
+                    <i class="fa-solid fa-id-card"></i>
+                </div>
+
+                <div>
+
+                    <span class="queue-label">
+                        JOBSEEKER PROFILE
+                    </span>
+
+                    <h2>
+                        Applicant Information
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        {% if selected_queue %}
+
+        {% set selected_registration =
+        queue_registration_map.get(
+        selected_queue.job_fair_registration_id
+        )
+        %}
+
+
+        {% if selected_registration %}
+
+        {% set selected_job_seeker =
+        selected_registration.job_seeker
+        %}
+
+        {% else %}
+
+        {% set selected_job_seeker = None %}
+
+        {% endif %}
+
+
+        {% set selected_queue_data =
+        selected_queue_data_map.get(
+        selected_queue.queue_group_id
+        )
+        %}
+
+
+        {% set selected_display_queue =
+        namespace(queue=None)
+        %}
+
+
+        {% for queue in active_queue_data %}
+
+        {% if queue.queue_group_id ==
+        selected_queue.queue_group_id %}
+
+        {% set selected_display_queue.queue =
+        queue
+        %}
+
+        {% endif %}
+
+        {% endfor %}
+
+
+        {% if selected_job_seeker %}
+
+        <div class="profile-content" id="jobseekerProfile" data-queue-id="{{ selected_queue.queue_group_id }}"
+            data-status="{{ selected_queue.status }}" data-selected-job-id="{{ selected_job_fair_job_id or '' }}"
+            data-evaluated-jobs="{{ queue_evaluation_completion.evaluated_jobs }}"
+            data-total-jobs="{{ queue_evaluation_completion.total_jobs }}">
+
+            <!-- =================================================
+                PROFILE HEADER
+            ================================================== -->
+
+            <div class="profile-header">
+
+                <div class="profile-picture-wrapper">
+
+                    {% if selected_job_seeker.profile_picture %}
+
+                    {% if '/' in selected_job_seeker.profile_picture %}
+
+                    <img src="{{ url_for(
+                                'static',
+                                filename=selected_job_seeker.profile_picture
+                            ) }}" alt="{{ selected_job_seeker.full_name }}" class="profile-picture"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+
+                    {% else %}
+
+                    <img src="{{ url_for(
+                                'static',
+                                filename='uploads/jobseekers/' ~ selected_job_seeker.profile_picture
+                            ) }}" alt="{{ selected_job_seeker.full_name }}" class="profile-picture"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+
+                    {% endif %}
+
+                    <div class="profile-picture-placeholder" style="display:none;">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+
+                    {% else %}
+
+                    <div class="profile-picture-placeholder">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+
+                    {% endif %}
+
+                </div>
+
+
+                <div class="profile-identity">
+
+                    <span class="profile-serving-status">
+                        <i class="fa-solid fa-circle"></i>
+                        Currently Serving
+                    </span>
+
+                    <h2 id="profileName">
+                        {{ selected_job_seeker.full_name }}
+                    </h2>
+
+
+                    <p id="profileCompany">
+                        {{ selected_queue_data.company
+                        if selected_queue_data
+                        else "Employer not specified" }}
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                QUEUE INFORMATION
+            ================================================== -->
+
+            <div class="profile-queue-number-display">
+
+                <span class="queue-number" id="profileQueueNumber">
+
+                    {% if selected_display_queue.queue %}
+
+                    {{ selected_display_queue.queue.queue_number }}
+
+                    {% else %}
+
+                    {{ selected_queue.queue_number }}
+
+                    {% endif %}
+
+                </span>
+
+            </div>
+
+
+            <div class="profile-section jf-qualification-panel" id="jfQualificationPanel"
+                 data-matches='{{ queue_qualification_matches|tojson|forceescape }}'>
+                <h3><i class="fa-solid fa-chart-simple"></i> Qualification Match</h3>
+                <div class="jf-match-heading" id="jfMatchJobTitle"></div>
+                <div id="jfMatchContent" aria-live="polite"></div>
+            </div>
+
+            <!-- =================================================
+    JOB EVALUATION CHECKLIST
+================================================= -->
+
+            <div class="profile-section">
+
+                <h3>
+                    <i class="fa-solid fa-list-check"></i>
+                    Job Evaluation Checklist
+                </h3>
+
+                <p class="profile-subtext">
+                    Select a job below to evaluate it individually.
+                    Every selected job must be evaluated before finishing this applicant.
+                </p>
+
+
+                <div class="job-evaluation-checklist" id="jobEvaluationChecklist">
+
+                    {% if selected_queue_data and
+                    selected_queue_data.jobs %}
+
+                    {% for queue_job in selected_queue_data.jobs %}
+
+                    {% set job_evaluation =
+                    queue_job_evaluations.get(
+                    queue_job.job_fair_job_id
+                    )
+                    %}
+
+                    <button type="button"
+                        class="job-evaluation-item{% if selected_job_fair_job_id == queue_job.job_fair_job_id %} selected{% endif %}{% if job_evaluation %} evaluated{% endif %}"
+                        data-job-fair-job-id="{{ queue_job.job_fair_job_id }}"
+                        data-job-title="{{ queue_job.job_title }}"
+                        data-total-vacancies="{{ queue_job.total_vacancies }}"
+                        data-remaining-vacancies="{{ queue_job.remaining_vacancies }}"
+                        data-job-status="{{ queue_job.job_status }}" data-evaluation-status="{{
+                        job_evaluation.status
+                        if job_evaluation
+                        else ''
+                    }}" data-evaluation-remarks="{{
+                        job_evaluation.remarks
+                        if job_evaluation
+                        else ''
+                    }}" data-evaluated="{{
+                        'true'
+                        if job_evaluation
+                        else 'false'
+                    }}">
+
+                        <span class="job-check-icon">
+
+                            {% if job_evaluation %}
+
+                            <i class="fa-solid fa-circle-check"></i>
+
+                            {% else %}
+
+                            <i class="fa-regular fa-circle"></i>
+
+                            {% endif %}
+
+                        </span>
+
+
+                        <span class="job-evaluation-main">
+                            <span class="job-evaluation-name">
+                                {{ queue_job.job_title }}
+                            </span>
+
+                            <span class="job-vacancy-state">
+                                {{ queue_job.remaining_vacancies }}
+                                /
+                                {{ queue_job.total_vacancies }}
+                                vacancies remaining
+                            </span>
+                        </span>
+
+
+                        <span class="job-evaluation-state">
+
+                            {% if job_evaluation %}
+                            Evaluated
+                            {% else %}
+                            Not Evaluated
+                            {% endif %}
+
+                        </span>
+
+                    </button>
+
+                    {% endfor %}
+
+                    {% else %}
+
+                    <p>
+                        No job information available.
+                    </p>
+
+                    {% endif %}
+
+                </div>
+
+
+                <div class="evaluation-progress" id="evaluationProgress">
+
+                    <i class="fa-solid fa-clipboard-check"></i>
+
+                    <span id="evaluationProgressText">
+
+                        {{ queue_evaluation_completion.evaluated_jobs }}
+                        /
+                        {{ queue_evaluation_completion.total_jobs }}
+                        jobs evaluated
+
+                    </span>
+
+                </div>
+
+            </div>
+
+            <!-- =================================================
+                CONTACT INFORMATION
+            ================================================== -->
+
+            <div class="profile-section">
+
+                <h3>
+                    <i class="fa-solid fa-address-card"></i>
+                    Contact Information
+                </h3>
+
+
+                <div class="profile-info-grid">
+
+                    <div class="profile-info">
+
+                        <span class="info-label">
+                            Contact Number
+                        </span>
+
+                        <span id="profileContact">
+                            {{ selected_job_seeker.contact_number
+                            or "Not provided" }}
+                        </span>
+
+                    </div>
+
+
+                    <div class="profile-info">
+
+                        <span class="info-label">
+                            Email
+                        </span>
+
+                        <span id="profileEmail">
+
+                            {% if selected_job_seeker.user and
+                            selected_job_seeker.user.email %}
+
+                            {{ selected_job_seeker.user.email }}
+
+                            {% else %}
+
+                            Not provided
+
+                            {% endif %}
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                ADDRESS
+            ================================================== -->
+
+            <div class="profile-section">
+
+                <h3>
+                    <i class="fa-solid fa-location-dot"></i>
+                    Address
+                </h3>
+
+
+                {% set address_parts = [
+                selected_job_seeker.street,
+                selected_job_seeker.barangay,
+                selected_job_seeker.city,
+                selected_job_seeker.province
+                ] %}
+
+
+                <p id="profileAddress">
+                    {{ address_parts
+                    | select
+                    | join(", ")
+                    or "Not provided"
+                    }}
+                </p>
+
+            </div>
+
+
+            <!-- =================================================
+                EMPLOYMENT
+            ================================================== -->
+
+            <div class="profile-section">
+
+                <h3>
+                    <i class="fa-solid fa-briefcase"></i>
+                    Employment Information
+                </h3>
+
+
+                <div class="profile-info-grid">
+
+                    <div class="profile-info">
+
+                        <span class="info-label">
+                            Employment Status
+                        </span>
+
+                        <span id="profileEmploymentStatus">
+                            {{ selected_job_seeker.employment_status
+                            or "Not provided" }}
+                        </span>
+
+                    </div>
+
+
+                    <div class="profile-info">
+
+                        <span class="info-label">
+                            Preferred Job Type
+                        </span>
+
+                        <span id="profileJobType">
+
+                            {% if selected_job_seeker.pref_job_type
+                            is iterable
+                            and selected_job_seeker.pref_job_type
+                            is not string %}
+
+                            {{ selected_job_seeker.pref_job_type
+                            | join(", ") }}
+
+                            {% else %}
+
+                            {{ selected_job_seeker.pref_job_type
+                            or "Not provided" }}
+
+                            {% endif %}
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                EDUCATION
+            ================================================== -->
+
+            <div class="profile-section">
+
+                <h3>
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    Education
+                </h3>
+
+
+                <p id="profileEducation">
+                    {{ selected_job_seeker.education_display
+                    or "Not provided" }}
+                </p>
+
+
+                <p class="profile-subtext" id="profileTertiary">
+
+                    {% if selected_job_seeker.tertiary_school %}
+
+                    {{ selected_job_seeker.tertiary_school }}
+
+                    {% if selected_job_seeker.tertiary_course %}
+
+                    — {{ selected_job_seeker.tertiary_course }}
+
+                    {% endif %}
+
+                    {% else %}
+
+                    Not provided
+
+                    {% endif %}
+
+                </p>
+
+            </div>
+
+
+            <!-- =================================================
+                SKILLS
+            ================================================== -->
+
+            <div class="profile-section">
+
+                <h3>
+                    <i class="fa-solid fa-gears"></i>
+                    Skills
+                </h3>
+
+
+                <p id="profileSkills">
+                    {{ selected_job_seeker.skills
+                    or "No skills provided." }}
+                </p>
+
+            </div>
+
+
+            <!-- =================================================
+                EXPERIENCE
+            ================================================== -->
+
+            <div class="profile-section">
+
+                <h3>
+                    <i class="fa-solid fa-user-tie"></i>
+                    Experience
+                </h3>
+
+
+                <p id="profileExperience">
+                    {{ selected_job_seeker.experience
+                    or "No experience provided." }}
+                </p>
+
+            </div>
+
+
+            <!-- =================================================
+    EMPLOYER EVALUATION
+================================================= -->
+
+            <div class="profile-evaluation">
+
+                <h3>
+                    <i class="fa-solid fa-clipboard-check"></i>
+                    Employer Evaluation
+                </h3>
+
+
+                <p class="evaluation-description">
+
+                    Evaluating:
+
+                    <strong id="currentEvaluationJobTitle">
+                        {% if selected_queue_data and
+                        selected_queue_data.jobs %}
+
+                        {% for queue_job in selected_queue_data.jobs %}
+
+                        {% if queue_job.job_fair_job_id ==
+                        selected_job_fair_job_id %}
+
+                        {{ queue_job.job_title }}
+
+                        {% endif %}
+
+                        {% endfor %}
+
+                        {% else %}
+
+                        No job selected
+
+                        {% endif %}
+                    </strong>
+
+                </p>
+
+
+                <div class="current-job-capacity" id="currentJobCapacity">
+                    {% if selected_queue_data and selected_queue_data.jobs %}
+                    {% for queue_job in selected_queue_data.jobs %}
+                    {% if queue_job.job_fair_job_id == selected_job_fair_job_id %}
+                    <i class="fa-solid fa-briefcase"></i>
+                    <span>
+                        <strong>{{ queue_job.remaining_vacancies }}</strong>
+                        of
+                        <strong>{{ queue_job.total_vacancies }}</strong>
+                        vacancies remaining
+                    </span>
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %}
+                </div>
+
+
+                <div class="evaluation-help">
+                    <div>
+                        <strong>Hired</strong>
+                        <span>Final hire for this position. This also accepts the application.</span>
+                    </div>
+                    <div>
+                        <strong>Nearly-hired</strong>
+                        <span>Strong candidate, but not a final hire.</span>
+                    </div>
+                    <div>
+                        <strong>Qualified</strong>
+                        <span>Meets the job requirements, but no final hiring decision yet.</span>
+                    </div>
+                    <div>
+                        <strong>Mismatch</strong>
+                        <span>The applicant does not sufficiently match this position.</span>
+                    </div>
+                </div>
+
+
+                <div class="evaluation-status">
+
+                    <button type="button"
+                        class="evaluation-status-btn{% if selected_evaluation and selected_evaluation.status == 'Hired' %} selected{% endif %}"
+                        data-status="Hired">
+                        <i class="fa-solid fa-handshake"></i>
+                        <span>Hired</span>
+                        <small class="evaluation-final-label">Final</small>
+                    </button>
+
+
+                    <button type="button"
+                        class="evaluation-status-btn{% if selected_evaluation and selected_evaluation.status == 'Nearly-hired' %} selected{% endif %}"
+                        data-status="Nearly-hired">
+                        <i class="fa-solid fa-user-check"></i>
+                        <span>Nearly-hired</span>
+                    </button>
+
+
+                    <button type="button"
+                        class="evaluation-status-btn{% if selected_evaluation and selected_evaluation.status == 'Qualified' %} selected{% endif %}"
+                        data-status="Qualified">
+                        <i class="fa-solid fa-star"></i>
+                        <span>Qualified</span>
+                    </button>
+
+
+                    <button type="button"
+                        class="evaluation-status-btn{% if selected_evaluation and selected_evaluation.status == 'Mismatch' %} selected{% endif %}"
+                        data-status="Mismatch">
+                        <i class="fa-solid fa-user-xmark"></i>
+                        <span>Mismatch</span>
+                    </button>
+
+                </div>
+
+
+                <label for="evaluationRemarks" class="evaluation-remarks-label">
+                    Remarks
+                </label>
+
+
+                <textarea id="evaluationRemarks" class="evaluation-remarks" rows="5"
+                    placeholder="Enter your remarks about this applicant and this specific job...">{{ selected_evaluation.remarks if selected_evaluation else "" }}</textarea>
+
+
+                <button type="button" id="saveEvaluationBtn" class="save-evaluation-btn"
+                    data-queue-id="{{ selected_queue.queue_group_id }}" data-evaluation-url="{{ url_for(
+            'employer.save_queue_evaluation',
+            queue_group_id=selected_queue.queue_group_id
+        ) }}">
+
+                    <i class="fa-solid fa-floppy-disk"></i>
+
+                    <span>
+
+                        {% if selected_evaluation %}
+                        Update Evaluation
+                        {% else %}
+                        Save Evaluation
+                        {% endif %}
+
+                    </span>
+
+                </button>
+
+            </div>
+
+
+            <!-- =================================================
+    FINISH QUEUE
+================================================= -->
+
+            <div class="profile-action">
+
+                <div class="queue-secondary-actions" id="queueSecondaryActions"{% if queue_job_evaluations %} hidden style="display: none !important;"{% endif %}>
+                    <button type="button" id="skipApplicantBtn" class="queue-secondary-btn"
+                        data-skip-url="{{ url_for('employer.skip_queue', queue_group_id=selected_queue.queue_group_id) }}">
+                        <i class="fa-solid fa-forward-step"></i>
+                        <span>Skip Applicant</span>
+                    </button>
+
+                    <button type="button" id="noShowApplicantBtn" class="queue-secondary-btn queue-danger-btn"
+                        data-no-show-url="{{ url_for('employer.mark_queue_no_show', queue_group_id=selected_queue.queue_group_id) }}">
+                        <i class="fa-solid fa-user-clock"></i>
+                        <span>Mark No-show</span>
+                    </button>
+                </div>
+
+                <button type="button" id="profileNextBtn" class="next-btn"
+                    data-queue-id="{{ selected_queue.queue_group_id }}" data-next-url="{{ url_for(
+            'employer.finish_queue',
+            queue_group_id=selected_queue.queue_group_id
+        ) }}" {% if not queue_evaluation_completion.complete %} disabled {% endif %}>
+
+                    <span class="next-btn-icon">
+                        <i class="fa-solid fa-forward"></i>
+                    </span>
+
+                    <span class="next-btn-text">
+                        Finish Applicant
+                    </span>
+
+                </button>
+
+            </div>
+
+
+            {% else %}
+
+            <div class="empty-profile">
+
+                <div class="empty-icon">
+                    <i class="fa-solid fa-user-slash"></i>
+                </div>
+
+                <h3>
+                    Applicant Not Found
+                </h3>
+
+                <p>
+                    The selected queue applicant could not be found.
+                </p>
+
+            </div>
+
+            {% endif %}
+
+
+            {% else %}
+
+            <div class="empty-profile">
+
+                <div class="empty-icon">
+                    <i class="fa-solid fa-user-slash"></i>
+                </div>
+
+                <h3>
+                    No Applicant Selected
+                </h3>
+
+                <p>
+                    There are currently no active applicants.
+                </p>
+
+            </div>
+
+            {% endif %}
+
+        </div>
+
+
+</section>
+
+{% else %}
+
+<!-- =========================================================
+    NO ONGOING JOB FAIR
+========================================================= -->
+
+<section class="empty-page">
+
+    <div class="empty-page-icon">
+        <i class="fa-solid fa-calendar-xmark"></i>
+    </div>
+
+    <span class="empty-page-label">
+        QUEUE MANAGEMENT
+    </span>
+
+    <h2>
+        No Ongoing Job Fair
+    </h2>
+
+    <p>
+        Queue management will become available when a job fair
+        is currently ongoing.
+    </p>
+
+</section>
+
+{% endif %}
+
+
+<script src="{{ url_for(
+        'static',
+        filename='javascript/employer/employer_queue_management.js'
+    ) }}" defer></script>
+
+{% endblock %}

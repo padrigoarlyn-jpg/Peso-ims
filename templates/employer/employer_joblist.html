@@ -1,0 +1,1459 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}employer-app{% endblock %}
+
+{% block title %}PESO: Employer Dashboard{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_shared_safe.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_joblist.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Shared mobile filter drawer styling -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared_mobile_filter_drawers.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_mobile_filter_sheet.css') }}">
+
+<style>
+    .form-drawer {
+        margin: 16px 0;
+        border: 1px solid #e3e8ef;
+        border-radius: 12px;
+        background: #ffffff;
+        overflow: hidden;
+    }
+
+    .form-drawer>summary {
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 15px 18px;
+        cursor: pointer;
+        user-select: none;
+        background: #f8fafc;
+        color: #003f8f;
+        font-weight: 600;
+    }
+
+    .form-drawer>summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .form-drawer>summary:hover {
+        background: #f2f6fb;
+    }
+
+    .drawer-heading {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+    }
+
+    .drawer-title {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 15px;
+        line-height: 1.35;
+    }
+
+    .drawer-hint {
+        color: #6b7280;
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 1.35;
+    }
+
+    .drawer-chevron {
+        flex-shrink: 0;
+        transition: transform 0.22s ease;
+        color: #6b7280;
+    }
+
+    .form-drawer[open]>summary .drawer-chevron {
+        transform: rotate(180deg);
+    }
+
+    .drawer-body {
+        padding: 18px;
+        border-top: 1px solid #edf0f4;
+    }
+
+    .form-drawer--important {
+        border-color: #d5e1ef;
+    }
+
+    .form-drawer--important>summary {
+        background: #f5f9ff;
+    }
+
+    @media (max-width: 768px) {
+        .form-drawer>summary {
+            padding: 14px 15px;
+        }
+
+        .drawer-body {
+            padding: 15px;
+        }
+
+        .drawer-hint {
+            display: none;
+        }
+    }
+
+.required-indicator {
+    color: #dc2626;
+    font-weight: 700;
+    margin-left: 4px;
+}
+
+.field-error {
+    color: #dc2626;
+    font-size: 12px;
+    margin-top: 5px;
+    display: block;
+}
+
+input.is-invalid,
+select.is-invalid,
+textarea.is-invalid {
+    border-color: #dc2626 !important;
+}
+
+</style>
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/employer_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+
+<!-- ========================== HEADER ========================== -->
+
+<main class="employer-joblist-main">
+
+<section class="joblist-page-header">
+    <div class="joblist-heading">
+        <span class="joblist-eyebrow">JOB MANAGEMENT</span>
+        <h1>Job Listings</h1>
+        <p>Create, edit, and monitor your company's job opportunities in one place.</p>
+    </div>
+
+</section>
+
+<!-- ========================== SEARCH / FILTERS ========================== -->
+<button type="button" class="mobile-filter-trigger joblist-mobile-filter-trigger"
+    id="joblistMobileFilterTrigger" aria-label="Open job search and filters" aria-expanded="false">
+    <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+    <span>Search &amp; Filters</span>
+</button>
+
+<div class="mobile-filter-overlay joblist-mobile-filter-overlay"
+    id="joblistMobileFilterOverlay" aria-hidden="true"></div>
+
+<section class="joblist-toolbar" id="joblistFilters" aria-label="Job listing filters">
+    <div class="mobile-filter-drawer-header joblist-mobile-filter-header">
+        <div>
+            <span class="mobile-filter-eyebrow">Job Management</span>
+            <h2>Search &amp; Filters</h2>
+        </div>
+        <button type="button" class="mobile-filter-close" id="joblistMobileFilterClose"
+            aria-label="Close job filters">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+    </div>
+    <div class="search-box dashboard-search-box">
+        <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
+        <input
+            id="searchInput"
+            type="search"
+            placeholder="Search jobs, categories, company, or type..."
+            autocomplete="off"
+            aria-label="Search job listings"
+        >
+    </div>
+
+    <div class="filters dashboard-filter-group">
+        <select id="jobStatusFilter" class="dashboard-filter-select" aria-label="Filter by job status">
+            <option value="All">All Job Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Open">Open</option>
+            <option value="Closed">Closed</option>
+        </select>
+
+        <select id="jobApprovalFilter" class="dashboard-filter-select" aria-label="Filter by approval status">
+            <option value="All">All Approval Statuses</option>
+            <option value="Pending">Pending Approval</option>
+            <option value="Approved">Approved</option>
+            <option value="Flagged">Flagged</option>
+            <option value="Rejected">Rejected</option>
+        </select>
+
+        <select id="jobTypeFilter" class="dashboard-filter-select" aria-label="Filter by job type">
+            <option value="All">All Job Types</option>
+            <option value="Referral">Referral</option>
+            <option value="Job Fair">Job Fair</option>
+        </select>
+
+        <button type="button" class="job-filter-reset" id="resetJobFilters" aria-label="Reset job filters">
+            <i class="fa-solid fa-rotate-left"></i>
+            <span>Reset</span>
+        </button>
+    </div>
+</section>
+
+<!-- ========================== JOB GRID ========================== -->
+<section class="job-grid" aria-live="polite">
+
+    <!-- CREATE NEW JOB CARD -->
+    <button type="button" class="create-card create-card-trigger" aria-label="Create a new job listing">
+        <i class="fa-solid fa-plus" aria-hidden="true"></i>
+        <h3>Create New Job</h3>
+        <p>Publish another job opportunity.</p>
+    </button>
+
+    {% for job in jobs.items %}
+    <div class="job-card" data-job-title="{{ job.job_title }}" data-job-category="{{ job.category }}"
+        data-company="{{ current_user.employer.company_name }}" data-job-type="{{ job.job_type }}"
+        data-employment-type="{{ job.employment_type }}" data-status="{{ job.status }}"
+        data-approval-status="{{ job.approval_status }}">
+
+        <div class="job-top">
+            <div>
+                <h3>{{ job.job_title }}</h3>
+
+                <div class="job-type-row">
+                    {% if job.job_type == "Job Fair" %}
+                    <div class="job-type job-type-job-fair">
+                        <i class="fa-solid fa-calendar-days"></i>
+                        Job Fair Exclusive
+                    </div>
+                    {% else %}
+                    <div class="job-type job-type-referral">
+                        <i class="fa-solid fa-share-nodes"></i>
+                        Referral
+                    </div>
+                    {% endif %}
+
+                    {% if job.job_type == "Referral" and job.is_in_job_fair %}
+                    <div class="job-type job-type-fair-participant"
+                        title="This Referral job is also participating in a Job Fair.">
+                        <i class="fa-solid fa-calendar-check"></i>
+                        In Job Fair
+                    </div>
+                    {% endif %}
+                </div>
+
+                <p>{{ current_user.employer.company_name }}</p>
+                <span class="job-category">{{ job.category }}</span>
+            </div>
+
+            <div class="job-statuses">
+
+                <span
+                    class="status approval-card-badge {% if job.approval_status == 'Pending' %}pending{% elif job.approval_status == 'Approved' %}approved{% elif job.approval_status == 'Rejected' %}rejected{% elif job.approval_status == 'Flagged' %}flagged{% endif %}"
+                    title="PESO approval status">
+                    {{ job.approval_status }}
+                </span>
+
+                <span
+                    class="status {% if job.status == 'Pending' %}pending{% elif job.status == 'Open' %}active{% elif job.status == 'Closed' %}closed{% elif job.status == 'Draft' %}draft{% endif %}"
+                    title="Job availability">
+                    {{ job.status }}
+                </span>
+
+            </div>
+        </div>
+
+        <div class="job-details">
+            <span>
+                <i class="fa-solid fa-briefcase"></i> {{ job.employment_type }}
+            </span>
+            <span>
+                <i class="fa-solid fa-users"></i> {{ job.remaining_vacancies }} of {{ job.vacancies }} Vacanc{% if
+                job.vacancies == 1 %}y{% else %}ies{% endif %} remaining
+            </span>
+            <span>
+                <i class="fa-solid fa-money-bill-wave"></i> ₱{{ "{:,.0f}".format(job.salary_min) }} - ₱{{
+                "{:,.0f}".format(job.salary_max) }}
+            </span>
+            <span>
+                <i class="fa-solid fa-location-dot"></i> {{ job.location }}
+            </span>
+            <span>
+                <i class="fa-solid fa-calendar-days"></i>
+                {% if job.approval_status == "Approved" and job.deadline %}
+                Deadline: {{ job.deadline.strftime("%B %d, %Y") }}
+                {% else %}
+                Deadline: Pending
+                {% endif %}
+            </span>
+        </div>
+
+        <div class="job-actions">
+            <button type="button" class="view-btn"
+                data-deadline="{% if job.approval_status == 'Approved' and job.deadline %}Deadline: {{ job.deadline.strftime('%B %d, %Y') }}{% else %}Deadline: Pending{% endif %}"
+                data-id="{{ job.job_id }}" data-title="{{ job.job_title }}" data-category="{{ job.category }}"
+                data-company="{{ current_user.employer.company_name }}" data-location="{{ job.location }}"
+                data-type="{{ job.employment_type }}" data-vacancies="{{ job.vacancies }}"
+                data-remaining-vacancies="{{ job.remaining_vacancies }}"
+                data-salary="₱{{ '{:,.2f}'.format(job.salary_min) }} - ₱{{ '{:,.2f}'.format(job.salary_max) }}"
+                data-description="{{ job.description }}" data-status="{{ job.status }}"
+                data-approval="{{ job.approval_status }}"
+                data-job-type="{{ job.job_type }}"
+                data-applicants="{{ job.visible_applicant_count }}"
+                data-hired="{{ job.accepted_count }}"
+                data-is-in-job-fair="{{ 'true' if job.is_in_job_fair else 'false' }}"
+                data-job-fair-id="{{ job.job_fair_id or '' }}"
+                data-review-remarks="{{ job.remarks or '' }}"
+                data-minimum-education="{{ job.minimum_education or 'NONE' }}"
+                data-minimum-experience="{{ job.minimum_experience_months or 0 }}"
+                data-standard-qualifications='{{ job.structured_qualification_payload | tojson }}'
+                data-qualifications="{{ job.qualifications or '' }}"
+                data-responsibilities="{{ job.responsibilities or '' }}">
+                View
+            </button>
+
+            {% if job.status == "Closed" %}
+            {% if job.remaining_vacancies > 0 %}
+            <form action="{{ url_for('employer.reopen_job', job_id=job.job_id) }}" method="POST"
+                class="reopen-job-form">
+                {{ form.hidden_tag() }}
+                <button type="submit" class="reopen-job-btn" title="Reopen this job">
+                    <i class="fa-solid fa-rotate-right"></i> Reopen Job
+                </button>
+            </form>
+            {% else %}
+            <button type="button" class="reopen-job-btn disabled" disabled
+                title="Cannot reopen because all vacancies have been filled.">
+                <i class="fa-solid fa-lock"></i> No Vacancy
+            </button>
+            {% endif %}
+            {% elif job.approval_status == "Approved" %}
+            <button type="button" class="approved-job-btn" disabled title="This job has already been approved.">
+                <i class="fa-solid fa-circle-check"></i> Approved
+            </button>
+            {% elif job.approval_status == "Rejected" %}
+            <button type="button" class="approved-job-btn disabled" disabled
+                title="Rejected is a final decision for this submission. Create a new listing to submit a revised job.">
+                <i class="fa-solid fa-circle-xmark"></i> Rejected - Final
+            </button>
+            {% else %}
+            <button type="button" class="edit-btn" data-id="{{ job.job_id }}" data-title="{{ job.job_title }}"
+                data-category="{{ job.category }}" data-company="{{ current_user.employer.company_name }}"
+                data-location="{{ job.location }}" data-type="{{ job.employment_type }}"
+                data-vacancies="{{ job.vacancies }}" data-salary-min="{{ job.salary_min }}"
+                data-salary-max="{{ job.salary_max }}" data-description="{{ job.description or '' }}"
+                data-status="{{ job.status }}" data-approval="{{ job.approval_status }}"
+                data-deadline="{% if job.approval_status == 'Approved' and job.deadline %}{{ job.deadline.strftime('%B %d, %Y') }}{% else %}Pending{% endif %}"
+                data-minimum-education="{{ job.minimum_education or 'NONE' }}"
+                data-minimum-experience="{{ job.minimum_experience_months or 0 }}"
+                data-standard-qualifications='{{ job.structured_qualification_payload | tojson }}'
+                data-qualifications="{{ job.qualifications or '' }}"
+                data-responsibilities="{{ job.responsibilities or '' }}">
+
+                {% if job.approval_status == "Flagged" %}
+                Correct & Resubmit
+                {% else %}
+                Edit
+                {% endif %}
+            </button>
+            {% endif %}
+
+            <button type="button" class="delete-job-btn" data-id="{{ job.job_id }}">
+                Delete Job
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</section>
+
+{% if jobs.total %}
+<div class="pagination peso-standard-pagination">
+    <span>Showing {{ ((jobs.page - 1) * jobs.per_page) + 1 }}-{{ ((jobs.page - 1) * jobs.per_page) + jobs.items|length }} of {{ jobs.total }} records</span>
+    <div class="page-controls">
+        {% if jobs.has_prev %}<a class="page-num" href="{{ url_for('employer.joblisting', page=jobs.prev_num) }}" aria-label="Previous page"><i class="fa-solid fa-chevron-left"></i></a>{% else %}<span class="page-num disabled" aria-disabled="true"><i class="fa-solid fa-chevron-left"></i></span>{% endif %}
+        {% for page_num in jobs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if page_num %}<a class="page-num {% if page_num == jobs.page %}active{% endif %}" href="{{ url_for('employer.joblisting', page=page_num) }}">{{ page_num }}</a>{% else %}<span class="page-ellipsis">&hellip;</span>{% endif %}
+        {% endfor %}
+        {% if jobs.has_next %}<a class="page-num" href="{{ url_for('employer.joblisting', page=jobs.next_num) }}" aria-label="Next page"><i class="fa-solid fa-chevron-right"></i></a>{% else %}<span class="page-num disabled" aria-disabled="true"><i class="fa-solid fa-chevron-right"></i></span>{% endif %}
+    </div>
+</div>
+{% endif %}
+</main>
+
+<!-- ========================== CREATE JOB MODAL ========================== -->
+<div id="createJobModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div>
+                <h2>Create New Job</h2>
+                <p>Publish a new job opening for applicants.</p>
+            </div>
+            <span class="close-modal">&times;</span>
+        </div>
+
+        <form action="{{ url_for('employer.create_job') }}" method="POST">
+            {{ form.hidden_tag() }}
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Company Name</label>
+                    <input type="text" value="{{ current_user.employer.company_name }}" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label>Job Title</label>
+                    <input type="text" placeholder="Enter job title" name="job_title" maxlength="150" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="createCategory" name="category" required>
+                        <option value="">Select Category</option>
+                        <option value="Administrative & Office Support">Administrative & Office Support</option>
+                        <option value="Agriculture & Fisheries">Agriculture & Fisheries</option>
+                        <option value="Architecture & Engineering">Architecture & Engineering</option>
+                        <option value="Arts, Design & Media">Arts, Design & Media</option>
+                        <option value="Automotive">Automotive</option>
+                        <option value="Banking & Financial Services">Banking & Financial Services</option>
+                        <option value="Beauty & Wellness">Beauty & Wellness</option>
+                        <option value="BPO / Customer Service">BPO / Customer Service</option>
+                        <option value="Construction">Construction</option>
+                        <option value="Education & Training">Education & Training</option>
+                        <option value="Food Service & Hospitality">Food Service & Hospitality</option>
+                        <option value="Government & Public Service">Government & Public Service</option>
+                        <option value="Healthcare & Medical">Healthcare & Medical</option>
+                        <option value="Human Resources">Human Resources</option>
+                        <option value="Information Technology (IT)">Information Technology (IT)</option>
+                        <option value="Legal Services">Legal Services</option>
+                        <option value="Logistics & Supply Chain">Logistics & Supply Chain</option>
+                        <option value="Manufacturing & Production">Manufacturing & Production</option>
+                        <option value="Marketing & Sales">Marketing & Sales</option>
+                        <option value="Retail & Merchandising">Retail & Merchandising</option>
+                        <option value="Science & Research">Science & Research</option>
+                        <option value="Security & Protective Services">Security & Protective Services</option>
+                        <option value="Skilled Trades & Technical">Skilled Trades & Technical</option>
+                        <option value="Telecommunications">Telecommunications</option>
+                        <option value="Tourism & Travel">Tourism & Travel</option>
+                        <option value="Transportation & Delivery">Transportation & Delivery</option>
+                        <option value="Others">Others</option>
+                    </select>
+                    <input type="text" id="createOtherCategory" name="other_category" maxlength="100"
+                        placeholder="Enter custom category" style="display:none; margin-top:10px;">
+                </div>
+
+                <div class="form-group">
+                    <label>Employment Type</label>
+
+                    <select name="employment_type" required>
+                        <option value="">Select Employment Type</option>
+                        <option value="Full Time">Full Time</option>
+                        <option value="Part Time">Part Time</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Vacancies</label>
+                    <input type="number" name="vacancies" min="1" max="100000" step="1" value="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Minimum Salary</label>
+
+                    <div class="salary-input">
+                        <span class="peso-sign">₱</span>
+                        <input type="text" name="salary_min" maxlength="24" class="salary-format-input" inputmode="decimal"
+                            autocomplete="off" placeholder="20,000" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Maximum Salary</label>
+
+                    <div class="salary-input">
+                        <span class="peso-sign">₱</span>
+                        <input type="text" name="salary_max" maxlength="24" class="salary-format-input" inputmode="decimal"
+                            autocomplete="off" placeholder="35,000" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Company Location</label>
+                    <input type="text" value="{{ company_location }}" readonly
+                        aria-label="Company location from profile">
+                </div>
+            </div>
+
+            <div class="form-group full">
+                <label>Job Description</label>
+                <textarea name="description" rows="5" required></textarea>
+            </div>
+
+            <!-- ===================== STRUCTURED REQUIREMENTS ===================== -->
+
+            <details class="form-drawer form-drawer--important" open>
+                <summary>
+                    <span class="drawer-heading">
+                        <span class="drawer-title">
+                            <i class="fa-solid fa-user-check"></i>
+                            Job Requirements
+                        </span>
+                        <span class="drawer-hint">Minimum education and relevant experience used for applicant
+                            matching.</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down drawer-chevron"></i>
+                </summary>
+
+                <div class="drawer-body">
+                    <div class="form-grid">
+
+                        <!-- MINIMUM EDUCATION -->
+                        <div class="form-group">
+                            <label for="minimumEducation">
+                                Minimum Education
+                            </label>
+
+                            <select id="minimumEducation" name="minimum_education" required>
+                                <option value="NONE">
+                                    No Minimum Education Requirement
+                                </option>
+
+                                <option value="JHS">
+                                    At Least Junior High School Graduate
+                                </option>
+
+                                <option value="HS">
+                                    At Least High School Graduate / Equivalent
+                                </option>
+
+                                <option value="SHS">
+                                    At Least Senior High School Graduate
+                                </option>
+
+                                <option value="COLLEGE_UNDERGRAD">
+                                    College Undergraduate Accepted
+                                </option>
+
+                                <option value="ASSOCIATE">
+                                    At Least Associate / 2-Year College Graduate
+                                </option>
+
+                                <option value="BACHELOR">
+                                    At Least Bachelor's Degree Graduate
+                                </option>
+
+                                <option value="RELEVANT_BACHELOR">
+                                    Bachelor's Degree in a Relevant Field
+                                </option>
+                            </select>
+                        </div>
+
+
+                        <!-- MINIMUM EXPERIENCE -->
+                        <div class="form-group">
+                            <label for="minimumExperience">
+                                Minimum Relevant Experience
+                            </label>
+
+                            <select id="minimumExperience" name="minimum_experience_months" required>
+                                <option value="0">
+                                    No Experience Required / Fresh Graduates Welcome
+                                </option>
+
+                                <option value="6">
+                                    At Least 6 Months
+                                </option>
+
+                                <option value="12">
+                                    At Least 1 Year
+                                </option>
+
+                                <option value="24">
+                                    At Least 2 Years
+                                </option>
+
+                                <option value="36">
+                                    At Least 3 Years
+                                </option>
+
+                                <option value="60">
+                                    At Least 5 Years
+                                </option>
+                            </select>
+                        </div>
+
+                    </div>
+                </div>
+            </details>
+
+
+            <!-- ===================== COMMON QUALIFICATIONS ===================== -->
+
+            <details class="form-drawer">
+                <summary>
+                    <span class="drawer-heading">
+                        <span class="drawer-title">
+                            <i class="fa-solid fa-list-check"></i>
+                            Common Qualifications
+                        </span>
+                        <span class="drawer-hint">Select at least one relevant qualification, then mark each as Required or Preferred. (Select at least 1)</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down drawer-chevron"></i>
+                </summary>
+
+                <div class="drawer-body">
+                    <small class="peso-common-qualification-error" role="status" hidden></small>
+                    <div class="qualification-options" id="createStandardQualifications">
+
+                        <!-- COMPUTER LITERATE -->
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+
+                                <input type="checkbox" name="standard_qualification[]" value="SKILL_COMPUTER">
+
+                                <span>Computer Literate</span>
+
+                            </label>
+
+                            <select name="importance_SKILL_COMPUTER" disabled>
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <!-- MICROSOFT OFFICE -->
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+
+                                <input type="checkbox" name="standard_qualification[]" value="SKILL_MS_OFFICE">
+
+                                <span>Microsoft Office Proficiency</span>
+
+                            </label>
+
+                            <select name="importance_SKILL_MS_OFFICE" disabled>
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <!-- DATA ENTRY -->
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+
+                                <input type="checkbox" name="standard_qualification[]" value="SKILL_DATA_ENTRY">
+
+                                <span>Data Entry / Typing Skills</span>
+
+                            </label>
+
+                            <select name="importance_SKILL_DATA_ENTRY" disabled>
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <!-- COMMUNICATION -->
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+
+                                <input type="checkbox" name="standard_qualification[]" value="SKILL_COMMUNICATION">
+
+                                <span>Communication Skills</span>
+
+                            </label>
+
+                            <select name="importance_SKILL_COMMUNICATION" disabled>
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <!-- CUSTOMER SERVICE -->
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+
+                                <input type="checkbox" name="standard_qualification[]" value="SKILL_CUSTOMER_SERVICE">
+
+                                <span>Customer Service Skills</span>
+
+                            </label>
+
+                            <select name="importance_SKILL_CUSTOMER_SERVICE" disabled>
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <!-- SALES -->
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+
+                                <input type="checkbox" name="standard_qualification[]" value="SKILL_SALES">
+
+                                <span>Sales Skills</span>
+
+                            </label>
+
+                            <select name="importance_SKILL_SALES" disabled>
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <!-- CASHIER / POS -->
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+
+                                <input type="checkbox" name="standard_qualification[]" value="SKILL_POS_CASHIER">
+
+                                <span>Cash Handling / POS Skills</span>
+
+                            </label>
+
+                            <select name="importance_SKILL_POS_CASHIER" disabled>
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <!-- ADMIN / CLERICAL -->
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+
+                                <input type="checkbox" name="standard_qualification[]" value="SKILL_ADMIN">
+
+                                <span>Administrative / Clerical Skills</span>
+
+                            </label>
+
+                            <select name="importance_SKILL_ADMIN" disabled>
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <!-- TESDA -->
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+
+                                <input type="checkbox" name="standard_qualification[]" value="CERT_TESDA">
+
+                                <span>Relevant TESDA / TVET Certification</span>
+
+                            </label>
+
+                            <select name="importance_CERT_TESDA" disabled>
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <!-- PROFESSIONAL LICENSE -->
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+
+                                <input type="checkbox" name="standard_qualification[]" value="CERT_PRO_LICENSE">
+
+                                <span>Relevant Professional License</span>
+
+                            </label>
+
+                            <select name="importance_CERT_PRO_LICENSE" disabled>
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <!-- DRIVER LICENSE -->
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+
+                                <input type="checkbox" name="standard_qualification[]" value="CERT_DRIVER">
+
+                                <span>Driver's License</span>
+
+                            </label>
+
+                            <select name="importance_CERT_DRIVER" disabled>
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <!-- CIVIL SERVICE -->
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+
+                                <input type="checkbox" name="standard_qualification[]" value="CERT_CSE">
+
+                                <span>Civil Service Eligibility</span>
+
+                            </label>
+
+                            <select name="importance_CERT_CSE" disabled>
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                </div>
+            </details>
+
+
+            <details class="form-drawer">
+                <summary>
+                    <span class="drawer-heading">
+                        <span class="drawer-title">
+                            <i class="fa-solid fa-circle-plus"></i>
+                            Additional Qualifications
+                        </span>
+                        <span class="drawer-hint">Enter at least one job-specific qualification not included in the common qualification list. (Add at least 1)</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down drawer-chevron"></i>
+                </summary>
+
+                <div class="drawer-body">
+                    <div id="qualifications-list">
+
+                        <div class="list-item">
+
+                            <input type="text" name="qualification[]"
+                                placeholder="e.g. Knowledge of basic bookkeeping is preferred">
+
+                            <button type="button" class="remove-btn">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <button type="button" class="add-btn" id="addQualification">
+                        <i class="fa-solid fa-plus"></i>
+                        Add Qualification
+                    </button>
+
+                </div>
+            </details>
+
+
+            <details class="form-drawer">
+                <summary>
+                    <span class="drawer-heading">
+                        <span class="drawer-title">
+                            <i class="fa-solid fa-clipboard-list"></i>
+                            Responsibilities
+                        </span>
+                        <span class="drawer-hint">Enter at least one main duty or task expected from this position. (Add at least 1)</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down drawer-chevron"></i>
+                </summary>
+
+                <div class="drawer-body">
+                    <div id="responsibilities-list">
+                        <div class="list-item">
+                            <input type="text" name="responsibility[]" placeholder="Develop web applications">
+                            <button type="button" class="remove-btn">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" class="add-btn" id="addResponsibility">
+                        <i class="fa-solid fa-plus"></i> Add Responsibility
+                    </button>
+                </div>
+            </details>
+
+
+            <div class="modal-buttons">
+                <button type="button" class="cancel-btn modal-cancel-btn">Cancel</button>
+                <button type="submit" class="publish-btn" id="createPublishBtn" disabled>
+                    Publish Job
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================== VIEW JOB MODAL ========================== -->
+<div class="job-modal modal" id="jobModal">
+    <div class="job-modal-content">
+        <div class="view-header">
+            <img src="{{ url_for('static', filename='images/pfp_placeholder.png') }}" alt="Company Logo"
+                class="company-logo">
+            <div class="job-header-info">
+                <h2 id="modalJobTitle"></h2>
+                <p class="company-name" id="modalCompany"></p>
+                <div class="job-meta">
+                    <span>
+                        <i class="fa-solid fa-location-dot"></i>
+                        <span id="modalLocation"></span>
+                    </span>
+                    <span>
+                        <i class="fa-solid fa-briefcase"></i>
+                        <span id="modalEmployment"></span>
+                    </span>
+                    <span>
+                        <i class="fa-solid fa-money-bill-wave"></i>
+                        <span id="modalSalary"></span>
+                    </span>
+                    <span>
+                        <i class="fa-solid fa-calendar-days"></i>
+                        <span id="modalDeadline"></span>
+                    </span>
+                </div>
+            </div>
+            <div class="modal-statuses">
+                <span class="status modal-status-badge" id="modalStatus">—</span>
+                <div class="approval-meta">
+                    <span class="approval-meta-label">Approval</span>
+                    <strong id="modalApprovalStatus">—</strong>
+                </div>
+            </div>
+        </div>
+
+        <hr class="divider">
+        <div class="modal-job-overview">
+
+            <div class="modal-job-overview-item">
+                <span>Job Type</span>
+                <strong id="modalJobType">—</strong>
+            </div>
+
+            <div class="modal-job-overview-item">
+                <span>Applicants</span>
+                <strong id="modalApplicantCount">0</strong>
+            </div>
+
+            <div class="modal-job-overview-item">
+                <span>Hired</span>
+                <strong id="modalHiredCount">0</strong>
+            </div>
+
+            <div class="modal-job-overview-item modal-vacancy-card">
+                <span>Vacancies</span>
+                <strong id="modalRemainingCount">0 total / 0 remaining</strong>
+            </div>
+
+        </div>
+
+
+        <div id="modalFairParticipationNote" class="modal-job-note fair-note" style="display:none;">
+            <i class="fa-solid fa-calendar-check"></i>
+
+            <span>
+                This is a normal Referral job that is also participating in a Job Fair.
+                Its job type remains Referral.
+            </span>
+        </div>
+
+
+        <div id="modalReviewRemarksWrap" class="modal-job-note review-note" style="display:none;">
+
+            <i class="fa-solid fa-circle-info"></i>
+
+            <div>
+                <strong>PESO Review Remarks</strong>
+                <p id="modalReviewRemarks"></p>
+            </div>
+
+        </div>
+
+
+        <div class="about">
+            <h3>Category</h3>
+            <p id="modalCategory"></p>
+        </div>
+
+        <div class="about">
+            <h3>About</h3>
+            <p id="modalDescription"></p>
+        </div>
+
+        <div class="details-grid">
+            <div class="details-card">
+                <h3>Responsibilities</h3>
+                <ul id="modalResponsibilities"></ul>
+            </div>
+            <div class="details-card">
+                <h3>Qualifications</h3>
+                <ul id="modalQualifications"></ul>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" id="viewShortlistBtn" class="modal-short-btn">View Applicants</button>
+            <button type="button" class="modal-close-btn close-modal" id="closeViewModal">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================== EDIT JOB MODAL ========================== -->
+<div id="editJobModal" class="modal">
+    <div class="modal-content edit-modal">
+        <div class="modal-header">
+            <div>
+                <h2>Edit Job</h2>
+                <p>Update the details of this job posting.</p>
+            </div>
+            <span class="close-modal">&times;</span>
+        </div>
+
+        <form action="{{ url_for('employer.update_job') }}" method="POST">
+            {{ form.hidden_tag() }}
+            <input type="hidden" id="editJobId" name="job_id">
+
+            <div class="edit-header">
+                <div class="logo-upload">
+                    <img src="{{ url_for('static', filename='images/pfp_placeholder.png') }}" alt="Company Logo">
+                </div>
+
+                <div class="header-fields">
+                    <div class="form-group">
+                        <label>Job Title</label>
+                        <input type="text" id="editJobTitle" name="job_title">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="editCategory" name="category" required>
+                            <option value="">Select Category</option>
+                            <option value="Administrative & Office Support">Administrative & Office Support</option>
+                            <option value="Agriculture & Fisheries">Agriculture & Fisheries</option>
+                            <option value="Architecture & Engineering">Architecture & Engineering</option>
+                            <option value="Arts, Design & Media">Arts, Design & Media</option>
+                            <option value="Automotive">Automotive</option>
+                            <option value="Banking & Financial Services">Banking & Financial Services</option>
+                            <option value="Beauty & Wellness">Beauty & Wellness</option>
+                            <option value="BPO / Customer Service">BPO / Customer Service</option>
+                            <option value="Construction">Construction</option>
+                            <option value="Education & Training">Education & Training</option>
+                            <option value="Food Service & Hospitality">Food Service & Hospitality</option>
+                            <option value="Government & Public Service">Government & Public Service</option>
+                            <option value="Healthcare & Medical">Healthcare & Medical</option>
+                            <option value="Human Resources">Human Resources</option>
+                            <option value="Information Technology (IT)">Information Technology (IT)</option>
+                            <option value="Legal Services">Legal Services</option>
+                            <option value="Logistics & Supply Chain">Logistics & Supply Chain</option>
+                            <option value="Manufacturing & Production">Manufacturing & Production</option>
+                            <option value="Marketing & Sales">Marketing & Sales</option>
+                            <option value="Retail & Merchandising">Retail & Merchandising</option>
+                            <option value="Science & Research">Science & Research</option>
+                            <option value="Security & Protective Services">Security & Protective Services</option>
+                            <option value="Skilled Trades & Technical">Skilled Trades & Technical</option>
+                            <option value="Telecommunications">Telecommunications</option>
+                            <option value="Tourism & Travel">Tourism & Travel</option>
+                            <option value="Transportation & Delivery">Transportation & Delivery</option>
+                            <option value="Others">Others</option>
+                        </select>
+                        <input type="text" id="editOtherCategory" name="other_category" maxlength="100"
+                            placeholder="Enter custom category" style="display:none; margin-top:10px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Company Name</label>
+                        <input type="text" id="editCompany" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Approval Status</label>
+                        <input id="editApprovalStatus" readonly>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Employment Type</label>
+
+                    <select id="editEmploymentType" name="employment_type" required>
+                        <option value="">Select Employment Type</option>
+                        <option value="Full Time">Full Time</option>
+                        <option value="Part Time">Part Time</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Vacancies</label>
+                    <input type="number" id="editVacancies" name="vacancies" min="1" max="100000" step="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Minimum Salary</label>
+                    <input type="text" id="editSalaryMin" name="salary_min" maxlength="24" class="salary-format-input"
+                        inputmode="decimal" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label>Maximum Salary</label>
+                    <input type="text" id="editSalaryMax" name="salary_max" maxlength="24" class="salary-format-input"
+                        inputmode="decimal" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="editStatus" name="status">
+                        <option value="Closed">Closed</option>
+                        <option value="Draft">Draft</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group full">
+                <label>About</label>
+                <textarea id="editDescription" name="description"></textarea>
+            </div>
+
+            <!-- ===================== EDIT STRUCTURED REQUIREMENTS ===================== -->
+
+            <details class="form-drawer form-drawer--important" open>
+                <summary>
+                    <span class="drawer-heading">
+                        <span class="drawer-title">
+                            <i class="fa-solid fa-user-check"></i>
+                            Job Requirements
+                        </span>
+                        <span class="drawer-hint">Minimum education and relevant experience used for applicant
+                            matching.</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down drawer-chevron"></i>
+                </summary>
+
+                <div class="drawer-body">
+                    <div class="form-grid">
+
+                        <div class="form-group">
+
+                            <label for="editMinimumEducation">
+                                Minimum Education
+                            </label>
+
+                            <select id="editMinimumEducation" name="minimum_education" required>
+                                <option value="NONE">
+                                    No Minimum Education Requirement
+                                </option>
+
+                                <option value="JHS">
+                                    At Least Junior High School Graduate
+                                </option>
+
+                                <option value="HS">
+                                    At Least High School Graduate / Equivalent
+                                </option>
+
+                                <option value="SHS">
+                                    At Least Senior High School Graduate
+                                </option>
+
+                                <option value="COLLEGE_UNDERGRAD">
+                                    College Undergraduate Accepted
+                                </option>
+
+                                <option value="ASSOCIATE">
+                                    At Least Associate / 2-Year College Graduate
+                                </option>
+
+                                <option value="BACHELOR">
+                                    At Least Bachelor's Degree Graduate
+                                </option>
+
+                                <option value="RELEVANT_BACHELOR">
+                                    Bachelor's Degree in a Relevant Field
+                                </option>
+                            </select>
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label for="editMinimumExperience">
+                                Minimum Relevant Experience
+                            </label>
+
+                            <select id="editMinimumExperience" name="minimum_experience_months" required>
+                                <option value="0">
+                                    No Experience Required / Fresh Graduates Welcome
+                                </option>
+
+                                <option value="6">
+                                    At Least 6 Months
+                                </option>
+
+                                <option value="12">
+                                    At Least 1 Year
+                                </option>
+
+                                <option value="24">
+                                    At Least 2 Years
+                                </option>
+
+                                <option value="36">
+                                    At Least 3 Years
+                                </option>
+
+                                <option value="60">
+                                    At Least 5 Years
+                                </option>
+                            </select>
+
+                        </div>
+
+                    </div>
+                </div>
+            </details>
+
+
+            <details class="form-drawer">
+                <summary>
+                    <span class="drawer-heading">
+                        <span class="drawer-title">
+                            <i class="fa-solid fa-list-check"></i>
+                            Common Qualifications
+                        </span>
+                        <span class="drawer-hint">Select the qualifications relevant to this job and mark each as
+                            Required or Preferred.</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down drawer-chevron"></i>
+                </summary>
+
+                <div class="drawer-body">
+                    <div class="qualification-options" id="editStandardQualifications">
+
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+                                <input type="checkbox" name="standard_qualification[]" value="SKILL_COMPUTER">
+                                <span>Computer Literate</span>
+                            </label>
+
+                            <select name="importance_SKILL_COMPUTER">
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+                                <input type="checkbox" name="standard_qualification[]" value="SKILL_MS_OFFICE">
+                                <span>Microsoft Office Proficiency</span>
+                            </label>
+
+                            <select name="importance_SKILL_MS_OFFICE">
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+                                <input type="checkbox" name="standard_qualification[]" value="SKILL_DATA_ENTRY">
+                                <span>Data Entry / Typing Skills</span>
+                            </label>
+
+                            <select name="importance_SKILL_DATA_ENTRY">
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+                                <input type="checkbox" name="standard_qualification[]" value="SKILL_COMMUNICATION">
+                                <span>Communication Skills</span>
+                            </label>
+
+                            <select name="importance_SKILL_COMMUNICATION">
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+                                <input type="checkbox" name="standard_qualification[]" value="SKILL_CUSTOMER_SERVICE">
+                                <span>Customer Service Skills</span>
+                            </label>
+
+                            <select name="importance_SKILL_CUSTOMER_SERVICE">
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+                                <input type="checkbox" name="standard_qualification[]" value="SKILL_SALES">
+                                <span>Sales Skills</span>
+                            </label>
+
+                            <select name="importance_SKILL_SALES">
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+                                <input type="checkbox" name="standard_qualification[]" value="SKILL_POS_CASHIER">
+                                <span>Cash Handling / POS Skills</span>
+                            </label>
+
+                            <select name="importance_SKILL_POS_CASHIER">
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+                                <input type="checkbox" name="standard_qualification[]" value="SKILL_ADMIN">
+                                <span>Administrative / Clerical Skills</span>
+                            </label>
+
+                            <select name="importance_SKILL_ADMIN">
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+                                <input type="checkbox" name="standard_qualification[]" value="CERT_TESDA">
+                                <span>Relevant TESDA / TVET Certification</span>
+                            </label>
+
+                            <select name="importance_CERT_TESDA">
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+                                <input type="checkbox" name="standard_qualification[]" value="CERT_PRO_LICENSE">
+                                <span>Relevant Professional License</span>
+                            </label>
+
+                            <select name="importance_CERT_PRO_LICENSE">
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+                                <input type="checkbox" name="standard_qualification[]" value="CERT_DRIVER">
+                                <span>Driver's License</span>
+                            </label>
+
+                            <select name="importance_CERT_DRIVER">
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+
+                        <div class="qualification-option">
+                            <label class="qualification-check">
+                                <input type="checkbox" name="standard_qualification[]" value="CERT_CSE">
+                                <span>Civil Service Eligibility</span>
+                            </label>
+
+                            <select name="importance_CERT_CSE">
+                                <option value="Required">Required</option>
+                                <option value="Preferred">Preferred</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                </div>
+            </details>
+
+
+            <details class="form-drawer">
+                <summary>
+                    <span class="drawer-heading">
+                        <span class="drawer-title">
+                            <i class="fa-solid fa-clipboard-list"></i>
+                            Responsibilities
+                        </span>
+                        <span class="drawer-hint">Update the main duties and tasks expected from the position.</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down drawer-chevron"></i>
+                </summary>
+
+                <div class="drawer-body">
+                    <div id="editResponsibilities"></div>
+                    <button type="button" class="add-btn" id="editAddResponsibility">
+                        <i class="fa-solid fa-plus"></i> Add Responsibility
+                    </button>
+                </div>
+            </details>
+
+
+            <details class="form-drawer">
+                <summary>
+                    <span class="drawer-heading">
+                        <span class="drawer-title">
+                            <i class="fa-solid fa-circle-plus"></i>
+                            Additional Qualifications
+                        </span>
+                        <span class="drawer-hint">Optional job-specific requirements not covered by the common
+                            qualification list.</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down drawer-chevron"></i>
+                </summary>
+
+                <div class="drawer-body">
+                    <div id="editQualifications"></div>
+
+                    <button type="button" class="add-btn" id="editAddQualification">
+                        <i class="fa-solid fa-plus"></i>
+                        Add Qualification
+                    </button>
+
+                </div>
+            </details>
+
+
+            <div class="modal-buttons">
+                <button type="button" class="cancel-btn modal-cancel-btn">Cancel</button>
+                <button type="submit" class="publish-btn">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================== JAVASCRIPT ========================== -->
+<script src="{{ url_for('static', filename='javascript/employer/employer_joblisting.js') }}"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_job_form_validation.css', v='20261022f') }}">
+<script src="{{ url_for('static', filename='javascript/employer/employer_job_form_validation.js', v='20261022f') }}"></script>
+{% endblock %}
+

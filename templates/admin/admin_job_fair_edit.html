@@ -1,0 +1,309 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}PESO: Edit Event - {{ job_fair.title }}{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_job_fair_management.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/admin_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="admin-dashboard-main">
+    <section class="welcome-section">
+        <div class="welcome-copy">
+            <p class="eyebrow">Event Management</p>
+            <h1>Edit Event Details</h1>
+            <p class="welcome-subtext">
+                Modify schedules, partner agencies, venues, reminders, or the event poster.
+            </p>
+        </div>
+
+        <div class="header-actions">
+            <a href="{{ url_for('admin.job_fairs') }}" class="btn-action return-btn">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>Back to Job Fairs</span>
+            </a>
+        </div>
+    </section>
+
+    {% if job_fair.status in ["Ongoing", "Finished"] %}
+    <aside class="job-fair-management-note warning event-edit-notice" role="status" aria-label="Event editing restrictions">
+        <div class="event-edit-notice__icon" aria-hidden="true">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div class="event-edit-notice__content">
+            <div class="event-edit-notice__heading">
+                <strong>Editing restrictions apply</strong>
+                <span class="event-edit-notice__status">{{ job_fair.status }}</span>
+            </div>
+            <p class="event-edit-notice__description">This event has already started, so certain details are protected to preserve existing registrations and queues.</p>
+            <div class="event-edit-notice__details">
+                <p><i class="fa-solid fa-lock" aria-hidden="true"></i><span><strong>Locked:</strong> Schedule, capacity, classification, lead agency, and additional event days.</span></p>
+                <p><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span><strong>Still editable:</strong> Title, primary venue, instructions, poster, and reminders.</span></p>
+            </div>
+        </div>
+    </aside>
+    {% endif %}
+
+    <form action="{{ url_for('admin.edit_job_fair', fair_id=job_fair.job_fair_id) }}" method="POST"
+        enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="card edit-form-card">
+            <div class="card-header">
+                <div class="card-header-title-wrapper">
+                    <div class="card-icon"><i class="fa-solid fa-pen-to-square"></i></div>
+                    <div>
+                        <h3 class="card-title">Event Information</h3>
+                        <p class="card-subtitle">Update the published event details below.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="edit-form-body">
+                <section class="form-section">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="event_type">Event Classification</label>
+                            <select id="event_type" name="event_type" class="form-control" required>
+                                <option value="Mega Job Fair" {% if job_fair.event_type=='Mega Job Fair' %}selected{%
+                                    endif %}>Mega Job Fair (Multiple Employers)</option>
+                                <option value="BSRA" {% if job_fair.event_type=='BSRA' %}selected{% endif %}>Barangay
+                                    Special Recruitment Activity (BSRA)</option>
+                                <option value="SRA Overseas" {% if job_fair.event_type=='SRA Overseas' %}selected{%
+                                    endif %}>Special Recruitment Activity - Overseas (SRA)</option>
+                                <option value="SRA Local" {% if job_fair.event_type=='SRA Local' %}selected{% endif %}>
+                                    Special Recruitment Activity - Local (SRA)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="status">Event Status</label>
+                            <select id="status" name="status" class="form-control" required>
+                                <option value="Upcoming" {% if job_fair.status=='Upcoming' %}selected{% endif %}>
+                                    Upcoming</option>
+                                <option value="Ongoing" {% if job_fair.status=='Ongoing' %}selected{% endif %}>Ongoing
+                                </option>
+                                {% if job_fair.status == 'Finished' %}
+                                <option value="Finished" selected>Finished</option>
+                                {% endif %}
+
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="title">Event Title</label>
+                            <input type="text" id="title" name="title" maxlength="150" class="form-control" value="{{ job_fair.title }}"
+                                maxlength="150" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="lead_agency_id">Lead Recruitment Agency</label>
+                            <select id="lead_agency_id" name="lead_agency_id" class="form-control">
+                                <option value="">-- None / Multiple Agencies --</option>
+                                {% for agency in registered_agencies %}
+                                <option value="{{ agency.user.public_id }}" {% if
+                                    job_fair.lead_agency_id==agency.employer_id %}selected{% endif %}>{{
+                                    agency.company_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-section">
+                    <div class="form-group">
+                        <label for="venue">Primary Venue / Location</label>
+                        <input type="text" id="venue" name="venue" maxlength="200" class="form-control" value="{{ job_fair.venue }}"
+                            maxlength="200" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="start_datetime">Start Date &amp; Time</label>
+                            <input type="datetime-local" id="start_datetime" name="start_datetime" class="form-control"
+                                value="{{ job_fair.start_datetime.strftime('%Y-%m-%dT%H:%M') if job_fair.start_datetime else '' }}"
+                                required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="end_datetime">End Date &amp; Time</label>
+                            <input type="datetime-local" id="end_datetime" name="end_datetime" class="form-control"
+                                value="{{ job_fair.end_datetime.strftime('%Y-%m-%dT%H:%M') if job_fair.end_datetime else '' }}"
+                                required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="registration_deadline">Registration Cutoff</label>
+                            <input type="datetime-local" id="registration_deadline" name="registration_deadline"
+                                class="form-control"
+                                value="{{ job_fair.registration_deadline.strftime('%Y-%m-%dT%H:%M') if job_fair.registration_deadline else '' }}"
+                                required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="queue_entry_deadline">Queue Entry Cutoff</label>
+                            <input type="datetime-local" id="queue_entry_deadline" name="queue_entry_deadline"
+                                class="form-control"
+                                value="{{ job_fair.queue_entry_deadline.strftime('%Y-%m-%dT%H:%M') if job_fair.queue_entry_deadline else job_fair.end_datetime.strftime('%Y-%m-%dT%H:%M') }}"
+                                required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="capacity">Maximum Capacity</label>
+                            <input type="number" id="capacity" name="capacity" class="form-control"
+                                value="{{ job_fair.capacity }}" min="1" max="100000" step="1" required>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-section">
+                    <div class="venue-section-head">
+                        <div>
+                            <span class="form-section-title">Additional Event Days / Locations</span>
+                            <p class="form-helper">Use this for BSRA legs or multi-venue schedules.</p>
+                        </div>
+                        <button type="button" id="addVenueRowBtn" class="btn-action secondary-btn">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Add Day / Location</span>
+                        </button>
+                    </div>
+
+                    <div id="additionalVenuesContainer">
+                        {% if job_fair.additional_venues %}
+                        {% for item in job_fair.additional_venues %}
+                        <div class="venue-row">
+                            <div class="venue-field">
+                                <label>Date</label>
+                                <input type="date" name="add_venue_date[]" class="form-control" value="{{ item.date }}">
+                            </div>
+
+                            <div class="venue-field">
+                                <label>Venue / Location</label>
+                                <input type="text" name="add_venue_location[]" class="form-control"
+                                    value="{{ item.venue }}" maxlength="200" placeholder="Venue Location">
+                            </div>
+
+                            <div class="venue-field">
+                                <label>Time</label>
+                                <input type="text" name="add_venue_time[]" class="form-control"
+                                    value="{{ item.time_range }}" maxlength="100" placeholder="e.g. 8:00 AM - 3:00 PM">
+                            </div>
+
+                            <button type="button" class="remove-venue-btn" aria-label="Remove venue"
+                                title="Remove venue">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                </section>
+
+                <section class="form-section">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="poster">Change Event Poster</label>
+                            <input type="file" id="poster" name="poster" class="form-control" accept="image/*">
+                            <p class="form-help-text">
+                                Recommended: upload a banner-sized image, preferably around
+                                1600 × 600 px or a similar wide landscape ratio for the best display.
+                            </p>
+                        </div>
+
+                        {% if job_fair.poster_image %}
+                        <div class="current-poster-wrap">
+                            <img src="{{ url_for('static', filename='uploads/posters/' + job_fair.poster_image) }}"
+                                alt="Current event poster" class="current-poster">
+                            <div>
+                                <span class="form-section-title">Current Poster</span>
+                                <p class="form-helper">Uploading a new image will replace the current poster.</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </section>
+
+                <section class="form-section">
+                    <div class="form-group">
+                        <label>Standard PESO Reminders</label>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" name="enforce_dress_code" value="1" {% if
+                                    job_fair.enforce_dress_code %}checked{% endif %}> Enforce Proper Attire
+                                Policy</label>
+                            <label><input type="checkbox" name="require_gov_ids" value="1" {% if
+                                    job_fair.require_gov_ids %}checked{% endif %}> Require Complete Government Numbers
+                                (SSS, Pag-IBIG, PhilHealth)</label>
+                            <label><input type="checkbox" name="require_srs_id" value="1" {% if job_fair.require_srs_id
+                                    %}checked{% endif %}> Require SRS ID Card</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Vacancies &amp; Instructions</label>
+                        <textarea id="description" name="description" maxlength="10000" class="form-control"
+                            rows="5" maxlength="10000">{{ job_fair.description }}</textarea>
+                    </div>
+                </section>
+            </div>
+
+            <section class="form-section">
+                <span class="form-section-title">Job Fair Operations</span>
+                <p class="form-helper">Scheduled cutoffs stop new registrations or queue entries without interrupting existing queues.</p>
+                <div class="edit-form-actions" style="justify-content:flex-start; flex-wrap:wrap;">
+                    {% if job_fair.registration_manually_closed %}
+                    <button type="submit" form="reopenRegistrationForm" class="btn-action secondary-btn">Reopen Registration</button>
+                    {% else %}
+                    <button type="submit" form="closeRegistrationForm" class="btn-action secondary-btn">Close Registration</button>
+                    {% endif %}
+                    {% if job_fair.queue_entry_manually_closed %}
+                    <button type="submit" form="reopenQueueEntryForm" class="btn-action secondary-btn">Reopen Queue Entry</button>
+                    {% else %}
+                    <button type="submit" form="closeQueueEntryForm" class="btn-action secondary-btn">Close Queue Entry</button>
+                    {% endif %}
+                    {% if job_fair.status != 'Finished' %}
+                    <button
+                        type="submit"
+                        form="finishJobFairForm"
+                        class="btn-action secondary-btn"
+                        id="finishJobFairBtn"
+                        data-final-confirm="{{ 'true' if request.args.get('confirm_finish') == '1' else 'false' }}"
+                    >
+                        {{ 'Confirm Finish Job Fair' if request.args.get('confirm_finish') == '1' else 'Finish Job Fair' }}
+                    </button>
+                    {% endif %}
+                </div>
+            </section>
+
+            <div class="edit-form-actions">
+                <a href="{{ url_for('admin.job_fairs') }}" class="btn-action secondary-btn">Cancel</a>
+                <button type="submit" id="saveJobFairBtn" class="btn-action primary-btn">Save Changes</button>
+            </div>
+        </div>
+    </form>
+
+    <form id="closeRegistrationForm" method="POST" action="{{ url_for('admin.set_job_fair_registration_availability', fair_id=job_fair.job_fair_id, action='close') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
+    <form id="reopenRegistrationForm" method="POST" action="{{ url_for('admin.set_job_fair_registration_availability', fair_id=job_fair.job_fair_id, action='reopen') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
+    <form id="closeQueueEntryForm" method="POST" action="{{ url_for('admin.set_job_fair_queue_entry_availability', fair_id=job_fair.job_fair_id, action='close') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
+    <form id="reopenQueueEntryForm" method="POST" action="{{ url_for('admin.set_job_fair_queue_entry_availability', fair_id=job_fair.job_fair_id, action='reopen') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
+    <form id="finishJobFairForm" method="POST" action="{{ url_for('admin.finish_job_fair', fair_id=job_fair.job_fair_id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="confirm_unresolved" value="{{ '1' if request.args.get('confirm_finish') == '1' else '0' }}">
+    </form>
+</main>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/admin/admin_job_fair_edit.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}PESO: Job Referral Listings{% endblock %}
+
+{% block css %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_job_referral.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+
+<!-- Patch 18: mobile action buttons; scoped to referral-table only. -->
+<style id="peso-mobile-actions-patch18">
+@media screen and (max-width: 760px) {
+  .referral-table tr td[data-label="Action"] {
+    display: block !important; width: 100% !important; max-width: none !important;
+    min-width: 0 !important; box-sizing: border-box !important;
+    grid-template-columns: none !important;
+  }
+  .referral-table tr td[data-label="Action"]::before { display: none !important; }
+  .referral-table tr td[data-label="Action"] .table-actions {
+    display: block !important; width: 100% !important; max-width: none !important;
+    min-width: 0 !important; box-sizing: border-box !important;
+  }
+  .referral-table tr td[data-label="Action"] a.btn-view {
+    display: flex !important; width: 100% !important; max-width: none !important;
+    min-width: 0 !important; flex: none !important; box-sizing: border-box !important;
+    min-height: 42px !important; margin: 0 !important;
+    align-items: center !important; justify-content: center !important;
+    text-align: center !important; white-space: nowrap !important;
+  }
+}
+</style>
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/admin_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="admin-referral-main">
+    <section class="page-header">
+        <div>
+            <span class="page-eyebrow">Referral Management</span>
+            <h1>Job Referral Listings</h1>
+            <p>Review PESO-mediated Referral jobs and process pending referral requests.</p>
+        </div>
+
+        <div class="page-summary" aria-label="Referral job summary">
+            <strong>{{ jobs|length if jobs else 0 }}</strong>
+            <span>Referral Jobs</span>
+        </div>
+    </section>
+
+    <section class="filter-card referral-filter-card" aria-label="Search and export referral jobs">
+        <div class="dashboard-search-box">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="searchInput" placeholder="Search job title, company, type, or location..." autocomplete="off">
+        </div>
+        <form class="referral-export-toolbar" method="GET" action="{{ url_for('admin.export_job_referrals') }}" aria-label="Export job referral report">
+            <label for="referralExportYear">Report year</label>
+            <select id="referralExportYear" name="year">
+                <option value="all">All years</option>
+                {% for report_year in referral_years %}
+                <option value="{{ report_year }}">{{ report_year }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="referral-export-button"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> Export</button>
+        </form>
+    </section>
+
+    <section class="referral-section">
+        <div class="section-heading">
+            <div>
+                <h2>Referral Requests</h2>
+                <p>Only normal PESO Referral jobs are shown here.</p>
+            </div>
+
+            <span id="referralResultCount">
+                {{ jobs|length if jobs else 0 }}
+                {{ "job" if jobs and jobs|length == 1 else "jobs" }}
+            </span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="referral-table">
+                <thead>
+                    <tr>
+                        <th>Job Title</th>
+                        <th>Company</th>
+                        <th>Job Type</th>
+                        <th>Location</th>
+                        <th>Job Status</th>
+                        <th>Requests</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody id="referralTableBody">
+                    {% if jobs %}
+                    {% for job in jobs %}
+                    <tr class="referral-row">
+                        <td data-label="Job Title">
+                            <strong class="name-text">{{ job.job_title }}</strong>
+                        </td>
+
+                        <td data-label="Company">
+                            <span class="company-text">
+                                {{ job.employer.company_name }}
+                            </span>
+                        </td>
+
+                        <td data-label="Job Type">
+                            <span class="badge-type">
+                                <i class="fa-solid fa-share-nodes"></i>
+                                Referral
+                            </span>
+                        </td>
+
+                        <td data-label="Location">
+                            <span class="location-text">
+                                <i class="fa-solid fa-location-dot"></i>
+                                {{ job.location or "Location not specified" }}
+                            </span>
+                        </td>
+
+                        <td data-label="Job Status">
+                            {% set job_open = job.status == 'Open' and job.approval_status == 'Approved' and (not job.deadline or job.deadline >= today) %}
+                            <span class="referral-job-status {{ 'is-open' if job_open else 'is-closed' }}">
+                                {{ 'Open' if job_open else 'Closed / Unavailable' }}
+                            </span>
+                        </td>
+
+                        <td data-label="Requests">
+                            <div class="referral-request-summary">
+                                <span class="request-badge request-pending">
+                                    {{ job.pending_referral_count }} Awaiting Review
+                                </span>
+
+                                <small>
+                                    {{ job.referred_count }} referred
+                                </small>
+                            </div>
+                        </td>
+
+                        <td data-label="Action">
+                            <div class="table-actions">
+                                <a href="{{ url_for('admin.job_rankings', job_id=job.job_id) }}" class="btn-view">
+                                    View Rankings
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                    <tr id="noResultsMsg" class="no-results-row standardized-no-results" style="display:none;">
+                        <td colspan="7">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <span>No jobs matching your search query.</span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr class="empty-row standardized-no-results static-no-results">
+                        <td colspan="7" class="empty-table"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>No jobs with referral requests found.</span></td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/admin/admin_job_referral.js') }}" defer></script>
+{% endblock %}

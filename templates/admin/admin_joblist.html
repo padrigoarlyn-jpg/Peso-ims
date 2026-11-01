@@ -1,0 +1,566 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}PESO: Job Listing{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_joblist.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+<!-- Shared mobile filter drawer styling -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared_mobile_filter_drawers.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_joblist_mobile_sheet.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/admin_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<main class="admin-joblist-main">
+
+    <!-- =========================================================
+         PAGE HEADER
+    ========================================================== -->
+    <section class="page-header">
+        <div>
+            <span class="page-eyebrow">Job Management</span>
+            <h1>Job Listings</h1>
+            <p>
+                Review, approve, and manage employer job postings
+                in one place.
+            </p>
+        </div>
+
+        <div class="page-summary" aria-label="Job listing summary">
+            <strong>{{ total_jobs }}</strong>
+            <span>Total Listings</span>
+        </div>
+    </section>
+
+    <!-- =========================================================
+         JOB TYPE TABS
+    ========================================================== -->
+    <nav class="tab-container" aria-label="Job listing type">
+        <a href="{{ url_for('admin.joblist', availability=current_availability if current_availability != 'All' else None, q=current_search or None) }}" class="tab {% if current_status == 'All' %}active{% endif %}">
+            <span>All Listings</span>
+            <strong>{{ total_jobs }}</strong>
+        </a>
+
+        <a href="{{ url_for('admin.joblist', status='Referral', availability=current_availability if current_availability != 'All' else None, q=current_search or None) }}" class="tab {% if current_status == 'Referral' %}active{% endif %}">
+            <span>Referral</span>
+            <strong>{{ referral_count }}</strong>
+        </a>
+
+        <a href="{{ url_for('admin.joblist', status='Job Fair', availability=current_availability if current_availability != 'All' else None, q=current_search or None) }}" class="tab {% if current_status == 'Job Fair' %}active{% endif %}">
+            <span>Job Fair Participants</span>
+            <strong>{{ job_fair_count }}</strong>
+        </a>
+    </nav>
+
+    <!-- =========================================================
+         MOBILE FILTER BUTTON
+    ========================================================== -->
+    <button type="button" class="mobile-filter-trigger" aria-label="Open job filters" aria-expanded="false">
+        <i class="fa-solid fa-sliders"></i>
+        <span>Filters</span>
+    </button>
+
+    <div class="mobile-filter-overlay" aria-hidden="true"></div>
+
+    <!-- =========================================================
+         SEARCH & FILTERS
+    ========================================================== -->
+    <section class="filter-section dashboard-filter-section" aria-label="Job search and filters">
+        <div class="filter-container">
+
+            <div class="mobile-filter-drawer-header">
+                <div>
+                    <span class="mobile-filter-eyebrow">Job Search</span>
+                    <h2>Filters</h2>
+                </div>
+
+                <button type="button" class="mobile-filter-close" aria-label="Close job filters">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="search-box dashboard-search-box">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="searchJob" value="{{ current_search | e }}" placeholder="Search jobs, companies, locations, or keywords..." autocomplete="off">
+            </div>
+
+            <div class="filter-dropdowns">
+                <div class="select-wrapper dashboard-filter-select-wrapper">
+                    <select id="filterStatus" aria-label="Approval Status">
+                        <option value="all" {% if current_status == "All" %}selected{% endif %}>All Approval Status</option>
+                        <option value="Pending" {% if current_status == "Pending" %}selected{% endif %}>Reviewing</option>
+                        <option value="Approved" {% if current_status == "Approved" %}selected{% endif %}>Approved</option>
+                        <option value="Flagged" {% if current_status == "Flagged" %}selected{% endif %}>Flagged</option>
+                        <option value="Rejected" {% if current_status == "Rejected" %}selected{% endif %}>Rejected</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </div>
+
+                <div class="select-wrapper dashboard-filter-select-wrapper">
+                    <select id="filterAvailability" aria-label="Job Availability">
+                        <option value="All" {% if current_availability == "All" %}selected{% endif %}>All Job Availability</option>
+                        <option value="Open" {% if current_availability == "Open" %}selected{% endif %}>Open</option>
+                        <option value="Closed" {% if current_availability == "Closed" %}selected{% endif %}>Closed</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </div>
+
+                <button type="button" id="resetFilters" class="reset-filter-btn" aria-label="Reset filters" title="Reset filters">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span>Reset</span>
+                </button>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- =========================================================
+         JOB LIST TABLE
+    ========================================================== -->
+    <div class="table-container">
+        <div class="table-scroll">
+            <table class="job-table">
+                <thead>
+                    <tr>
+                        <th id="sortPosition" style="width: 15%;">
+                            Position
+                            <i class="fa-solid fa-sort"></i>
+                        </th>
+                        <th style="width: 25%;">Company</th>
+                        <th>Job Type</th>
+                        <th>Employment</th>
+                        <th id="sortStatus">
+                            Status
+                            <i class="fa-solid fa-sort"></i>
+                        </th>
+                        <th>Availability</th>
+                        <th id="sortDate">
+                            Posted Date
+                            <i class="fa-solid fa-sort"></i>
+                        </th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody id="jobTableBody">
+                    {% if jobs.items %}
+                    {% for job in jobs.items %}
+                    <tr 
+                        data-title="{{ job.job_title }}"
+                        data-company="{{ job.employer.company_name }}"
+                        data-location="{{ job.location or '' }}"
+                        data-status="{{ job.approval_status }}"
+                        data-availability="{{ job.status or '' }}"
+                        data-job-type="{% if job.job_type == 'Job Fair' %}Job Fair Exclusive{% elif job.is_job_fair_participant %}Referral Job Fair Participant{% else %}{{ job.job_type }}{% endif %}"
+                        data-employment-type="{{ job.employment_type or '' }}"
+                        data-date="{{ job.created_at.strftime('%Y-%m-%d') if job.created_at else '' }}"
+                    >
+                        <!-- POSITION -->
+                        <td class="job-position" data-label="Position">
+                            <strong>{{ job.job_title }}</strong>
+                        </td>
+
+                        <!-- COMPANY -->
+                        <td class="job-company" data-label="Company">
+                            <strong>{{ job.employer.company_name }}</strong>
+                            <br>
+                            <small class="company-location">
+                                <i class="fa-solid fa-location-dot"></i>
+                                {{ job.location or job.employer.address or "Location not specified" }}
+                            </small>
+                        </td>
+
+                        <!-- JOB TYPE -->
+                        <td class="job-type" data-label="Job Type">
+                            {% if job.job_type == "Job Fair" %}
+                            <span class="badge-type">
+                                <i class="fa-solid fa-calendar-days"></i>
+                                Job Fair Exclusive
+                            </span>
+
+                            {% elif job.job_type == "Referral" and job.is_job_fair_participant %}
+                            <div class="job-type-value-group">
+                            <span class="badge-type">
+                                <i class="fa-solid fa-share-nodes"></i>
+                                Referral
+                            </span>
+                            <span class="badge-type job-fair-participant-badge">
+                                <i class="fa-solid fa-calendar-check"></i>
+                                Fair Participant
+                            </span>
+
+                            {% if job.job_fair_participations %}
+                            <small class="job-fair-context">
+                                {% for fair in job.job_fair_participations %}
+                                    {{ fair.title }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </small>
+                            {% endif %}
+                            </div>
+
+                            {% elif job.job_type == "Referral" %}
+                            <span class="badge-type">
+                                <i class="fa-solid fa-share-nodes"></i>
+                                Referral
+                            </span>
+
+                            {% else %}
+                            <span class="badge-type">
+                                {{ job.job_type or "Unknown" }}
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- EMPLOYMENT TYPE -->
+                        <td class="job-employment-type" data-label="Employment">
+                            {{ job.employment_type or "Not specified" }}
+                        </td>
+
+                        <!-- STATUS -->
+                        <td class="job-status" data-label="Status">
+                            {% if job.approval_status == "Pending" %}
+                            <span class="status-badge status-reviewing">Reviewing</span>
+                            {% elif job.approval_status == "Approved" %}
+                            <span class="status-badge status-active">Approved</span>
+                            {% elif job.approval_status == "Flagged" %}
+                            <span class="status-badge status-flagged">
+                                <i class="fa-solid fa-flag"></i> Flagged
+                            </span>
+                            {% elif job.approval_status == "Rejected" %}
+                            <span class="status-badge status-rejected">Rejected</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- JOB AVAILABILITY (distinct from approval status) -->
+                        <td class="job-availability" data-label="Availability">
+                            {% if job.status == "Open" %}
+                            <span class="status-badge availability-open">Open</span>
+                            {% elif job.status == "Closed" %}
+                            <span class="status-badge availability-closed">Closed</span>
+                            {% else %}
+                            <span class="status-badge availability-other">{{ job.status or "Not set" }}</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- DATE -->
+                        <td data-label="Posted Date">
+                            {{ job.created_at.strftime("%B %d, %Y") if job.created_at else "—" }}
+                        </td>
+
+                        <!-- ACTION -->
+                        <td data-label="Action">
+                            <button 
+                                type="button" 
+                                class="btn-table btn-review"
+                                data-job-id="{{ job.job_id }}"
+                                data-salary="{{ job.salary_display|default('Not specified', true)|e }}"
+                                data-title="{{ job.job_title|default('', true)|e }}"
+                                data-company="{{ job.employer.company_name|default('', true)|e }}"
+                                data-address="{{ job.employer.address|default('', true)|e }}"
+                                data-location="{{ job.location|default('', true)|e }}"
+                                data-date="{{ job.created_at.strftime('%B %d, %Y') if job.created_at else '' }}"
+                                data-status="{{ job.approval_status }}"
+                                data-job-type="{% if job.job_type == 'Job Fair' %}Job Fair Exclusive{% elif job.is_job_fair_participant %}Referral Job Fair Participant{% else %}{{ job.job_type|default('Not specified', true)|e }}{% endif %}"
+                                data-employment-type="{{ job.employment_type or '' }}"
+                                data-description="{{ job.description|default('', true)|e }}"
+                                data-responsibilities="{{ job.responsibilities|default('', true)|e }}"
+                                data-qualifications="{{ job.qualifications|default('', true)|e }}"
+                                data-email="{{ job.employer.email|default('', true)|e }}"
+                                data-phone="{{ job.employer.company_phone|default('', true)|e }}"
+                                data-logo="{% if job.employer and job.employer.company_logo %}{{ url_for('static', filename='uploads/logos/' + job.employer.company_logo) }}{% else %}{{ url_for('static', filename='images/pfp_placeholder.png') }}{% endif %}"
+                                data-remarks="{{ job.remarks|default('', true)|e }}"
+                                data-job-status="{{ job.status or 'Pending' }}"
+                                data-vacancies="{{ job.vacancies or 0 }}"
+                                data-hired="{{ job.accepted_count or 0 }}"
+                                data-remaining="{{ job.remaining_vacancies or 0 }}"
+                                data-deadline="{{ job.deadline.strftime('%B %d, %Y') if job.deadline else '' }}"
+                                data-minimum-education="{{ job.minimum_education or 'NONE' }}"
+                                data-minimum-experience="{{ job.minimum_experience_months or 0 }}"
+                                data-structured-qualification-payload='{{ job.structured_qualification_payload | tojson }}'
+                                data-structured-qualifications='{{ job.structured_qualifications | map(attribute="qualification_code") | list | tojson }}'
+                                data-structured-importance='{{ job.structured_qualifications | map(attribute="importance") | list | tojson }}'
+                            >
+                                Review
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                    <!-- SEARCH EMPTY STATE -->
+                    <tr id="noResultsMsg" class="no-results-row standardized-no-results" style="display: none;">
+                        <td colspan="8">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <span>No job listings match your search or filter criteria.</span>
+                        </td>
+                    </tr>
+
+                    {% else %}
+                    <tr class="no-results-row standardized-no-results static-no-results">
+                        <td colspan="8" class="empty-table">
+                            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                            <span>No job listings found.</span>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- =====================================================
+             PAGINATION
+        ====================================================== -->
+        <div class="pagination peso-standard-pagination">
+            <span id="paginationInfo" data-total-jobs="{{ jobs.total }}">
+                {% if jobs.total %}Showing {{ ((jobs.page - 1) * jobs.per_page) + 1 }}-{{ ((jobs.page - 1) * jobs.per_page) + jobs.items|length }} of {{ jobs.total }} records{% else %}No records{% endif %}
+            </span>
+            <div class="page-controls">
+                {% if jobs.has_prev %}
+                <a class="page-num" href="{{ url_for('admin.joblist', page=jobs.prev_num, status=current_status if current_status != 'All' else None, availability=current_availability if current_availability != 'All' else None, q=current_search or None) }}" aria-label="Previous page"><i class="fa-solid fa-chevron-left"></i></a>
+                {% else %}
+                <span class="page-num disabled" aria-disabled="true"><i class="fa-solid fa-chevron-left"></i></span>
+                {% endif %}
+                {% for page_num in jobs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}<a class="page-num {% if page_num == jobs.page %}active{% endif %}" href="{{ url_for('admin.joblist', page=page_num, status=current_status if current_status != 'All' else None, availability=current_availability if current_availability != 'All' else None, q=current_search or None) }}">{{ page_num }}</a>{% else %}<span class="page-ellipsis">&hellip;</span>{% endif %}
+                {% endfor %}
+                {% if jobs.has_next %}
+                <a class="page-num" href="{{ url_for('admin.joblist', page=jobs.next_num, status=current_status if current_status != 'All' else None, availability=current_availability if current_availability != 'All' else None, q=current_search or None) }}" aria-label="Next page"><i class="fa-solid fa-chevron-right"></i></a>
+                {% else %}
+                <span class="page-num disabled" aria-disabled="true"><i class="fa-solid fa-chevron-right"></i></span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- ============================================================
+     JOB REVIEW MODAL
+============================================================ -->
+<div id="reviewModal" class="modal" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="reviewModalTitle">
+
+        <button type="button" class="close-modal" aria-label="Close">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <!-- HEADER -->
+        <div class="review-header">
+            <h2 id="reviewModalTitle">JOB LISTING REVIEW</h2>
+            <p>Review the submitted job information before taking action.</p>
+        </div>
+
+        <!-- JOB HEADER -->
+        <div class="job-meta">
+            <div class="company-info">
+                <strong id="modalJobTitle"></strong>
+                <span id="modalPostedDate"></span>
+            </div>
+            <div class="job-meta-type">
+                <span class="badge-type" id="modalJobType"></span>
+            </div>
+        </div>
+
+        <section class="review-summary-card" aria-label="Job review summary">
+            <div class="review-summary-item">
+                <span class="review-summary-label">Approval</span>
+                <strong id="modalApprovalOverview" class="review-summary-value">—</strong>
+            </div>
+            <div class="review-summary-item">
+                <span class="review-summary-label">Availability</span>
+                <strong id="modalAvailability" class="review-summary-value">—</strong>
+            </div>
+            <div class="review-summary-item">
+                <span class="review-summary-label">Vacancies</span>
+                <strong id="modalVacancies" class="review-summary-value">0</strong>
+            </div>
+            <div class="review-summary-item">
+                <span class="review-summary-label">Remaining</span>
+                <strong id="modalRemaining" class="review-summary-value">0</strong>
+            </div>
+            <div class="review-summary-item review-summary-wide">
+                <span class="review-summary-label">Deadline</span>
+                <strong id="modalDeadline" class="review-summary-value">—</strong>
+            </div>
+        </section>
+
+        <!-- =====================================================
+             REVIEW CONTENT
+        ====================================================== -->
+        <div class="review-layout">
+
+            <!-- JOB INFORMATION -->
+            <section class="review-info-card">
+                <div class="card-heading">
+                    <h3>Job Information</h3>
+                    <span class="status-badge" id="modalStatus"></span>
+                </div>
+
+                <div class="card-body">
+                    <div class="info-block">
+                        <h4>Employment Type</h4>
+                        <p id="modalEmploymentType">—</p>
+                    </div>
+
+                    <div class="info-block structured-review-block">
+                        <h4>Structured Requirements</h4>
+
+                        <div class="structured-review-summary">
+                            <div>
+                                <span>Minimum Education</span>
+                                <strong id="modalMinimumEducation">—</strong>
+                            </div>
+
+                            <div>
+                                <span>Relevant Experience</span>
+                                <strong id="modalMinimumExperience">—</strong>
+                            </div>
+                        </div>
+
+                        <div id="modalStructuredQualifications"
+                            class="structured-review-qualifications"></div>
+                    </div>
+
+                    <div class="info-block">
+                        <h4>Job Description</h4>
+                        <p id="modalDescription">Not provided</p>
+                    </div>
+
+                    <div class="info-block">
+                        <h4>Key Responsibilities</h4>
+                        <ul id="modalResponsibilities"></ul>
+                    </div>
+
+                    <div class="info-block">
+                        <h4>Qualifications</h4>
+                        <ul id="modalQualifications"></ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- EMPLOYER INFORMATION -->
+            <aside class="review-info-card employer-card">
+                <div class="card-heading">
+                    <h3>Employer Information</h3>
+                </div>
+
+                <div class="card-body">
+                    <div class="employer-logo-box">
+                        <img 
+                            id="modalLogo" 
+                            src="{{ url_for('static', filename='images/pfp_placeholder.png') }}" 
+                            data-fallback="{{ url_for('static', filename='images/pfp_placeholder.png') }}" 
+                            alt="Company Logo" 
+                            class="employer-modal-logo"
+                        >
+                    </div>
+
+                    <div class="employer-company">
+                        <h4 id="modalCompany2"></h4>
+                    </div>
+
+                    <div class="employer-details">
+                        <!-- JOB LOCATION -->
+                        <div class="employer-detail">
+                            <div class="employer-detail-icon">
+                                <i class="fa-solid fa-location-dot"></i>
+                            </div>
+                            <div class="employer-detail-content">
+                                <strong>Job Location</strong>
+                                <span id="modalLocation">Not specified</span>
+                            </div>
+                        </div>
+                        
+                        <!-- SALARY -->
+                        <div class="employer-detail">
+                            <div class="employer-detail-icon">
+                                <i class="fa-solid fa-money-bill-wave"></i>
+                            </div>
+
+                            <div class="employer-detail-content">
+                                <strong>Salary</strong>
+                                <span id="modalSalary">Not specified</span>
+                            </div>
+                        </div>
+
+                        <!-- COMPANY ADDRESS -->
+                        <div class="employer-detail">
+                            <div class="employer-detail-icon">
+                                <i class="fa-solid fa-building"></i>
+                            </div>
+                            <div class="employer-detail-content">
+                                <strong>Company Address</strong>
+                                <span id="modalAddress">Not provided</span>
+                            </div>
+                        </div>
+
+                        <!-- EMAIL -->
+                        <div class="employer-detail">
+                            <div class="employer-detail-icon">
+                                <i class="fa-solid fa-envelope"></i>
+                            </div>
+                            <div class="employer-detail-content">
+                                <strong>Email</strong>
+                                <span id="modalEmail">Not provided</span>
+                            </div>
+                        </div>
+
+                        <!-- PHONE -->
+                        <div class="employer-detail">
+                            <div class="employer-detail-icon">
+                                <i class="fa-solid fa-phone"></i>
+                            </div>
+                            <div class="employer-detail-content">
+                                <strong>Phone</strong>
+                                <span id="modalPhone">Not provided</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+        </div>
+
+        <!-- =====================================================
+             ADMIN ACTION FORM
+        ====================================================== -->
+        <form id="reviewActionForm" method="POST">
+            <div class="remarks-section">
+                <label for="modalRemarks">ADMIN REMARKS</label>
+                <textarea id="modalRemarks" name="remarks" maxlength="2000" placeholder="Enter review remarks..."></textarea>
+            </div>
+
+            <!-- ALREADY PROCESSED MESSAGE -->
+            <div id="actionPerformedNotice" class="action-performed-notice" style="display: none;">
+                <i class="fa-solid fa-circle-info"></i>
+                <span id="noticeText">This job listing has already been processed.</span>
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <div class="review-actions" id="reviewActionsContainer">
+                <button type="submit" name="action" value="flag" class="btn-flag" id="flagBtn">
+                    <i class="fa-solid fa-flag"></i> Flag
+                </button>
+
+                <button type="submit" name="action" value="reject" class="btn-reject" id="rejectBtn">
+                    <i class="fa-solid fa-xmark"></i> Reject
+                </button>
+
+                <button type="submit" name="action" value="approve" class="btn-approve" id="approveBtn">
+                    <i class="fa-solid fa-check"></i> Approve
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/admin/admin_joblist.js') }}" defer></script>
+{% endblock %}  

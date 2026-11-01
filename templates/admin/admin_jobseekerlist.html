@@ -1,0 +1,224 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}PESO: Job Seekers{% endblock %}
+
+{% block css %}
+<style>
+.jsrf-export-dates{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.jsrf-export-dates label{font-size:12px;font-weight:650;color:#596b84}
+.jsrf-export-dates input{max-width:160px;min-height:38px;padding:6px 8px;border:1px solid #d6dfed;border-radius:8px;background:#fff;color:#1d3559;font:inherit;font-size:13px}
+@media(max-width:700px){.jsrf-export-dates{width:100%}.jsrf-export-dates input{flex:1;min-width:115px}}
+</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_jobseekerlist.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+
+<!-- Patch 18: mobile action buttons; scoped to jobseeker-table only. -->
+<style id="peso-mobile-actions-patch18">
+@media screen and (max-width: 760px) {
+  .jobseeker-table tr td[data-label="Action"] {
+    display: block !important; width: 100% !important; max-width: none !important;
+    min-width: 0 !important; box-sizing: border-box !important;
+    grid-template-columns: none !important;
+  }
+  .jobseeker-table tr td[data-label="Action"]::before { display: none !important; }
+  .jobseeker-table tr td[data-label="Action"] .table-actions {
+    display: block !important; width: 100% !important; max-width: none !important;
+    min-width: 0 !important; box-sizing: border-box !important;
+  }
+  .jobseeker-table tr td[data-label="Action"] a.btn-view {
+    display: flex !important; width: 100% !important; max-width: none !important;
+    min-width: 0 !important; flex: none !important; box-sizing: border-box !important;
+    min-height: 42px !important; margin: 0 !important;
+    align-items: center !important; justify-content: center !important;
+    text-align: center !important; white-space: nowrap !important;
+  }
+}
+</style>
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/admin_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="admin-jobseekers-main">
+    <section class="page-header">
+        <div>
+            <span class="page-eyebrow">Job Seeker Management</span>
+            <h1>Job Seekers</h1>
+            <p>View and manage registered job seeker accounts.</p>
+        </div>
+        <div class="page-summary" aria-label="Job seeker summary">
+            <strong>{{ job_seekers|length if job_seekers else 0 }}</strong>
+            <span>Total Job Seekers</span>
+        </div>
+    </section>
+
+    <form id="bulkExportForm" action="{{ url_for('admin.export_bulk_jobseekers') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <section class="list-toolbar" aria-label="Job seeker search and filters">
+            <div class="filter-container">
+                <div class="dashboard-search-box">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+
+                    <input type="text" id="searchInput" placeholder="Search name, ID, skills, or location..."
+                        autocomplete="off">
+                </div>
+
+                <div class="filter-controls">
+                    <div class="select-wrapper">
+                        <select id="statusFilter">
+                            <option value="all">All Statuses</option>
+                            <option value="verified">Verified</option>
+                            <option value="pending">Pending</option>
+                        </select>
+
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+
+                    <div class="jsrf-export-dates" aria-label="JSRF export registration date filters">
+                        <label for="jsrfRegisteredFrom">Registered from</label>
+                        <input type="date" id="jsrfRegisteredFrom" name="registration_from" aria-label="Registration date from">
+                        <label for="jsrfRegisteredTo">To</label>
+                        <input type="date" id="jsrfRegisteredTo" name="registration_to" aria-label="Registration date to">
+                    </div>
+                    <button type="submit" id="btnBulkExport" class="btn-export">
+                        <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+                        <span>Export</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="jobseekers-section">
+            <div class="mobile-select-all">
+                <label for="mobileSelectAllCheckbox">
+                    <input type="checkbox" id="mobileSelectAllCheckbox">
+                    <span>Select All Visible Job Seekers</span>
+                </label>
+            </div>
+            <div class="table-responsive">
+                <table class="jobseeker-table">
+                    <thead>
+                        <tr>
+                            <th class="select-column">
+                                <input type="checkbox" id="selectAllCheckbox" title="Select all visible job seekers">
+                            </th>
+                            <th class="photo-column">Photo</th>
+                            <th>Name</th>
+                            <th>Job Seeker ID</th>
+                            <th>Skills</th>
+                            <th>JSRF Status</th>
+                            <th>Account Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="jobseekerTableBody">
+                        {% if job_seekers %}
+                        {% for seeker in job_seekers %}
+                        <tr class="jobseeker-row" data-status="{{ 'verified' if seeker.is_verified else 'pending' }}">
+                            <td class="select-cell" data-label="Select">
+                                <input type="checkbox" name="selected_jobseeker_ids" value="{{ seeker.user.public_id }}"
+                                    class="seeker-checkbox">
+                            </td>
+
+                            <td class="photo-cell" data-label="Photo">
+                                {% set photo_path = seeker.profile_picture or (seeker.user.profile_picture if
+                                seeker.user and seeker.user.profile_picture else None) %}
+                                {% set default_pfp = url_for('static', filename='images/pfp_placeholder.png') %}
+
+                                {% if photo_path %}
+                                {% set final_src = photo_path if '/' in photo_path else 'uploads/jobseekers/' ~
+                                photo_path %}
+                                <img src="{{ url_for('static', filename=final_src) }}" class="table-avatar"
+                                    alt="{{ seeker.first_name }} {{ seeker.last_name }}"
+                                    data-fallback="{{ default_pfp }}">
+                                {% else %}
+                                <img src="{{ default_pfp }}" class="table-avatar"
+                                    alt="{{ seeker.first_name }} {{ seeker.last_name }}">
+                                {% endif %}
+                            </td>
+
+                            <td data-label="Name">
+                                <div class="applicant-meta">
+                                    <strong class="name-text">
+                                        {{ seeker.first_name }} {{ seeker.last_name }}
+                                    </strong>
+                                    <span class="location-text">
+                                        <i class="fa-solid fa-location-dot"></i>
+                                        {% set location = [seeker.street, seeker.barangay, seeker.city, seeker.province]
+                                        | select | join(', ') %}
+                                        {{ location if location else (seeker.address or 'No address provided') }}
+                                    </span>
+                                </div>
+                            </td>
+
+                            <td data-label="Job Seeker ID">
+                                <span class="id-text">
+                                    {{ seeker.user.public_id }}
+                                </span>
+                            </td>
+
+                            <td data-label="Skills">
+                                <span class="skills-text">
+                                    {{ seeker.skills or "No skills listed" }}
+                                </span>
+                            </td>
+
+                            <td data-label="JSRF Status">
+                                {% if seeker.jsrf_completed %}
+                                <span class="status-badge status-jsrf-complete">Complete</span>
+                                {% else %}
+                                <span class="status-badge status-jsrf-incomplete">Incomplete</span>
+                                {% endif %}
+                            </td>
+
+                            <td data-label="Account Status">
+                                {% if seeker.is_verified %}
+                                <span class="status-badge status-verified" title="PESO has verified this jobseeker">Verified</span>
+                                {% elif seeker.user.is_unclaimed %}
+                                <span class="status-badge status-pending" title="The applicant has not claimed the supervised account">Unclaimed</span>
+                                {% elif seeker.user.status == 'active' %}
+                                <span class="status-badge status-pending" title="Account claimed and active; JSRF verification is pending">Claimed</span>
+                                {% else %}
+                                <span class="status-badge status-pending" title="Account is pending activation or PESO verification">Pending</span>
+                                {% endif %}
+                            </td>
+
+                            <td data-label="Action">
+                                <div class="table-actions">
+                                    <a href="{{ url_for('admin.jobseeker_profile', public_id=seeker.user.public_id) }}"
+                                        class="btn-view">
+                                        View Profile
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        <tr id="noResultsMsg" class="no-results-row standardized-no-results" style="display:none;">
+                            <td colspan="8">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <span>No job seekers matching your search query.</span>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr class="empty-row standardized-no-results static-no-results">
+                            <td colspan="7" class="empty-table"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>No registered job seekers found.</span></td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </form>
+</main>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/admin/admin_jobseekerlist.js') }}" defer></script>
+{% endblock %}

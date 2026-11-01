@@ -1,0 +1,154 @@
+{% extends "layouts/auth_base.html" %}
+
+{% block title %}Register as Job Seeker{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth/auth.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="auth-page">
+    <div class="auth-container">
+
+        <section class="branding-panel">
+            <div class="decor-circle circle-top"></div>
+            <div class="decor-circle circle-bottom"></div>
+
+            <div class="peso-logo">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="PESO Logo">
+            </div>
+
+            <div class="branding-content">
+                <span class="organization-name">PUBLIC EMPLOYMENT SERVICE OFFICE</span>
+                <h1>CONNECTING PEOPLE WITH OPPORTUNITIES</h1>
+                <p>Discover employment opportunities, connect with employers, and build your career through PESO.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fa-solid fa-briefcase"></i>
+                </div>
+                <div>
+                    <strong>Find Opportunities</strong>
+                    <span>Explore available employment opportunities.</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="form-panel">
+            <div class="form-wrapper">
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="flash-messages-container">
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'message' else 'info' }}">
+                        <i class="fa-solid 
+                                {% if category == 'success' %}fa-circle-check
+                                {% elif category == 'danger' or category == 'error' %}fa-circle-exclamation
+                                {% elif category == 'warning' %}fa-triangle-exclamation
+                                {% else %}fa-circle-info{% endif %}">
+                        </i>
+                        <span>{{ message }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                <div class="form-header">
+                    <span class="form-eyebrow">GET STARTED</span>
+                    <h2>Create your account</h2>
+                    <p>Register to discover employment opportunities through PESO.</p>
+                </div>
+
+                <form id="registerForm" method="POST" class="auth-form">
+                    {{ form.hidden_tag() }}
+
+                    <div class="form-grid">
+                        <div class="input-group">
+                            {{ form.first_name.label }}
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-user"></i>
+                                {{ form.first_name(class="form-control", placeholder="First name") }}
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            {{ form.last_name.label }}
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-user"></i>
+                                {{ form.last_name(class="form-control", placeholder="Last name") }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        {{ form.email.label }}
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-envelope"></i>
+                            {{ form.email(class="form-control", placeholder="Enter your email address") }}
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        {{ form.contact_number.label }}
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-phone"></i>
+                            {{ form.contact_number(
+                            class="form-control",
+                            placeholder="09XXXXXXXXX",
+                            inputmode="numeric",
+                            maxlength="11",
+                            minlength="11",
+                            pattern="09[0-9]{9}",
+                            autocomplete="tel",
+                            data_ph_mobile="true",
+                            title="Enter an 11-digit Philippine mobile number starting with 09"
+                            ) }}
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="input-group">
+                            {{ form.password.label }}
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-lock"></i>
+                                {{ form.password(class="form-control", id="password", placeholder="Create password") }}
+                                <button type="button" class="password-toggle" data-target="password"
+                                    aria-label="Show password" title="Show password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            {{ form.confirm_password.label }}
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-lock"></i>
+                                {{ form.confirm_password(class="form-control", id="confirm_password",
+                                placeholder="Confirm password") }}
+                                <button type="button" class="password-toggle" data-target="confirm_password"
+                                    aria-label="Show password" title="Show password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="primary-btn">
+                        <span>Create Account</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+
+                    <div class="switch-account">
+                        <span>Already have an account?</span>
+                        <a href="{{ url_for('auth.login') }}">Sign In</a>
+                    </div>
+                </form>
+
+            </div>
+        </section>
+
+    </div>
+</main>
+{% endblock %}

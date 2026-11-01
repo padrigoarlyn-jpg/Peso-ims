@@ -1,0 +1,817 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}employer-app{% endblock %}
+
+{% block title %}Employer View: {{ applicant.full_name }} | PESO IMS{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_shared_safe.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/employer_jobseeker.css', v='20261024c') }}">
+
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/employer_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="dashboard-container">
+
+    {% set application_status = application.status or "Pending" %}
+
+    <!-- NAVIGATION HEADER -->
+    <div class="back-button">
+        <a href="{{ back_url }}">
+            <i class="fa-solid fa-arrow-left"></i> {{ back_label }}
+        </a>
+    </div>
+
+    <div class="profile-grid-layout">
+
+        <!-- LEFT COLUMN: SIDEBAR / OVERVIEW -->
+        <aside class="profile-sidebar">
+
+            <!-- APPLICANT PROFILE OVERVIEW CARD -->
+            <div class="card profile-overview-card">
+                <div class="avatar-container">
+                    {% if applicant.profile_picture %}
+                    {% if '/' in applicant.profile_picture %}
+                    <img src="{{ url_for('static', filename=applicant.profile_picture) }}" alt="Profile Picture"
+                        class="large-avatar">
+                    {% else %}
+                    <img src="{{ url_for('static', filename='uploads/jobseekers/' ~ applicant.profile_picture) }}"
+                        alt="Profile Picture" class="large-avatar">
+                    {% endif %}
+                    {% else %}
+                    <img src="{{ url_for('static', filename='images/pfp_placeholder.png') }}" alt="Profile Picture"
+                        class="large-avatar">
+                    {% endif %}
+                </div>
+
+                <div class="overview-info">
+                    <h2>
+                        {{ applicant.full_name }}
+                        {% if applicant.is_verified %}
+                        <i class="fa-solid fa-circle-check verified-icon" title="Verified Account"></i>
+                        {% endif %}
+                    </h2>
+
+                    <div class="badge-group">
+                        <span class="role-tag">{{ job.job_title }}</span>
+                        {% if referral %}
+                        <span class="badge badge-peso">
+                            <i class="fa-solid fa-user-check"></i> Referred by PESO
+                        </span>
+                        {% elif is_job_fair %}
+                        <span class="badge badge-secondary">
+                            <i class="fa-solid fa-people-roof"></i> Job Fair Applicant
+                        </span>
+                        {% else %}
+                        <span class="badge badge-secondary">
+                            <i class="fa-solid fa-user"></i> Direct Applicant
+                        </span>
+                        {% endif %}
+                        <span
+                            class="badge {{ 'badge-pending' if application_status in ['Pending', 'Reviewed', 'Interview'] else 'badge-success' }}">
+                            <i class="fa-solid fa-circle"></i> {{ application_status }}
+                        </span>
+                    </div>
+
+                    <div class="meta-row">
+                        <span class="meta-label">Location</span>
+                        <span class="meta-val">
+                            {{ [applicant.street, applicant.barangay, applicant.city, applicant.province] | select |
+                            join(", ") or "N/A" }}
+                        </span>
+                    </div>
+
+                    <div class="meta-row">
+                        <span class="meta-label">Job Seeker ID</span>
+                        <span class="meta-val">{{ applicant.user.public_id if applicant.user else 'N/A' }}</span>
+                    </div>
+
+                    <!-- DIRECT ACTION BUTTONS -->
+                    <div class="sidebar-actions">
+                        <a class="btn-action btn-message" href="mailto:{{ applicant.user.email }}">
+                            <i class="fa-solid fa-paper-plane"></i> Send Email
+                        </a>
+                        {% if applicant.resume %}
+                        <a class="btn-action btn-secondary"
+                            href="{{ url_for('employer.view_application_resume', application_id=application.application_id) }}"
+                            download>
+                            <i class="fa-solid fa-download"></i> Resume
+                        </a>
+                        {% endif %}
+                    </div>
+
+                    {% if applicant.summary %}
+                    <div class="summary-section">
+                        <div class="section-header-row">
+                            <h3>Professional Summary</h3>
+                        </div>
+                        <p id="summaryText">{{ applicant.summary }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- APPLICATION STATUS PROGRESS CARD -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3><i class="fa-solid fa-clock-rotate-left"></i> Application Status</h3>
+                </div>
+                <ul class="application-timeline">
+                    {% if is_job_fair %}
+                    <li class="completed"><i class="fa-solid fa-circle-check"></i> Registered for Job Fair</li>
+                    <li class="completed"><i class="fa-solid fa-circle-check"></i> Attended Job Fair</li>
+                    <li class="completed"><i class="fa-solid fa-circle-check"></i> Evaluated by Employer</li>
+                    <li class="{{ 'active' if application_status == 'Accepted' else '' }}">
+                        <i class="fa-{{ 'solid fa-circle-check' if application_status == 'Accepted' else 'regular fa-circle' }}"></i>
+                        Hired
+                    </li>
+                    {% else %}
+                    <li class="completed"><i class="fa-solid fa-circle-check"></i> Applied</li>
+                    <li class="{{ 'completed' if referral else '' }}">
+                        <i class="fa-{{ 'solid fa-circle-check' if referral else 'regular fa-circle' }}"></i> Referred by PESO
+                    </li>
+                    <li class="{{ 'active' if application_status == 'Interview' else ('completed' if application_status == 'Accepted' else '') }}">
+                        <i class="fa-{{ 'solid fa-circle-check' if application_status in ['Interview', 'Accepted'] else 'regular fa-circle' }}"></i> Interview
+                    </li>
+                    <li class="{{ 'active' if application_status == 'Accepted' else '' }}">
+                        <i class="fa-{{ 'solid fa-circle-check' if application_status == 'Accepted' else 'regular fa-circle' }}"></i> Hired
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+
+
+            <!-- STRUCTURED QUALIFICATION MATCH -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3>
+                        <i class="fa-solid fa-chart-simple"></i>
+                        Qualification Match
+                    </h3>
+                </div>
+
+                <div class="match-overview">
+                    <div class="match-stat">
+                        <span>Overall Match</span>
+                        <strong>
+                            {{ "%.0f"|format(match_result.match_percentage or 0) }}%
+                        </strong>
+                    </div>
+
+                    <div class="match-stat">
+                        <span>Required Criteria</span>
+                        <strong>
+                            {{ match_result.required_matched }}/{{ match_result.required_total }}
+                        </strong>
+                    </div>
+
+                    <div class="match-stat">
+                        <span>Preferred Criteria</span>
+                        <strong>
+                            {{ match_result.preferred_matched }}/{{ match_result.preferred_total }}
+                        </strong>
+                    </div>
+                </div>
+
+                <p class="required-summary {{ 'met' if match_result.all_required_met else 'missing' }}">
+                    {% if match_result.all_required_met %}
+                    <i class="fa-solid fa-circle-check"></i>
+                    All required criteria are matched.
+                    {% else %}
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    One or more required criteria are not matched.
+                    {% endif %}
+                </p>
+            </div>
+
+            {% if is_referred %}
+            <!-- PESO REFERRAL STATUS CARD -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3><i class="fa-solid fa-handshake"></i> Referral Details</h3>
+                </div>
+                {% if referral %}
+                <div class="details-list">
+                    <div class="detail-row">
+                        <span class="d-label">Referral ID</span>
+                        <span class="d-value">REF-{{ "%06d"|format(referral.referral_id) if referral.referral_id else
+                            "N/A" }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="d-label">Status</span>
+                        <span class="d-value badge badge-success">{{ referral.status }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="d-label">Referred By</span>
+                        <span class="d-value">{% if referral.referrer %}
+                            {% set admin_name = [referral.referrer.first_name, referral.referrer.middle_name, referral.referrer.last_name] | select | join(' ') | trim %}
+                            {{ admin_name or (referral.referrer.user.username if referral.referrer.user else 'PESO Admin') }}
+                            {% else %}PESO Admin (not recorded){% endif %}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="d-label">Referral Date</span>
+                        <span class="d-value">{{ referral.referral_date.strftime("%B %d, %Y") if referral.referral_date
+                            else "N/A" }}</span>
+                    </div>
+                    {% if referral.remarks %}
+                    <div class="detail-row full-width mt-2">
+                        <span class="d-label">Assessment Remarks</span>
+                        <p class="text-muted small mb-0">{{ referral.remarks }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0"><i class="fa-solid fa-circle-info"></i> Direct application (Not referred via
+                    PESO).</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+        </aside>
+
+        <!-- RIGHT COLUMN: DETAILED APPLICANT DATA -->
+        <section class="profile-main-content">
+
+
+            {% if is_job_fair and job_fair_evaluation %}
+            <!-- JOB FAIR APPLICATION -->
+            <div class="card referred-jobs-profile-card job-fair-application-card">
+                <div class="card-header-flex">
+                    <div>
+                        <h3><i class="fa-solid fa-people-roof"></i> Job Fair Application</h3>
+                        <p class="card-helper-text">Application and employer evaluation recorded during the job fair.</p>
+                    </div>
+                    <span class="badge badge-secondary">Job Fair</span>
+                </div>
+                <div class="details-list">
+                    <div class="detail-row"><span class="d-label">Applied Position</span><span class="d-value">{{ job.job_title }}</span></div>
+                    <div class="detail-row"><span class="d-label">Job Fair</span><span class="d-value">{{ job_fair_evaluation.job_fair.title if job_fair_evaluation.job_fair else "N/A" }}</span></div>
+                    <div class="detail-row"><span class="d-label">Event Date</span><span class="d-value">{{ job_fair_evaluation.job_fair.start_datetime.strftime("%B %d, %Y") if job_fair_evaluation.job_fair and job_fair_evaluation.job_fair.start_datetime else "N/A" }}</span></div>
+                    <div class="detail-row"><span class="d-label">Venue</span><span class="d-value">{{ job_fair_evaluation.job_fair.venue if job_fair_evaluation.job_fair else "N/A" }}</span></div>
+                    <div class="detail-row"><span class="d-label">Registration Type</span><span class="d-value">{{ job_fair_evaluation.job_fair_registration.registration_source if job_fair_evaluation.job_fair_registration else "N/A" }}</span></div>
+                    <div class="detail-row"><span class="d-label">Attendance</span><span class="d-value">{{ job_fair_evaluation.job_fair_registration.attendance_status if job_fair_evaluation.job_fair_registration else "N/A" }}</span></div>
+                    <div class="detail-row"><span class="d-label">Evaluation</span><span class="d-value badge badge-success">{{ job_fair_evaluation.status or "N/A" }}</span></div>
+                    <div class="detail-row"><span class="d-label">Application Status</span><span class="d-value">{{ application_status }}</span></div>
+                    {% if job_fair_evaluation.remarks %}
+                    <div class="detail-row full-width"><span class="d-label">Evaluation Remarks</span><span class="d-value">{{ job_fair_evaluation.remarks }}</span></div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <!-- REFERRED JOBS -->
+            <div class="card referred-jobs-profile-card" id="referredJobsCard">
+                <div class="card-header-flex">
+                    <div>
+                        <h3>
+                            <i class="fa-solid fa-briefcase"></i>
+                            Referred Jobs
+                        </h3>
+                        <p class="card-helper-text">
+                            Jobs that PESO officially referred this job seeker to under your company.
+                        </p>
+                    </div>
+
+                    <span class="referred-jobs-count">
+                        {{ referred_jobs|length }}
+                    </span>
+                </div>
+
+                {% if referred_jobs %}
+                <div class="profile-referred-jobs-list">
+
+                    {% for item in referred_jobs %}
+                    <div class="profile-referred-job-item {% if item.application.application_id == application.application_id %}is-current{% endif %}">
+
+                        <div class="profile-referred-job-main">
+                            <div class="profile-referred-job-title">
+                                {{ item.job.job_title }}
+                            </div>
+
+                            <div class="profile-referred-job-meta">
+                                <span>
+                                    {{ item.job.employment_type or "Employment type not specified" }}
+                                </span>
+
+                                <span aria-hidden="true">•</span>
+
+                                <span>
+                                    Referred
+                                    {{
+                                        item.referral_date.strftime("%B %d, %Y")
+                                        if item.referral_date
+                                        else "date unavailable"
+                                    }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="profile-referred-job-side">
+                            <span class="status-pill {{ (item.application.status or 'Pending')|lower }}">
+                                {{ item.application.status or "Pending" }}
+                            </span>
+
+                            {% if item.application.application_id == application.application_id %}
+                            <span class="current-referral-label">
+                                Current
+                            </span>
+                            {% else %}
+                            <a
+                                class="referred-job-view-btn"
+                                href="{{ url_for(
+                                    'employer.applicant_details',
+                                    application_id=item.application.application_id
+                                ) }}"
+                            >
+                                View
+                            </a>
+                            {% endif %}
+                        </div>
+
+                    </div>
+                    {% endfor %}
+
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">
+                    No official PESO referrals were found for this job seeker under your company.
+                </p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- MATCH BREAKDOWN -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3>
+                        <i class="fa-solid fa-list-check"></i>
+                        Job Requirement Match
+                    </h3>
+                </div>
+
+                {% if match_result.details %}
+                <div class="criteria-list">
+                    {% for detail in match_result.details %}
+                    <div class="criteria-item">
+                        <div class="criteria-icon {{ 'met' if detail.matched else 'missing' }}">
+                            <i class="fa-solid {{ 'fa-circle-check' if detail.matched else 'fa-circle-xmark' }}"></i>
+                        </div>
+
+                        <div>
+                            <div class="criteria-title">
+                                {{ detail.label }}
+                            </div>
+
+                            <div class="criteria-detail">
+                                {% if detail.type == "education" %}
+                                Required: {{ detail.required_value }}
+                                · Applicant: {{ detail.applicant_value }}
+                                {% elif detail.type == "experience" %}
+                                Required: {{ detail.required_value }} month{% if detail.required_value != 1 %}s{% endif
+                                %}
+                                · Relevant experience: {{ detail.applicant_value }} month{% if detail.applicant_value !=
+                                1 %}s{% endif %}
+                                {% else %}
+                                {{ "Matched from JSRF records" if detail.matched else "Not detected in JSRF records" }}
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <span class="criteria-importance">
+                            {{ detail.importance }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">
+                    This job does not yet have structured requirements available for matching.
+                </p>
+                {% endif %}
+            </div>
+
+            <!-- INTERVIEW SCHEDULE CARD -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3><i class="fa-solid fa-calendar-days"></i> Interview Schedule</h3>
+                    {% if application_status not in ['Accepted', 'Rejected'] %}
+                    <button type="button" id="openInterviewModal" class="btn-action btn-secondary">
+                        <i class="fa-solid fa-calendar-plus"></i> {{ 'Reschedule' if application.interview_date else
+                        'Schedule Interview' }}
+                    </button>
+                    {% endif %}
+                </div>
+                {% if application.interview_date and application.interview_time %}
+                <div class="info-grid">
+                    <div>
+                        <span class="field-label">Date</span>
+                        <span class="field-value">{{ application.interview_date.strftime("%B %d, %Y") }}</span>
+                    </div>
+                    <div>
+                        <span class="field-label">Time</span>
+                        <span class="field-value">{{ application.interview_time.strftime("%I:%M %p") }}</span>
+                    </div>
+                    <div class="full-width">
+                        <span class="field-label">Location / Link</span>
+                        <span class="field-value">{{ application.interview_location or "Location not provided" }}</span>
+                    </div>
+                    {% if application.interview_notes %}
+                    <div class="full-width">
+                        <span class="field-label">Notes</span>
+                        <span class="field-value">{{ application.interview_notes }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="text-muted">No interview has been scheduled yet.</p>
+                {% endif %}
+            </div>
+
+            <!-- PERSONAL INFORMATION -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3><i class="fa-solid fa-user"></i> Personal Information</h3>
+                </div>
+
+                <div class="contact-grid">
+                    <div class="contact-item">
+                        <span class="field-label">Email Address</span>
+                        <span class="field-value">{{ applicant.user.email }}</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="field-label">Phone Number</span>
+                        <span class="field-value">{{ applicant.contact_number or "—" }}</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="field-label">Date of Birth</span>
+                        <span class="field-value">{{ applicant.birthdate.strftime("%B %d, %Y") if applicant.birthdate
+                            else "—" }}</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="field-label">Sex</span>
+                        <span class="field-value">{{ applicant.sex or "—" }}</span>
+                    </div>
+                    <div class="contact-item full-width">
+                        <span class="field-label">Full Address</span>
+                        <span class="field-value">{{ [applicant.street, applicant.barangay, applicant.city,
+                            applicant.province] | select | join(", ") or "—" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- JOB PREFERENCES & EXPECTATIONS -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3><i class="fa-solid fa-briefcase"></i> Job Preferences & Expectations</h3>
+                </div>
+                <div class="details-list">
+                    <div class="detail-row">
+                        <div>
+                            <span class="d-label">Target Position</span>
+                            <span class="d-value">{{ job.job_title }}</span>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div>
+                            <span class="d-label">Preferred Employment Type</span>
+                            <span class="d-value">{{ applicant.pref_job_type or job.employment_type or "Any" }}</span>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div>
+                            <span class="d-label">Total Experience</span>
+                            <span class="d-value">{{ applicant.experience_display }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TWO COLUMN: SKILLS & EDUCATION -->
+            <div class="grid-two-col">
+                <!-- SKILLS -->
+                <div class="card">
+                    <div class="card-header-flex">
+                        <h3><i class="fa-solid fa-laptop-code"></i> Skills & Competencies</h3>
+                    </div>
+                    <div class="skills-tags">
+                        {% for skill in skills %}
+                        <span class="tag">{{ skill }}</span>
+                        {% else %}
+                        <p class="text-muted">No skills listed.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- EDUCATION -->
+                <div class="card">
+                    <div class="card-header-flex">
+                        <h3><i class="fa-solid fa-graduation-cap"></i> Educational Background</h3>
+                    </div>
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <h4>{{ applicant.tertiary_course or applicant.tertiary_level_reached or "Educational
+                                background not provided" }}</h4>
+                            <p class="text-muted">{{ applicant.tertiary_school or "N/A" }}</p>
+                            <small>{{ applicant.tertiary_year_attended or applicant.tertiary_year_grad or "N/A"
+                                }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WORK EXPERIENCE -->
+            <!-- WORK EXPERIENCE -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3>
+                        <i class="fa-solid fa-building"></i>
+                        Work Experience
+                    </h3>
+                </div>
+
+                <div class="timeline">
+                    {% if work_history %}
+                    {% for work in work_history %}
+                    <div class="timeline-item">
+                        <h4>{{ work.position or "Position not specified" }}</h4>
+
+                        <p class="text-muted">
+                            {{ work.company or "Company not specified" }}
+                        </p>
+                        <small>{{ work.company_address or 'Address not yet supplied' }}{% if work.number_of_months is not none %} · {{ work.number_of_months }} month{% if work.number_of_months != 1 %}s{% endif %}{% endif %}</small>
+
+                        {% if work.appointment_status %}
+                        <div class="work-status-wrapper">
+                            <span class="work-status">{{ work.appointment_status }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted">No prior work experience listed.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- RESUME ATTACHMENT CARD -->
+            <div class="card resume-card">
+                <div class="card-header-flex">
+                    <h3>
+                        <i class="fa-solid fa-file-lines"></i>
+                        Resume Attachment
+                    </h3>
+                </div>
+
+                <div class="resume-container">
+                    {% if applicant.resume %}
+                    {% set resume_lower = applicant.resume|lower %}
+                    {% set resume_is_pdf = resume_lower.endswith('.pdf') %}
+                    {% set resume_is_word = resume_lower.endswith('.doc') or resume_lower.endswith('.docx') %}
+
+                    <div class="resume-icon {{ 'is-word' if resume_is_word else 'is-pdf' }}">
+                        {% if resume_is_word %}
+                            <i class="fa-solid fa-file-word"></i>
+                        {% else %}
+                            <i class="fa-solid fa-file-pdf"></i>
+                        {% endif %}
+                    </div>
+
+                    <div class="resume-info">
+                        <h4>{{ applicant.full_name }} - Resume</h4>
+
+                        {% if resume_is_pdf %}
+                        <span>PDF Resume Attachment</span>
+                        {% elif resume_is_word %}
+                        <span>Word Resume Attachment</span>
+                        {% else %}
+                        <span>Uploaded Resume Attachment</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="resume-buttons">
+
+                        {% if resume_is_pdf %}
+                        <button
+                            type="button"
+                            class="btn-action btn-secondary"
+                            id="openResumeBtn"
+                        >
+                            <i class="fa-solid fa-eye"></i>
+                            Preview
+                        </button>
+                        {% else %}
+                        <button
+                            type="button"
+                            class="btn-action btn-secondary resume-preview-disabled"
+                            disabled
+                            title="Inline preview is available for PDF resumes only."
+                        >
+                            <i class="fa-solid fa-eye-slash"></i>
+                            Preview unavailable
+                        </button>
+                        {% endif %}
+
+                        <a
+                            class="btn-action btn-secondary"
+                            href="{{ url_for('employer.view_application_resume', application_id=application.application_id) }}"
+                            download
+                        >
+                            <i class="fa-solid fa-download"></i>
+                            Resume
+                        </a>
+
+                    </div>
+                    {% else %}
+                    <div class="resume-info">
+                        <h4>No resume attached</h4>
+                        <span>No document was provided by applicant</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if applicant.resume and not resume_is_pdf %}
+                <p class="resume-preview-note">
+                    <i class="fa-solid fa-circle-info"></i>
+                    Word documents cannot be previewed directly in this browser.
+                    Download the resume to open it in Microsoft Word or another compatible application.
+                </p>
+                {% endif %}
+            </div>
+
+            <!-- DECISION ACTION BAR -->
+            <div class="decision-section">
+                {% if application_status not in ['Accepted', 'Rejected'] %}
+
+                {% if can_hire %}
+                <form method="POST"
+                    action="{{ url_for('employer.hire_applicant', application_id=application.application_id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="accept-btn">
+                        <i class="fa-solid fa-circle-check"></i> Accept Jobseeker
+                    </button>
+                </form>
+                {% elif application_status != 'Interview' %}
+                <p class="decision-notice"><i class="fa-solid fa-circle-info"></i> Schedule and complete an interview
+                    before accepting this jobseeker.</p>
+                {% elif application.interview_date and application.interview_date > current_date %}
+                <p class="decision-notice"><i class="fa-solid fa-circle-info"></i> Acceptance will be available after
+                    the interview date.</p>
+                {% elif remaining_vacancies <= 0 %} <p class="decision-notice"><i class="fa-solid fa-circle-info"></i>
+                    No vacancies remain for this job.</p>
+                    {% endif %}
+
+                    <form method="POST"
+                        action="{{ url_for('employer.reject_applicant', application_id=application.application_id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="reject-btn">
+                            <i class="fa-solid fa-circle-xmark"></i> Reject Jobseeker
+                        </button>
+                    </form>
+
+                    {% else %}
+                    <p class="decision-notice">This applicant has already been <strong>{{ application_status | lower
+                            }}</strong>.</p>
+                    {% if application_status == 'Accepted' %}
+                    <section class="employment-lifecycle" aria-label="Employment record">
+                        <div class="employment-lifecycle__heading"><i class="fa-solid fa-briefcase" aria-hidden="true"></i><span>Employment Record</span></div>
+                        {% if application.employment_ended_at %}
+                        <div class="employment-lifecycle__summary" role="status">
+                            <span class="employment-lifecycle__badge employment-lifecycle__badge--ended">Employment Ended</span>
+                            <dl><div><dt>End Date</dt><dd>{{ application.employment_ended_at.strftime('%B %d, %Y') }}</dd></div>
+                            <div><dt>Reason</dt><dd>{{ application.employment_end_reason or 'Not specified' }}</dd></div></dl>
+                        </div>
+                        {% else %}
+                        <span class="employment-lifecycle__badge">Currently Employed</span>
+                        <p class="employment-lifecycle__help">End employment only when this job seeker's employment with your company has actually finished. The accepted application and placement record will be retained.</p>
+                        <button type="button" class="employment-lifecycle__open" id="openEndEmploymentModal" aria-haspopup="dialog" aria-controls="endEmploymentModal"><i class="fa-solid fa-calendar-xmark" aria-hidden="true"></i> End Employment</button>
+                        {% endif %}
+                    </section>
+                    {% endif %}
+
+                    {% endif %}
+            </div>
+
+        </section>
+
+    </div>
+</main>
+
+<!-- RESUME MODAL -->
+{% if applicant.resume and resume_is_pdf %}
+<div id="resumeModal" class="modal">
+    <div class="modal-content resume-modal-content">
+        <div class="resume-modal-header">
+            <div>
+                <h2>Resume Preview</h2>
+                <p>{{ applicant.first_name }} {{ applicant.middle_name or '' }} {{ applicant.last_name }} — {{
+                    application.job.title }}</p>
+            </div>
+
+            <button type="button" class="resume-close-btn" id="closeResumeBtn">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="resume-preview-shell">
+            <iframe
+                src="about:blank"
+                data-resume-src="{{ url_for('employer.view_application_resume', application_id=application.application_id) }}#toolbar=0&navpanes=0&scrollbar=1"
+                title="Resume Preview"
+                class="resume-preview-frame">
+            </iframe>
+        </div>
+
+        <div class="resume-modal-footer">
+            <button type="button" class="resume-secondary-btn" id="closeResumeBtnAlt">
+                Close
+            </button>
+
+            <a href="{{ url_for('employer.view_application_resume', application_id=application.application_id) }}"
+                class="resume-primary-btn" download>
+                <i class="fa-solid fa-download"></i>
+                Download Resume
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- SCHEDULE INTERVIEW MODAL -->
+<div id="interviewModal" class="modal">
+    <div class="interview-modal">
+        <span class="close-interview" id="closeInterviewBtn"
+            onclick="document.getElementById('interviewModal').style.display='none'">&times;</span>
+
+        <h2>Schedule Interview</h2>
+
+        <form id="scheduleInterviewForm"
+            action="{{ url_for('employer.schedule_interview', application_id=application.application_id) }}"
+            method="POST"
+            data-application-id="{{ application.application_id }}"
+            data-availability-url="{{ url_for('employer.interview_availability') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" id="interviewLocationValue" />
+
+            <div class="form-group">
+                <label for="interviewDate">Interview Date</label>
+                <input type="date" id="interviewDate" name="interview_date"
+                    value="{{ application.interview_date.strftime('%Y-%m-%d') if application.interview_date else '' }}"
+                    required />
+            </div>
+
+            <div id="interviewAvailabilityNote" class="interview-availability-note" hidden role="status" aria-live="polite"></div>
+
+            <div class="form-group">
+                <label for="interviewTime">Interview Time</label>
+                <input type="time" id="interviewTime" name="interview_time"
+                    value="{{ application.interview_time.strftime('%H:%M') if application.interview_time else '' }}"
+                    required />
+            </div>
+
+            <div class="form-group">
+                <label>Interview Location</label>
+                <button type="button" class="btn-use-company-address" id="useCompanyAddress"
+                    data-company-address="{{ employer.address if employer else '' }}">
+                    Click here if the location is the company's address
+                </button>
+
+                <input type="text" id="interviewLocationInput" name="interview_location" maxlength="220"
+                    value="{{ application.interview_location if application.interview_location else '' }}"
+                    placeholder="Grand Villas, LDGH, Marilao, Bulacan" required />
+                <input type="text" id="interviewFloorRoomInput" name="interview_floor_room" maxlength="30"
+                    placeholder="Floor and room (optional)" />
+            </div>
+
+            <div class="form-group">
+                <label for="interviewNotes">Notes (Optional)</label>
+                <textarea id="interviewNotes" name="interview_notes" maxlength="5000" rows="4"
+                    placeholder="Reminders&#10;- Please be 10 minutes early.&#10;- Wear a white shirt and pants.&#10;- Bring resume.">{{ application.interview_notes if application.interview_notes else '' }}</textarea>
+            </div>
+
+            <button type="submit" class="btn-interview">Save Interview Schedule</button>
+        </form>
+    </div>
+</div>
+
+
+{% if application_status == 'Accepted' and not application.employment_ended_at %}
+<div class="employment-end-overlay" id="endEmploymentModal" hidden>
+  <div class="employment-end-dialog" role="dialog" aria-modal="true" aria-labelledby="employmentEndTitle" aria-describedby="employmentEndDescription">
+    <div class="employment-end-dialog__header"><div><h2 id="employmentEndTitle">End Employment</h2><p id="employmentEndDescription">Confirm the end of this job seeker's employment. Their work history will be updated.</p></div><button type="button" class="employment-end-dialog__close" data-close-employment aria-label="Close dialog"><i class="fa-solid fa-xmark"></i></button></div>
+    <form id="endEmploymentForm" method="POST" action="{{ url_for('employer.end_employment', application_id=application.application_id) }}" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="employmentEndReason">Reason for ending employment <span class="employment-end-required">Required</span></label>
+      <select id="employmentEndReason" name="end_reason" required aria-describedby="employmentEndError"><option value="">Select a reason</option><option value="Finished Contract">Finished Contract</option><option value="Resigned">Resigned</option><option value="Terminated">Terminated</option><option value="Laid Off">Laid Off</option><option value="Other">Other</option></select>
+      <p class="employment-end-error" id="employmentEndError" role="alert" aria-live="polite"></p>
+      <p class="employment-end-dialog__notice"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> This action preserves the hiring and referral records. Please verify the reason before confirming.</p>
+      <div class="employment-end-dialog__actions"><button type="button" class="employment-end-dialog__cancel" data-close-employment>Cancel</button><button type="submit" class="employment-end-dialog__submit">Confirm End Employment</button></div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<script src="{{ url_for('static', filename='javascript/employer/employer_jobseeker.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/employer/employment_end_modal.js', v='20261024c') }}"></script>
+{% endblock %}

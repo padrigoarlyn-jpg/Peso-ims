@@ -1,0 +1,338 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}PESO: Job Fair Management{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_job_fair_management.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/admin_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="admin-dashboard-main">
+    <section class="welcome-section">
+        <div class="welcome-copy">
+            <p class="eyebrow">Event Management</p>
+            <h1>Job Fair Control Panel</h1>
+            <p class="welcome-subtext">
+                Manage upcoming career fairs, monitor booth allocations, and track event registrations.
+            </p>
+        </div>
+
+        <div class="header-actions">
+            <button class="btn-action primary-btn" id="openCreateModalBtn" type="button">
+                <i class="fa-solid fa-plus"></i>
+                <span>Create Job Fair</span>
+            </button>
+        </div>
+    </section>
+
+
+    <section class="stats-grid">
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-calendar-days"></i></div>
+            <div class="stat-info">
+                <h2>{{ total_fairs }}</h2>
+                <p>Total Job Fairs</p>
+            </div>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-building-user"></i></div>
+            <div class="stat-info">
+                <h2>{{ participating_employers_count }}</h2>
+                <p>Participating Employers</p>
+            </div>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-users-viewfinder"></i></div>
+            <div class="stat-info">
+                <h2>{{ registered_jobseekers_count }}</h2>
+                <p>Registered Job Seekers</p>
+            </div>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-user-check"></i></div>
+            <div class="stat-info">
+                <h2>{{ total_hired_count }}</h2>
+                <p>Total Hired</p>
+            </div>
+        </article>
+    </section>
+
+    <section class="card analytics-card" id="jobFairAnalytics"
+        data-metrics-url="{{ url_for('admin.job_fair_metrics') }}">
+        <div class="analytics-header">
+            <div class="card-header-title-wrapper">
+                <div class="card-icon"><i class="fa-solid fa-chart-line"></i></div>
+                <div>
+                    <h3 class="card-title">Job Fair Performance Trend</h3>
+                    <p class="card-subtitle">Compare registration, attendance, employer participation, and hiring across job fairs that have occurred.</p>
+                </div>
+            </div>
+
+            <div class="analytics-filters" aria-label="Job fair analytics filters">
+                <div class="analytics-filter-group">
+                    <label for="metricsYear">Year</label>
+                    <select id="metricsYear" class="form-control filter-select">
+                        {% for year in metric_years %}
+                        <option value="{{ year }}">{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="analytics-filter-group">
+                    <label for="metricsPeriod">Period</label>
+                    <select id="metricsPeriod" class="form-control filter-select">
+                        <option value="3">3 Months</option>
+                        <option value="6">6 Months</option>
+                        <option value="12">1 Year</option>
+                    </select>
+                </div>
+                <div class="analytics-filter-group" id="metricsEndMonthGroup">
+                    <label for="metricsEndMonth">Ending Month</label>
+                    <select id="metricsEndMonth" class="form-control filter-select">
+                        <option value="3">March</option>
+                        <option value="4">April</option>
+                        <option value="5">May</option>
+                        <option value="6">June</option>
+                        <option value="7">July</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12" selected>December</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="analytics-body">
+            <div class="analytics-summary" aria-live="polite">
+                <span><strong id="analyticsFairTotal">0</strong> Job Fairs</span>
+                <span><strong id="analyticsRegisteredTotal">0</strong> Registered</span>
+                <span><strong id="analyticsAttendedTotal">0</strong> Attended</span>
+                <span><strong id="analyticsEmployerTotal">0</strong> Employer Participations</span>
+                <span><strong id="analyticsHiredTotal">0</strong> Hired</span>
+            </div>
+            <div class="analytics-chart-wrap">
+                <canvas id="jobFairMetricsChart" aria-label="Job fair performance line graph"></canvas>
+                <div class="analytics-empty" id="analyticsEmpty" hidden>
+                    <i class="fa-regular fa-chart-bar"></i>
+                    <strong>No job fair data for this period</strong>
+                    <span>Choose another year, period, or ending month.</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="dashboard-grid single-column-grid">
+        <article class="card">
+            <div class="card-header">
+                <div class="card-header-title-wrapper">
+                    <div class="card-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+                    <div>
+                        <h3 class="card-title">Scheduled Job Fairs</h3>
+                        <p class="card-subtitle">Active and upcoming career fair events</p>
+                    </div>
+                </div>
+
+                <div class="filter-bar">
+                    <select id="fairStatusFilter" class="form-control filter-select">
+                        <option value="">All Statuses</option>
+                        <option value="Upcoming">Upcoming</option>
+                        <option value="Ongoing">Ongoing</option>
+                        <option value="Finished">Finished</option>
+                    </select>
+                    <input type="text" id="fairSearchInput" class="search-input" placeholder="Search job fair...">
+                </div>
+            </div>
+
+            <div class="card-content">
+                {% if job_fairs %}
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Event Title</th>
+                                <th>Start Date &amp; Time</th>
+                                <th>Venue / Location</th>
+                                <th>Status</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="jobFairTableBody">
+                            {% for fair in job_fairs %}
+                            {% set current_status = (fair.status | trim | title) if fair and fair.status else
+                            'Cancelled' %}
+                            <tr data-status="{{ current_status }}">
+                                <td data-label="Event Title">
+                                    <strong>{{ fair.title }}</strong>
+                                    <span class="event-badge">{{ fair.event_type }}</span>
+                                </td>
+                                <td data-label="Start Date">
+                                    {{ fair.start_datetime.strftime('%b %d, %Y %I:%M %p') if fair.start_datetime else
+                                    'TBD' }}
+                                </td>
+                                <td data-label="Venue">{{ fair.venue or 'TBD' }}</td>
+                                <td data-label="Status">
+                                    <span class="badge badge-{{ current_status | lower }}">{{ current_status }}</span>
+                                </td>
+                                <td data-label="Actions" class="text-right action-links">
+                                    <a href="{{ url_for('admin.manage_employer_applications', fair_id=fair.job_fair_id) }}"
+                                        class="text-btn">Booths</a>
+                                    <a href="{{ url_for('admin.view_jobfair_attendees', fair_id=fair.job_fair_id) }}"
+                                        class="text-btn">Attendees</a>
+                                    <a href="{{ url_for('admin.edit_job_fair', fair_id=fair.job_fair_id) }}"
+                                        class="text-btn">Edit</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="noResultsMessage" class="no-results-message" style="display: none;">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    <span>No matching job fairs found.</span>
+                </div>
+                {% else %}
+                <div class="list-item">
+                    <strong>No job fairs scheduled</strong>
+                    <p class="list-subtext">Click “Create Job Fair” to set up a new event.</p>
+                </div>
+                {% endif %}
+            </div>
+        </article>
+    </section>
+</main>
+
+<div class="modal-overlay" id="createFairModal" aria-hidden="true">
+    <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="createFairModalTitle">
+        <div class="modal-header">
+            <div>
+                <h3 id="createFairModalTitle">Create PESO Event / Job Fair</h3>
+                <span class="modal-subtitle-text">Enter the event details below.</span>
+            </div>
+            <button type="button" class="modal-close" id="closeCreateModalBtn" aria-label="Close modal">&times;</button>
+        </div>
+
+        <form action="{{ url_for('admin.create_job_fair') }}" method="POST" enctype="multipart/form-data"
+            id="createJobFairForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="event_type">Event Classification</label>
+                        <select id="event_type" name="event_type" class="form-control" required>
+                            <option value="Mega Job Fair">Mega Job Fair (Multiple Employers)</option>
+                            <option value="BSRA">Barangay Special Recruitment Activity (BSRA)</option>
+                            <option value="SRA Overseas">Special Recruitment Activity - Overseas (SRA)</option>
+                            <option value="SRA Local">Special Recruitment Activity - Local (SRA)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lead_agency_id">Lead Recruitment Agency</label>
+                        <select id="lead_agency_id" name="lead_agency_id" class="form-control">
+                            <option value="">-- None / Multiple Agencies --</option>
+                            {% for agency in registered_agencies %}
+                            <option value="{{ agency.user.public_id }}">{{ agency.company_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="title">Event Title</label>
+                    <input type="text" id="title" name="title" maxlength="150" class="form-control"
+                        placeholder="e.g. PESO Mega Job Fair 2026" maxlength="150" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="venue">Primary Venue / Location</label>
+                    <input type="text" id="venue" name="venue" class="form-control" placeholder="Enter venue" maxlength="200" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="start_datetime">Start Date &amp; Time</label>
+                        <input type="datetime-local" id="start_datetime" name="start_datetime" class="form-control"
+                            required>
+                    </div>
+                    <div class="form-group">
+                        <label for="end_datetime">End Date &amp; Time</label>
+                        <input type="datetime-local" id="end_datetime" name="end_datetime" class="form-control"
+                            required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="registration_deadline">Registration Cutoff</label>
+                        <input type="datetime-local" id="registration_deadline" name="registration_deadline"
+                            class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="queue_entry_deadline">Queue Entry Cutoff</label>
+                        <input type="datetime-local" id="queue_entry_deadline" name="queue_entry_deadline"
+                            class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="capacity">Maximum Capacity</label>
+                        <input type="number" id="capacity" name="capacity" class="form-control" min="1" max="100000" step="1" value="500"
+                            required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="poster">Event Poster Image</label>
+                    <input type="file" id="poster" name="poster" class="form-control file-input" accept="image/*">
+                    <p class="form-help-text">
+                        Recommended: upload a banner-sized image, preferably around
+                        1600 × 600 px or a similar wide landscape ratio for the best display.
+                    </p>
+                </div>
+
+                <div class="form-group">
+                    <label>Standard PESO Reminders &amp; Rules</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="enforce_dress_code" value="1" checked> Require Proper
+                            Attire</label>
+                        <label><input type="checkbox" name="require_gov_ids" value="1" checked> Require Government
+                            Numbers</label>
+                        <label><input type="checkbox" name="require_srs_id" value="1" checked> Require SRS ID Card, if
+                            applicable</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Vacancies &amp; Job Details</label>
+                    <textarea id="description" name="description" maxlength="10000" class="form-control" rows="4"
+                        placeholder="Enter vacancies, instructions, or additional event details..."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="modal-btn modal-btn-cancel" id="cancelModalBtn">Cancel</button>
+                <button type="submit" class="modal-btn modal-btn-primary" id="publishJobFairBtn">Publish Event</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='javascript/admin/admin_job_fair_management.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/admin/admin_job_fair_metrics.js') }}"></script>
+{% endblock %}

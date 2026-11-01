@@ -1,0 +1,308 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}PESO: Flagged Job Listings{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_joblist.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_flagged.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/admin_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+
+<main>
+
+    <section class="page-header">
+        <h1>Flagged Job Listings</h1>
+        <p>
+            Review flagged job postings and determine whether they should be approved,
+            rejected, or restored.
+        </p>
+    </section>
+
+    <!-- Filters -->
+
+    <div class="filter-section dashboard-filter-section">
+
+        <div class="filter-group dashboard-filter-group">
+
+            <div class="search-box dashboard-search-box">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input
+                    type="text"
+                    id="searchJob"
+                    placeholder="Search by job title, company, location...">
+
+            </div>
+
+            <select id="sortFlagged" class="dashboard-filter-select">
+
+                <option value="latest">Latest Flagged</option>
+
+                <option value="oldest">Oldest Flagged</option>
+
+            </select>
+
+        </div>
+
+    </div>
+
+    <!-- Table -->
+
+    <div class="table-container">
+
+        <table class="job-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>Position</th>
+
+                    <th>Company</th>
+
+                    <th>Reason</th>
+
+                    <th>Flagged Date</th>
+
+                    <th>Reviewed By</th>
+
+                    <th>Action</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+            {% if jobs %}
+
+                {% for job in jobs.items %}
+
+                <tr>
+
+                    <td>
+
+                        <strong>{{ job.job_title }}</strong><br>
+
+                        <small>
+
+                            <i class="fa-solid fa-location-dot"></i>
+
+                            {{ job.location }}
+
+                        </small>
+
+                    </td>
+
+                    <td>
+
+                        <strong>{{ job.employer.company_name }}</strong><br>
+
+                        <small>
+
+                            {{ job.employer.company_address }}
+
+                        </small>
+
+                    </td>
+
+                    <td>
+
+                        <span class="flagged-reason">
+
+                        {% if job.remarks %}
+
+                            {{ job.remarks }}
+
+                        {% else %}
+
+                            No remarks provided.
+
+                        {% endif %}
+
+                        </span>
+
+                    </td>
+
+                    <td>
+
+                        {% if job.reviewed_at %}
+
+                            {{ job.reviewed_at.strftime("%B %d, %Y") }}
+
+                        {% else %}
+
+                            -
+
+                        {% endif %}
+
+                    </td>
+
+                    <td>
+
+                        {% if job.reviewer and job.reviewer.admin %}
+
+                            {{ job.reviewer.admin.first_name }}
+                            {{ job.reviewer.admin.last_name }}
+
+                        {% else %}
+
+                            System
+
+                        {% endif %}
+
+                    </td>
+
+                    <td>
+
+                        <button
+                            class="btn-table btn-review"
+                            data-job-id="{{ job.job_id }}">
+
+                            Review
+
+                        </button>
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            {% else %}
+
+                <tr class="standardized-no-results static-no-results">
+
+                    <td colspan="6" class="empty-table">
+                        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                        <span>No flagged job listings found.</span>
+                    </td>
+
+                </tr>
+
+            {% endif %}
+
+            </tbody>
+
+        </table>
+
+        <!-- Pagination -->
+
+        <div class="pagination peso-standard-pagination">
+            <span>{% if jobs.total %}Showing {{ ((jobs.page - 1) * jobs.per_page) + 1 }}-{{ ((jobs.page - 1) * jobs.per_page) + jobs.items|length }} of {{ jobs.total }} records{% else %}No records{% endif %}</span>
+            <div class="page-controls">
+                {% if jobs.has_prev %}<a class="page-num" href="{{ url_for('admin.flagged_page', page=jobs.prev_num) }}" aria-label="Previous page"><i class="fa-solid fa-chevron-left"></i></a>{% else %}<span class="page-num disabled" aria-disabled="true"><i class="fa-solid fa-chevron-left"></i></span>{% endif %}
+                {% for page_num in jobs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}{% if page_num %}<a class="page-num {% if page_num == jobs.page %}active{% endif %}" href="{{ url_for('admin.flagged_page', page=page_num) }}">{{ page_num }}</a>{% else %}<span class="page-ellipsis">&hellip;</span>{% endif %}{% endfor %}
+                {% if jobs.has_next %}<a class="page-num" href="{{ url_for('admin.flagged_page', page=jobs.next_num) }}" aria-label="Next page"><i class="fa-solid fa-chevron-right"></i></a>{% else %}<span class="page-num disabled" aria-disabled="true"><i class="fa-solid fa-chevron-right"></i></span>{% endif %}
+            </div>
+        </div>
+
+    </div>
+
+</main>
+
+{% endblock %}
+
+{% block javascript %}
+
+<!-- Job Review Modal -->
+<div id="reviewModal" class="modal">
+
+    <div class="modal-content">
+
+        <span class="close-modal">&times;</span>
+
+        <div class="review-header">
+
+            <h2>Job Listing Review</h2>
+
+            <p>
+                Review and approve employer job postings before publishing.
+            </p>
+        </div>
+        <div class="review-card">
+            <div class="review-main">
+                <h1 class="job-title-large" id="modalJobTitle"></h1>
+                <div class="job-meta-row">
+                    <div class="company-sub">
+                        <strong id="modalCompany"></strong><br>
+                        <span id="modalPostedDate"></span>
+                    </div>
+                </div>
+                <div class="review-section-header">
+                    <h3>Job Status</h3>
+                    <span
+                        class="status-badge"
+                        id="modalStatus">
+                    </span>
+                </div>
+                <hr class="card-divider">
+                <div class="location-row">
+                    <span>
+                        <i class="fa-solid fa-location-dot"></i>
+                        <span id="modalLocation"></span>
+                    </span>
+                    <span
+                        class="badge-type"
+                        id="modalType">
+                    </span>
+                </div>
+                <div class="job-details-text">
+                    <h4>Description</h4>
+                    <p id="modalDescription"></p>
+                    <h4>Responsibilities</h4>
+                    <div id="modalResponsibilities"></div>
+                    <h4>Qualifications</h4>
+                    <div id="modalQualifications"></div>
+                </div>
+            </div>
+            <div class="review-sidebar">
+                <div class="employer-info-box">
+                    <div class="employer-header">
+                        Employer Information
+                    </div>
+                    <div class="employer-logo-box">
+                        <img
+                            id="odalLogo"
+                            src=""
+                            alt="Company Logo">
+                    </div>
+                    <div class="employer-details">
+                        <p>
+                            <strong>Company</strong><br>
+                            <span id="modalCompany2"></span>
+                        </p>
+                        <p>
+                            <strong>Address</strong><br>
+                            <span id="modalAddress"></span>
+                        </p>
+                        <p>
+                            <strong>Email</strong><br>
+                            <span id="modalEmail"></span>
+                        </p>
+                        <p>
+                            <strong>Phone</strong><br>
+                            <span id="modalPhone"></span>
+                        </p>
+                    </div>
+                    <button type="button" class="btn-publish">
+                        Publish
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='javascript/admin/admin_joblist.js') }}" defer></script>
+
+{% endblock %}

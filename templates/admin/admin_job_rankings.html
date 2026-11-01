@@ -1,0 +1,821 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}PESO: Jobseeker Rankings{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_job_rankings.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/admin_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="admin-rankings-main">
+    <a href="{{ url_for('admin.job_referral') }}" class="back-link">
+        <i class="fa-solid fa-arrow-left"></i>
+        Back to Job Referrals
+    </a>
+
+    <section class="page-header">
+        <div class="page-heading-row">
+            <div>
+                <span class="page-eyebrow">Referral Management</span>
+                <h1>Jobseeker Rankings</h1>
+                <p>
+                    <strong>{{ job.job_title }}</strong>
+                    <span class="heading-divider">•</span>
+                    {{ job.employer.company_name if job.employer else 'N/A' }}
+                </p>
+            </div>
+
+            <div class="job-summary" aria-label="Ranking summary">
+                <span class="job-summary-label">Applicants</span>
+                <strong>{{ ranked_applications|length + unranked_applications|length }}</strong>
+                <span>
+                    {{ ranked_applications|length }} ranked ·
+                    {{ unranked_applications|length }} not ranked
+                </span>
+            </div>
+        </div>
+
+        {% if job.status != 'Open' or job.approval_status != 'Approved' or (job.deadline and job.deadline < today) %}
+        <p class="referral-closed-notice" role="status">
+            <i class="fa-solid fa-lock" aria-hidden="true"></i>
+            This job is closed or unavailable. Existing referrals remain visible, but new referrals cannot be issued.
+        </p>
+        {% endif %}
+        <p class="ranking-explanation">
+            Applicants are ranked using structured education, relevant experience,
+            and required and preferred qualification matching.
+        </p>
+    </section>
+
+    <form method="GET"
+        action="{{ url_for('admin.job_rankings', job_id=job.job_id) }}"
+        class="filter-card">
+        <div class="dashboard-search-box">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="searchInput" name="search" maxlength="200" value="{{ search }}"
+                placeholder="Search applicant name, skills, contact, or experience..."
+                autocomplete="off">
+        </div>
+    </form>
+
+    <div id="liveNoResultsMsg" class="no-results-message standardized-no-results" style="display: none;">
+        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        <span>No applicants match your search.</span>
+    </div>
+
+    <!-- RANKED JOBSEEKERS -->
+    <section class="ranking-section searchable-ranking-section">
+        <div class="ranking-section-header">
+            <div>
+                <h2 class="section-subtitle">Ranked Jobseekers</h2>
+                <p class="ranking-section-note">
+                    Applicants with at least one scored structured match.
+                </p>
+            </div>
+
+            <span class="ranking-count">
+                {{ ranked_applications|length }}
+            </span>
+        </div>
+
+    <div class="table-responsive">
+        <table class="ranking-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Applicant</th>
+                    <th>Match</th>
+                    <th>Contact</th>
+                    <th>Source</th>
+                    <th>Referral Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if ranked_applications %}
+                {% for application in ranked_applications %}
+                {% set seeker = application.job_seeker %}
+                {% set is_job_fair_direct = application.job_fair_evaluation is not none %}
+                {% set referral = application.referrals[0] if application.referrals else none %}
+                {% set is_referral_pending = referral and referral.status == "Pending" and not is_job_fair_direct %}
+                {% set is_referred = referral and referral.status == "Referred" and not is_job_fair_direct %}
+                {% set is_referral_rejected = referral and referral.status == "Rejected" and not is_job_fair_direct %}
+                <tr id="seeker-{{ seeker.user.public_id }}" class="ranking-row">
+                    <!-- RANK -->
+                    <td data-label="Rank">
+                        {% if application.rank %}
+                        {% if application.rank == 1 %}
+                        <span class="qualified-badge gold" title="Top ranked applicant">🥇 #1</span>
+                        {% elif application.rank == 2 %}
+                        <span class="qualified-badge silver" title="Second ranked applicant">🥈 #2</span>
+                        {% elif application.rank == 3 %}
+                        <span class="qualified-badge bronze" title="Third ranked applicant">🥉 #3</span>
+                        {% else %}
+                        <strong>#{{ application.rank }}</strong>
+                        {% endif %}
+                        {% else %}
+                        <span style="color: #888; font-size: 13px;">No Rank</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- APPLICANT -->
+                    <td data-label="Applicant">
+                        <div class="applicant-cell">
+                            {% if seeker.profile_picture %}
+                            {% if '/' in seeker.profile_picture %}
+                            <img src="{{ url_for('static', filename=seeker.profile_picture) }}" class="table-avatar"
+                                alt="Applicant" data-fallback="{{ url_for('static', filename='images/pfp_placeholder.png') }}">
+                            {% else %}
+                            <img src="{{ url_for('static', filename='uploads/jobseekers/' ~ seeker.profile_picture) }}"
+                                class="table-avatar" alt="Applicant" data-fallback="{{ url_for('static', filename='images/pfp_placeholder.png') }}">
+                            {% endif %}
+                            {% else %}
+                            <img src="{{ url_for('static', filename='images/pfp_placeholder.png') }}"
+                                class="table-avatar" alt="Applicant" data-fallback="{{ url_for('static', filename='images/pfp_placeholder.png') }}">
+                            {% endif %}
+                            <div class="applicant-meta">
+                                <span class="name-text">{{ seeker.full_name }}</span>
+                                <span class="id-text">APPL-{{ "%06d"|format(application.application_id) }}</span>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- STRUCTURED MATCH -->
+                    <td data-label="Match">
+                        {% if application.total_requirements > 0 %}
+                        <div class="structured-match">
+                            <strong>
+                                {{ "%.0f"|format(application.match_percentage or 0) }}% Match
+                            </strong>
+
+                            {% if application.all_required_met %}
+                            <small class="required-ok">
+                                <i class="fa-solid fa-circle-check"></i>
+                                All required met
+                            </small>
+                            {% else %}
+                            <small class="required-missing">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                Required:
+                                {{ application.required_matched }}/{{ application.required_total }}
+                            </small>
+                            {% endif %}
+
+                            {% if application.preferred_total %}
+                            <small>
+                                Preferred:
+                                {{ application.preferred_matched }}/{{ application.preferred_total }}
+                            </small>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <span style="color: #888; font-size: 13px;">
+                            No structured criteria
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- CONTACT -->
+                    <td data-label="Contact">
+                        <div class="applicant-meta">
+                            <span>{{ seeker.user.email if seeker.user else 'N/A' }}</span>
+                            <small>{{ seeker.contact_number or 'N/A' }}</small>
+                        </div>
+                    </td>
+
+                    <!-- Origin is independent of the referral decision. -->
+                    <td data-label="Source">
+                        {% if is_job_fair_direct %}
+                        <span class="badge-job-fair">Job Fair Evaluation</span>
+                        {% else %}
+                        <span class="badge-ready">Online Referral Request</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Referral Status">
+                        {% if is_referred %}
+                        <span class="badge-referred">Referred</span>
+                        {% elif is_referral_rejected %}
+                        <span class="badge-rejected">Do Not Refer</span>
+                        {% elif is_referral_pending %}
+                        <span class="badge-ready">Awaiting Review</span>
+                        {% else %}
+                        <span class="badge-ready">Not Referred</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- ACTIONS -->
+                    <td data-label="Actions">
+                        <div class="table-actions">
+                            <!-- VIEW DETAILS -->
+                            <button type="button" class="btn-view open-referral-modal"
+                                data-id="APPL-{{ '%06d'|format(application.application_id) }}"
+                                data-name="{{ seeker.full_name }}"
+                                data-photo="{% if seeker.profile_picture %}{% if '/' in seeker.profile_picture %}{{ url_for('static', filename=seeker.profile_picture) }}{% else %}{{ url_for('static', filename='uploads/jobseekers/' ~ seeker.profile_picture) }}{% endif %}{% else %}{{ url_for('static', filename='images/pfp_placeholder.png') }}{% endif %}"
+                                data-email="{{ seeker.user.email if seeker.user else 'N/A' }}"
+                                data-phone="{{ seeker.contact_number or 'N/A' }}"
+                                data-address="{% if seeker.street or seeker.barangay or seeker.city or seeker.province %}{{ [seeker.street, seeker.barangay, seeker.city, seeker.province] | select('string') | join(', ') }}{% else %}N/A{% endif %}"
+                                data-sex="{{ seeker.sex or 'N/A' }}"
+                                data-birthdate="{{ seeker.birthdate.strftime('%B %d, %Y') if seeker.birthdate else 'N/A' }}"
+                                data-civil="{{ seeker.civil_status or 'N/A' }}"
+                                data-education="{{ application.normalized_education or seeker.education_display }}"
+                                data-course="{{ seeker.tertiary_course or seeker.senior_high_strand or 'N/A' }}"
+                                data-skills="{{ seeker.skills or 'No skills listed' }}"
+                                data-experience="{{ application.experience_display or seeker.experience_display }}"
+                                data-resume="{% if seeker.resume %}{{ url_for('admin.view_jobseeker_resume', public_id=seeker.user.public_id) }}{% else %}#{% endif %}"
+                                data-job="{{ job.job_title }}"
+                                data-job-category="{{ job.category or 'N/A' }}"
+                                data-employment-type="{{ job.employment_type or 'N/A' }}"
+                                data-salary-min="{{ job.salary_min if job.salary_min is not none else '' }}"
+                                data-salary-max="{{ job.salary_max if job.salary_max is not none else '' }}"
+                                data-vacancies="{{ job.vacancies or 0 }}"
+                                data-deadline="{{ job.deadline.strftime('%B %d, %Y') if job.deadline else 'No deadline specified' }}"
+                                data-minimum-education="{{ job.minimum_education or 'NONE' }}"
+                                data-minimum-experience="{{ job.minimum_experience_months or 0 }}"
+                                data-job-description="{{ job.description or 'No job description provided.' }}"
+                                data-job-qualifications="{{ job.qualifications or 'No additional qualifications provided.' }}"
+                                data-job-responsibilities="{{ job.responsibilities or 'No responsibilities provided.' }}"
+                                data-company="{{ job.employer.company_name if job.employer else 'N/A' }}"
+                                data-location="{{ job.location or 'N/A' }}"
+                                data-date="{{ application.application_date.strftime('%B %d, %Y') if application.application_date else 'N/A' }}"
+                                data-status="{% if application.status == 'Rejected' or is_referral_rejected %}Rejected{% elif is_job_fair_direct %}Job Fair Evaluation{% elif is_referred %}Referred{% elif is_referral_pending %}Referral Requested{% else %}Referral{% endif %}"
+                                data-source="{% if is_job_fair_direct %}Job Fair Evaluation{% elif is_referred %}PESO Referral{% elif is_referral_pending %}PESO Referral Request{% elif is_referral_rejected %}PESO Referral Rejected{% else %}PESO Referral{% endif %}"
+                                data-job-fair="{% if is_job_fair_direct %}true{% else %}false{% endif %}"
+                                data-rank="{{ application.rank if application.rank else 'No Rank' }}"
+                                data-match-score="{{ application.matched_criteria_count|default(application.matched_requirements|length) }}"
+                                data-total-requirements="{{ application.total_requirements }}"
+                                data-match-percentage="{{ '%.2f'|format(application.match_percentage or 0) }}"
+                                data-required-matched="{{ application.required_matched or 0 }}"
+                                data-required-total="{{ application.required_total or 0 }}"
+                                data-preferred-matched="{{ application.preferred_matched or 0 }}"
+                                data-preferred-total="{{ application.preferred_total or 0 }}"
+                                data-unmatched-requirements="{{ application.unmatched_requirements|join('||') }}"
+                                data-most-recent-work="{{ application.most_recent_work or seeker.experience_display }}"
+                                data-matched-requirements="{{ application.matched_requirements|join('||') }}">
+                                View
+                            </button>
+
+                            <!-- REFER -->
+                            {% if job.status == 'Open' and job.approval_status == 'Approved' and
+                            (not job.deadline or job.deadline >= today) and
+                            not is_job_fair_direct and is_referral_pending and
+                            application.status not in ['Accepted', 'Rejected'] %}
+                            <form
+                                action="{{ url_for('admin.create_referral', application_id=application.application_id) }}"
+                                method="POST" class="inline-action-form">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-refer">Refer</button>
+                            </form>
+                            {% endif %}
+
+                            <!-- PDF -->
+                            {% if is_referred %}
+                            <a href="{{ url_for('admin.download_referral_letter', referral_id=application.referrals[0].referral_id) }}"
+                                class="btn-pdf"
+                                target="_blank">
+                                <i class="fa-solid fa-file-pdf"></i> PDF
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr class="static-empty-row standardized-no-results">
+                    <td colspan="7">
+                        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                        <span>No ranked jobseekers found for this job.</span>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    </section>
+
+    <!-- NOT RANKED JOBSEEKERS -->
+    <section class="ranking-section searchable-ranking-section">
+        <div class="ranking-section-header">
+            <div>
+                <h2 class="section-subtitle">Not Ranked</h2>
+                <p class="ranking-section-note">
+                    Applicants with a 0% structured match, or jobs without enough structured criteria to produce a rank.
+                </p>
+            </div>
+
+            <span class="ranking-count">
+                {{ unranked_applications|length }}
+            </span>
+        </div>
+
+    <div class="table-responsive unranked-table">
+        <table class="ranking-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Applicant</th>
+                    <th>Match</th>
+                    <th>Contact</th>
+                    <th>Source</th>
+                    <th>Referral Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if unranked_applications %}
+                {% for application in unranked_applications %}
+                {% set seeker = application.job_seeker %}
+                {% set is_job_fair_direct = application.job_fair_evaluation is not none %}
+                {% set referral = application.referrals[0] if application.referrals else none %}
+                {% set is_referral_pending = referral and referral.status == "Pending" and not is_job_fair_direct %}
+                {% set is_referred = referral and referral.status == "Referred" and not is_job_fair_direct %}
+                {% set is_referral_rejected = referral and referral.status == "Rejected" and not is_job_fair_direct %}
+                <tr id="seeker-{{ seeker.user.public_id }}" class="ranking-row">
+                    <!-- RANK -->
+                    <td data-label="Rank">
+                        {% if application.rank %}
+                        {% if application.rank == 1 %}
+                        <span class="qualified-badge gold" title="Top ranked applicant">🥇 #1</span>
+                        {% elif application.rank == 2 %}
+                        <span class="qualified-badge silver" title="Second ranked applicant">🥈 #2</span>
+                        {% elif application.rank == 3 %}
+                        <span class="qualified-badge bronze" title="Third ranked applicant">🥉 #3</span>
+                        {% else %}
+                        <strong>#{{ application.rank }}</strong>
+                        {% endif %}
+                        {% else %}
+                        <span style="color: #888; font-size: 13px;">No Rank</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- APPLICANT -->
+                    <td data-label="Applicant">
+                        <div class="applicant-cell">
+                            {% if seeker.profile_picture %}
+                            {% if '/' in seeker.profile_picture %}
+                            <img src="{{ url_for('static', filename=seeker.profile_picture) }}" class="table-avatar"
+                                alt="Applicant" data-fallback="{{ url_for('static', filename='images/pfp_placeholder.png') }}">
+                            {% else %}
+                            <img src="{{ url_for('static', filename='uploads/jobseekers/' ~ seeker.profile_picture) }}"
+                                class="table-avatar" alt="Applicant" data-fallback="{{ url_for('static', filename='images/pfp_placeholder.png') }}">
+                            {% endif %}
+                            {% else %}
+                            <img src="{{ url_for('static', filename='images/pfp_placeholder.png') }}"
+                                class="table-avatar" alt="Applicant" data-fallback="{{ url_for('static', filename='images/pfp_placeholder.png') }}">
+                            {% endif %}
+                            <div class="applicant-meta">
+                                <span class="name-text">{{ seeker.full_name }}</span>
+                                <span class="id-text">APPL-{{ "%06d"|format(application.application_id) }}</span>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- STRUCTURED MATCH -->
+                    <td data-label="Match">
+                        {% if application.total_requirements > 0 %}
+                        <div class="structured-match">
+                            <strong>
+                                {{ "%.0f"|format(application.match_percentage or 0) }}% Match
+                            </strong>
+
+                            {% if application.all_required_met %}
+                            <small class="required-ok">
+                                <i class="fa-solid fa-circle-check"></i>
+                                All required met
+                            </small>
+                            {% else %}
+                            <small class="required-missing">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                Required:
+                                {{ application.required_matched }}/{{ application.required_total }}
+                            </small>
+                            {% endif %}
+
+                            {% if application.preferred_total %}
+                            <small>
+                                Preferred:
+                                {{ application.preferred_matched }}/{{ application.preferred_total }}
+                            </small>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <span style="color: #888; font-size: 13px;">
+                            No structured criteria
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- CONTACT -->
+                    <td data-label="Contact">
+                        <div class="applicant-meta">
+                            <span>{{ seeker.user.email if seeker.user else 'N/A' }}</span>
+                            <small>{{ seeker.contact_number or 'N/A' }}</small>
+                        </div>
+                    </td>
+
+                    <!-- Origin is independent of the referral decision. -->
+                    <td data-label="Source">
+                        {% if is_job_fair_direct %}
+                        <span class="badge-job-fair">Job Fair Evaluation</span>
+                        {% else %}
+                        <span class="badge-ready">Online Referral Request</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Referral Status">
+                        {% if is_referred %}
+                        <span class="badge-referred">Referred</span>
+                        {% elif is_referral_rejected %}
+                        <span class="badge-rejected">Do Not Refer</span>
+                        {% elif is_referral_pending %}
+                        <span class="badge-ready">Awaiting Review</span>
+                        {% else %}
+                        <span class="badge-ready">Not Referred</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- ACTIONS -->
+                    <td data-label="Actions">
+                        <div class="table-actions">
+                            <!-- VIEW DETAILS -->
+                            <button type="button" class="btn-view open-referral-modal"
+                                data-id="APPL-{{ '%06d'|format(application.application_id) }}"
+                                data-name="{{ seeker.full_name }}"
+                                data-photo="{% if seeker.profile_picture %}{% if '/' in seeker.profile_picture %}{{ url_for('static', filename=seeker.profile_picture) }}{% else %}{{ url_for('static', filename='uploads/jobseekers/' ~ seeker.profile_picture) }}{% endif %}{% else %}{{ url_for('static', filename='images/pfp_placeholder.png') }}{% endif %}"
+                                data-email="{{ seeker.user.email if seeker.user else 'N/A' }}"
+                                data-phone="{{ seeker.contact_number or 'N/A' }}"
+                                data-address="{% if seeker.street or seeker.barangay or seeker.city or seeker.province %}{{ [seeker.street, seeker.barangay, seeker.city, seeker.province] | select('string') | join(', ') }}{% else %}N/A{% endif %}"
+                                data-sex="{{ seeker.sex or 'N/A' }}"
+                                data-birthdate="{{ seeker.birthdate.strftime('%B %d, %Y') if seeker.birthdate else 'N/A' }}"
+                                data-civil="{{ seeker.civil_status or 'N/A' }}"
+                                data-education="{{ application.normalized_education or seeker.education_display }}"
+                                data-course="{{ seeker.tertiary_course or seeker.senior_high_strand or 'N/A' }}"
+                                data-skills="{{ seeker.skills or 'No skills listed' }}"
+                                data-experience="{{ application.experience_display or seeker.experience_display }}"
+                                data-resume="{% if seeker.resume %}{{ url_for('admin.view_jobseeker_resume', public_id=seeker.user.public_id) }}{% else %}#{% endif %}"
+                                data-job="{{ job.job_title }}"
+                                data-job-category="{{ job.category or 'N/A' }}"
+                                data-employment-type="{{ job.employment_type or 'N/A' }}"
+                                data-salary-min="{{ job.salary_min if job.salary_min is not none else '' }}"
+                                data-salary-max="{{ job.salary_max if job.salary_max is not none else '' }}"
+                                data-vacancies="{{ job.vacancies or 0 }}"
+                                data-deadline="{{ job.deadline.strftime('%B %d, %Y') if job.deadline else 'No deadline specified' }}"
+                                data-minimum-education="{{ job.minimum_education or 'NONE' }}"
+                                data-minimum-experience="{{ job.minimum_experience_months or 0 }}"
+                                data-job-description="{{ job.description or 'No job description provided.' }}"
+                                data-job-qualifications="{{ job.qualifications or 'No additional qualifications provided.' }}"
+                                data-job-responsibilities="{{ job.responsibilities or 'No responsibilities provided.' }}"
+                                data-company="{{ job.employer.company_name if job.employer else 'N/A' }}"
+                                data-location="{{ job.location or 'N/A' }}"
+                                data-date="{{ application.application_date.strftime('%B %d, %Y') if application.application_date else 'N/A' }}"
+                                data-status="{% if application.status == 'Rejected' or is_referral_rejected %}Rejected{% elif is_job_fair_direct %}Job Fair Evaluation{% elif is_referred %}Referred{% elif is_referral_pending %}Referral Requested{% else %}Referral{% endif %}"
+                                data-source="{% if is_job_fair_direct %}Job Fair Evaluation{% elif is_referred %}PESO Referral{% elif is_referral_pending %}PESO Referral Request{% elif is_referral_rejected %}PESO Referral Rejected{% else %}PESO Referral{% endif %}"
+                                data-job-fair="{% if is_job_fair_direct %}true{% else %}false{% endif %}"
+                                data-rank="{{ application.rank if application.rank else 'No Rank' }}"
+                                data-match-score="{{ application.matched_criteria_count|default(application.matched_requirements|length) }}"
+                                data-total-requirements="{{ application.total_requirements }}"
+                                data-match-percentage="{{ '%.2f'|format(application.match_percentage or 0) }}"
+                                data-required-matched="{{ application.required_matched or 0 }}"
+                                data-required-total="{{ application.required_total or 0 }}"
+                                data-preferred-matched="{{ application.preferred_matched or 0 }}"
+                                data-preferred-total="{{ application.preferred_total or 0 }}"
+                                data-unmatched-requirements="{{ application.unmatched_requirements|join('||') }}"
+                                data-most-recent-work="{{ application.most_recent_work or seeker.experience_display }}"
+                                data-matched-requirements="{{ application.matched_requirements|join('||') }}">
+                                View
+                            </button>
+
+                            <!-- REFER -->
+                            {% if job.status == 'Open' and job.approval_status == 'Approved' and
+                            (not job.deadline or job.deadline >= today) and
+                            not is_job_fair_direct and is_referral_pending and
+                            application.status not in ['Accepted', 'Rejected'] %}
+                            <form
+                                action="{{ url_for('admin.create_referral', application_id=application.application_id) }}"
+                                method="POST" class="inline-action-form">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-refer">Refer</button>
+                            </form>
+                            {% endif %}
+
+                            <!-- PDF -->
+                            {% if is_referred %}
+                            <a href="{{ url_for('admin.download_referral_letter', referral_id=application.referrals[0].referral_id) }}"
+                                class="btn-pdf"
+                                target="_blank">
+                                <i class="fa-solid fa-file-pdf"></i> PDF
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr class="static-empty-row standardized-no-results">
+                    <td colspan="7">
+                        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                        <span>No unranked jobseekers.</span>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    </section>
+
+</main>
+
+<!-- APPLICANT DETAILS MODAL -->
+<div id="referralModal" class="modal" aria-hidden="true">
+    <div class="referral-modal" role="dialog" aria-modal="true" aria-labelledby="m_name">
+        <header class="modal-header">
+            <div class="modal-profile-header">
+                <img id="m_photo"
+                    class="modal-profile-photo"
+                    src="{{ url_for('static', filename='images/pfp_placeholder.png') }}"
+                    data-fallback="{{ url_for('static', filename='images/pfp_placeholder.png') }}"
+                    alt="Jobseeker Photo">
+
+                <div class="modal-profile-info">
+                    <span class="modal-eyebrow">Applicant Profile</span>
+                    <h2 id="m_name">N/A</h2>
+                    <p id="m_id">Applicant ID: N/A</p>
+                    <span id="m_status" class="modal-status">Direct</span>
+                </div>
+            </div>
+
+            <button type="button" class="close-modal" aria-label="Close applicant details">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </header>
+
+        <div class="modal-body">
+            <section class="application-card ranking-summary-card">
+                <div class="application-card-header">
+                    <div class="application-icon">
+                        <i class="fa-solid fa-ranking-star"></i>
+                    </div>
+                    <div>
+                        <h3>Ranking Summary</h3>
+                        <span>Structured qualification matching result</span>
+                    </div>
+                </div>
+
+                <div class="application-card-body">
+                    <div class="ranking-summary-grid">
+                        <div class="summary-stat">
+                            <span class="modal-label">Rank</span>
+                            <strong id="m_rank" class="modal-value">No Rank</strong>
+                        </div>
+
+                        <div class="summary-stat">
+                            <span class="modal-label">Matched Criteria</span>
+                            <strong id="m_match_score" class="modal-value">0 / 0</strong>
+                        </div>
+                        <div class="summary-stat">
+                            <span class="modal-label">Weighted Match</span>
+                            <strong id="m_match_percentage" class="modal-value">0%</strong>
+                        </div>
+                        <div class="summary-stat">
+                            <span class="modal-label">Required Criteria</span>
+                            <strong id="m_required_score" class="modal-value">0 / 0</strong>
+                        </div>
+                        <div class="summary-stat">
+                            <span class="modal-label">Preferred Criteria</span>
+                            <strong id="m_preferred_score" class="modal-value">0 / 0</strong>
+                        </div>
+                    </div>
+
+                    <div class="matched-section">
+                        <span class="modal-label">Matched Qualifications</span>
+                        <div id="m_matched_requirements" class="matched-requirements">
+                            <span class="matched-empty">No matched qualifications</span>
+                        </div>
+                    </div>
+                    <div class="matched-section unmatched-section">
+                        <span class="modal-label">Unmatched Criteria</span>
+                        <div id="m_unmatched_requirements" class="matched-requirements">
+                            <span class="matched-empty">No unmatched criteria</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="modal-content-grid">
+                <section class="modal-card">
+                    <div class="modal-card-header">
+                        <div class="modal-card-icon">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div>
+                            <h3>Personal Information</h3>
+                            <span>Basic applicant details</span>
+                        </div>
+                    </div>
+
+                    <div class="modal-card-body">
+                        <div class="modal-field">
+                            <span class="modal-label">Email</span>
+                            <span id="m_email" class="modal-value">N/A</span>
+                        </div>
+
+                        <div class="modal-field">
+                            <span class="modal-label">Phone</span>
+                            <span id="m_phone" class="modal-value">N/A</span>
+                        </div>
+
+                        <div class="modal-field-row">
+                            <div class="modal-field">
+                                <span class="modal-label">Sex</span>
+                                <span id="m_sex" class="modal-value">N/A</span>
+                            </div>
+
+                            <div class="modal-field">
+                                <span class="modal-label">Civil Status</span>
+                                <span id="m_civil" class="modal-value">N/A</span>
+                            </div>
+                        </div>
+
+                        <div class="modal-field">
+                            <span class="modal-label">Birthdate</span>
+                            <span id="m_birthdate" class="modal-value">N/A</span>
+                        </div>
+
+                        <div class="modal-field">
+                            <span class="modal-label">Address</span>
+                            <span id="m_address" class="modal-value">N/A</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="modal-card">
+                    <div class="modal-card-header">
+                        <div class="modal-card-icon">
+                            <i class="fa-solid fa-briefcase"></i>
+                        </div>
+                        <div>
+                            <h3>Professional Profile</h3>
+                            <span>Education and career information</span>
+                        </div>
+                    </div>
+
+                    <div class="modal-card-body">
+                        <div class="modal-field">
+                            <span class="modal-label">Education</span>
+                            <span id="m_education" class="modal-value">N/A</span>
+                        </div>
+
+                        <div class="modal-field">
+                            <span class="modal-label">Course / Major</span>
+                            <span id="m_course" class="modal-value">N/A</span>
+                        </div>
+
+                        <div class="modal-field">
+                            <span class="modal-label">Skills</span>
+                            <span id="m_skills" class="modal-value">N/A</span>
+                        </div>
+
+                        <div class="modal-field">
+                            <span class="modal-label">Total Work Experience</span>
+                            <span id="m_experience" class="modal-value">N/A</span>
+                        </div>
+                        <div class="modal-field">
+                            <span class="modal-label">Most Recent Work</span>
+                            <span id="m_recent_work" class="modal-value">N/A</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <section class="application-card job-details-card">
+                <div class="application-card-header">
+                    <div class="application-icon">
+                        <i class="fa-solid fa-briefcase"></i>
+                    </div>
+                    <div>
+                        <h3>Job Details</h3>
+                        <span>Position details and employer requirements</span>
+                    </div>
+                </div>
+
+                <div class="application-card-body">
+                    <div class="application-position">
+                        <span class="modal-label">Position</span>
+                        <strong id="m_job_title_detail">N/A</strong>
+                    </div>
+
+                    <div class="job-details-grid">
+                        <div class="application-meta-item">
+                            <span class="modal-label">Category</span>
+                            <span id="m_job_category" class="modal-value">N/A</span>
+                        </div>
+                        <div class="application-meta-item">
+                            <span class="modal-label">Employment Type</span>
+                            <span id="m_employment_type" class="modal-value">N/A</span>
+                        </div>
+                        <div class="application-meta-item">
+                            <span class="modal-label">Salary Range</span>
+                            <span id="m_salary" class="modal-value">N/A</span>
+                        </div>
+                        <div class="application-meta-item">
+                            <span class="modal-label">Vacancies</span>
+                            <span id="m_vacancies" class="modal-value">N/A</span>
+                        </div>
+                        <div class="application-meta-item">
+                            <span class="modal-label">Deadline</span>
+                            <span id="m_deadline" class="modal-value">N/A</span>
+                        </div>
+                        <div class="application-meta-item">
+                            <span class="modal-label">Minimum Education</span>
+                            <span id="m_minimum_education" class="modal-value">N/A</span>
+                        </div>
+                        <div class="application-meta-item">
+                            <span class="modal-label">Relevant Experience</span>
+                            <span id="m_minimum_experience" class="modal-value">N/A</span>
+                        </div>
+                    </div>
+
+                    <div class="job-detail-text">
+                        <span class="modal-label">Job Description</span>
+                        <span id="m_job_description" class="modal-value">N/A</span>
+                    </div>
+                    <div class="job-detail-text">
+                        <span class="modal-label">Additional Qualifications</span>
+                        <span id="m_job_qualifications" class="modal-value">N/A</span>
+                    </div>
+                    <div class="job-detail-text">
+                        <span class="modal-label">Key Responsibilities</span>
+                        <span id="m_job_responsibilities" class="modal-value">N/A</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="application-card">
+                <div class="application-card-header">
+                    <div class="application-icon">
+                        <i class="fa-solid fa-file-circle-check"></i>
+                    </div>
+                    <div>
+                        <h3>Application Information</h3>
+                        <span>Position, source, company, and application date</span>
+                    </div>
+                </div>
+
+                <div class="application-card-body">
+                    <div class="application-position">
+                        <span class="modal-label">Position Applied</span>
+                        <strong id="m_job">N/A</strong>
+                    </div>
+
+                    <div class="application-meta">
+                        <div class="application-meta-item">
+                            <span class="modal-label">Source</span>
+                            <span id="m_source" class="modal-value">Direct</span>
+                        </div>
+
+                        <div class="application-meta-item">
+                            <span class="modal-label">Company</span>
+                            <span id="m_company" class="modal-value">N/A</span>
+                        </div>
+
+                        <div class="application-meta-item">
+                            <span class="modal-label">Location</span>
+                            <span id="m_location" class="modal-value">N/A</span>
+                        </div>
+
+                        <div class="application-meta-item">
+                            <span class="modal-label">Date Applied</span>
+                            <span id="m_date" class="modal-value">N/A</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <footer class="modal-footer">
+            <button type="button" class="btn-modal-close close-modal-secondary">
+                Close
+            </button>
+
+            <a id="resumeBtn"
+                class="btn-resume"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer">
+                <i class="fa-solid fa-file-arrow-down"></i>
+                View Resume
+            </a>
+        </footer>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/admin/admin_job_rankings.js') }}" defer></script>
+{% endblock %}

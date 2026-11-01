@@ -1,0 +1,1178 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}admin-app{% endblock %}
+
+{% block title %}PESO: Kiosk Management{% endblock %}
+
+{% block css %}
+
+<link rel="stylesheet" href="{{ url_for(
+        'static',
+        filename='css/admin/admin_kiosk_management.css'
+    ) }}">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_shared_safe.css') }}">
+{% endblock %}
+
+
+{% block navbar %}
+
+{% include "layouts/admin_navbar.html" %}
+
+{% endblock %}
+
+
+{% block content %}
+
+<main class="kiosk-management-main">
+
+    <!-- ======================================================
+         PAGE HEADER
+    ======================================================= -->
+
+    <section class="page-header">
+
+        <div>
+
+            <h1>
+                Kiosk Management
+            </h1>
+
+            <p>
+                Create, view, and manage kiosk accounts used for public PESO kiosks.
+            </p>
+
+        </div>
+
+
+        <!-- Create Kiosk Account Button -->
+
+        <div class="page-header-actions">
+
+            <button type="button" class="btn-primary" id="openCreateKioskModal">
+
+                <i class="fa-solid fa-plus"></i>
+
+                Create Kiosk Account
+
+            </button>
+
+        </div>
+
+    </section>
+
+
+    <!-- ======================================================
+         SEARCH
+    ======================================================= -->
+
+    <form method="GET" action="{{ url_for('admin.kiosk_management') }}"
+        class="search-container dashboard-filter-section" id="kioskSearchForm">
+
+        <div class="dashboard-search-box">
+
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+
+
+            <input type="text" id="searchInput" name="search" maxlength="200" value="{{ search }}"
+                placeholder="Search kiosk name, username, or ID..." autocomplete="off">
+
+
+        </div>
+
+    </form>
+
+
+    <!-- ======================================================
+         SECTION TITLE
+    ======================================================= -->
+
+    <div class="section-heading">
+
+        <div>
+
+            <h2 class="section-subtitle">
+                Kiosk Accounts
+            </h2>
+
+            <p class="section-description">
+                Manage the accounts assigned to PESO kiosk devices.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- ======================================================
+         KIOSK ACCOUNTS TABLE
+    ======================================================= -->
+
+    <div class="table-responsive">
+
+        <table class="jobseeker-table">
+
+            <thead>
+
+                <tr>
+
+                    <th style="width: 9%;">
+                        Kiosk ID
+                    </th>
+
+
+                    <th style="width: 18%;">
+                        Kiosk Name
+                    </th>
+
+
+                    <th style="width: 17%;">
+                        Username
+                    </th>
+
+
+                    <th style="width: 14%;">
+                        Location
+                    </th>
+
+
+                    <th style="width: 10%;">
+                        Status
+                    </th>
+
+
+                    <th style="width: 17%;">
+                        Mode / Assigned Job Fair
+                    </th>
+
+
+                    <th style="width: 15%;">
+                        Actions
+                    </th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody>
+
+                {% if kiosks %}
+
+                {% for kiosk in kiosks %}
+
+                <tr>
+
+                    <!-- ==================================================
+                             KIOSK ID
+                        =================================================== -->
+
+                    <td data-label="Kiosk ID">
+
+                        KSK-{{ "%06d"|format(
+                        kiosk.kiosk_id
+                        ) }}
+
+                    </td>
+
+
+                    <!-- ==================================================
+                             KIOSK NAME
+                        =================================================== -->
+
+                    <td data-label="Kiosk Name">
+
+                        <div class="applicant-meta">
+
+                            <strong class="name-text">
+
+                                {{ kiosk.kiosk_name }}
+
+                            </strong>
+
+
+                            <span class="location-text">
+
+                                <i class="fa-solid fa-desktop"></i>
+
+                                Public Information Kiosk
+
+                            </span>
+
+                        </div>
+
+                    </td>
+
+
+                    <!-- ==================================================
+                             USERNAME
+                        =================================================== -->
+
+                    <td data-label="Username">
+                        <span class="mobile-cell-value">{{ kiosk.user.username }}</span>
+                    </td>
+
+
+                    <!-- ==================================================
+                             LOCATION
+                        =================================================== -->
+
+                    <td data-label="Location">
+                        <span class="mobile-cell-value">{{ kiosk.location }}</span>
+                    </td>
+
+
+                    <!-- ==================================================
+                             STATUS
+                        =================================================== -->
+
+                    <td data-label="Status">
+
+                        {% if kiosk.status == "active" %}
+
+                        <span class="badge-referred">
+                            Active
+                        </span>
+
+                        {% else %}
+
+                        <span class="badge-disabled">
+                            Disabled
+                        </span>
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <!-- ==================================================
+                             MODE / ASSIGNED JOB FAIR
+                        =================================================== -->
+
+                    <td data-label="Mode / Job Fair">
+
+                        {% if kiosk.mode in ("job_fair", "queue_display") %}
+
+                        <div class="applicant-meta">
+
+                            <strong class="name-text">
+
+                                <i class="fa-solid fa-briefcase"></i>
+
+                                {% if kiosk.mode == "queue_display" %}
+                                Queue Display
+                                {% else %}
+                                Job Fair
+                                {% endif %}
+
+                            </strong>
+
+
+                            {% set assigned_fair =
+                            assigned_job_fairs.get(
+                            kiosk.job_fair_id
+                            )
+                            %}
+
+
+                            {% if assigned_fair %}
+
+                            <span class="location-text">
+
+                                <i class="fa-solid fa-calendar-days"></i>
+
+                                {{ assigned_fair.title }}
+
+                            </span>
+
+                            {% else %}
+
+                            <span class="location-text">
+
+                                <i class="fa-solid fa-calendar-xmark"></i>
+
+                                No Job Fair assigned
+
+                            </span>
+
+                            {% endif %}
+
+                        </div>
+
+                        {% else %}
+
+                        <div class="applicant-meta">
+
+                            <strong class="name-text">
+
+                                <i class="fa-solid fa-house"></i>
+
+                                Standby
+
+                            </strong>
+
+
+                            <span class="location-text">
+
+                                No Job Fair assigned
+
+                            </span>
+
+                        </div>
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <!-- ==================================================
+                             ACTIONS
+                        =================================================== -->
+
+                    <td data-label="Actions">
+
+                        <div class="table-actions">
+
+                            <button type="button" class="btn-view manage-kiosk-btn" data-kiosk-id="{{ kiosk.kiosk_id }}"
+                                data-kiosk-name="{{ kiosk.kiosk_name }}" data-status="{{ kiosk.status }}"
+                                data-mode="{{ kiosk.mode }}" data-job-fair-id="{{ kiosk.job_fair_id or '' }}">
+
+                                <i class="fa-solid fa-gear"></i>
+
+                                Manage
+
+                            </button>
+
+
+                            <button type="button" class="btn-edit edit-kiosk-btn" data-kiosk-id="{{ kiosk.kiosk_id }}"
+                                data-kiosk-name="{{ kiosk.kiosk_name }}" data-location="{{ kiosk.location }}"
+                                data-description="{{ kiosk.description or '' }}"
+                                data-username="{{ kiosk.user.username }}">
+
+                                <i class="fa-solid fa-pen"></i>
+
+                                Edit
+
+                            </button>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+                {% else %}
+
+                <tr>
+
+                    <td colspan="7">
+
+                        <div class="empty-state standardized-empty-state">
+
+                            <i class="fa-solid fa-desktop"></i>
+
+
+                            <strong>
+                                {% if search %}
+                                No kiosk accounts found.
+                                {% else %}
+                                No kiosk accounts found.
+                                {% endif %}
+                            </strong>
+
+
+                            {% if search %}
+
+                            <p>
+                                No kiosks matched
+                                "<strong>{{ search }}</strong>".
+                                Try a different kiosk name,
+                                username, or ID.
+                            </p>
+
+                            {% else %}
+
+                            <p>
+                                Create a kiosk account to get started.
+                            </p>
+
+                            {% endif %}
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+                {% endif %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</main>
+
+
+<!-- ==========================================================
+     CREATE KIOSK ACCOUNT MODAL
+========================================================== -->
+
+<div class="modal" id="createKioskModal" aria-hidden="true">
+
+    <div class="kiosk-modal">
+
+        <!-- Modal Header -->
+
+        <div class="modal-header">
+
+            <div>
+                <div class="modal-title-container">
+
+                    <h2>
+                        Create Kiosk Account
+                    </h2>
+
+                    <p>
+                        Create an account for a PESO public information kiosk.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <button type="button" class="close-modal" id="closeCreateKioskModal" aria-label="Close">
+
+                <i class="fa-solid fa-xmark"></i>
+
+            </button>
+
+        </div>
+
+
+        <!-- Modal Body -->
+
+        <form method="POST" action="{{ url_for('admin.create_kiosk') }}" id="createKioskForm">
+
+            <!-- CSRF -->
+
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+
+            <div class="modal-body">
+
+                <!-- Kiosk Information -->
+
+                <div class="form-section">
+
+                    <div class="form-section-title">
+                        <span>
+                            Kiosk Information
+                        </span>
+
+                    </div>
+
+
+                    <div class="form-grid">
+
+                        <!-- Kiosk Name -->
+
+                        <div class="form-group">
+
+                            <label for="kiosk_name">
+
+                                Kiosk Name
+
+                                <span class="required">
+                                    *
+                                </span>
+
+                            </label>
+
+
+                            <input type="text" id="kiosk_name" name="kiosk_name" placeholder="e.g. PESO Main Kiosk"
+                                maxlength="100" required>
+
+                        </div>
+
+
+                        <!-- Location -->
+
+                        <div class="form-group">
+
+                            <label for="location">
+
+                                Location
+
+                                <span class="required">
+                                    *
+                                </span>
+
+                            </label>
+
+
+                            <input type="text" id="location" name="location" placeholder="e.g. PESO Main Office"
+                                maxlength="255" required>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Description -->
+
+                    <div class="form-group">
+
+                        <label for="description">
+                            Description
+                        </label>
+
+
+                        <textarea id="description" name="description" rows="3" maxlength="5000"
+                            placeholder="Optional description for this kiosk..."></textarea>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Account Information -->
+
+                <div class="form-section">
+
+                    <div class="form-section-title">
+                        <span>
+                            Kiosk Login Credentials
+                        </span>
+
+                    </div>
+
+
+                    <div class="form-grid">
+
+                        <!-- Username -->
+
+                        <div class="form-group">
+
+                            <label for="username">
+
+                                Username
+
+                                <span class="required">
+                                    *
+                                </span>
+
+                            </label>
+
+
+                            <div class="input-with-icon">
+                                <input type="text" id="username" name="username" placeholder="e.g. peso_kiosk_01"
+                                    maxlength="50" autocomplete="off" required>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- Password -->
+
+                        <div class="form-group">
+
+                            <label for="password">
+
+                                Password
+
+                                <span class="required">
+                                    *
+                                </span>
+
+                            </label>
+
+
+                            <div class="password-input">
+
+                                <input type="password" id="password" name="password" maxlength="128" placeholder="Enter kiosk password"
+                                    autocomplete="new-password" minlength="8" maxlength="128" required>
+
+
+                                <button type="button" class="password-toggle" id="toggleKioskPassword"
+                                    aria-label="Show password">
+
+                                    <i class="fa-solid fa-eye"></i>
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Notice -->
+
+                <div class="kiosk-notice">
+                    <div>
+
+                        <strong>
+                            Kiosk Account
+                        </strong>
+
+
+                        <p>
+                            This account is intended for a public PESO kiosk
+                            device. It will have kiosk-only access to the system.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Modal Footer -->
+
+            <div class="modal-footer">
+
+                <button type="button" class="btn-cancel" id="cancelCreateKiosk">
+
+                    Cancel
+
+                </button>
+
+
+                <button type="submit" class="btn-submit" id="submitCreateKiosk">
+
+                    <i class="fa-solid fa-plus"></i>
+
+                    Create Kiosk Account
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- ==========================================================
+     MANAGE KIOSK MODAL
+========================================================== -->
+
+<div class="modal" id="manageKioskModal" aria-hidden="true">
+
+    <div class="kiosk-modal">
+
+        <!-- Header -->
+
+        <div class="modal-header">
+
+            <div>
+                <div class="modal-title-container">
+
+                    <h2>
+                        Manage Kiosk
+                    </h2>
+
+                    <p id="manageKioskSubtitle">
+                        Manage kiosk status and operating mode.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <button type="button" class="close-modal" id="closeManageKioskModal" aria-label="Close">
+
+                <i class="fa-solid fa-xmark"></i>
+
+            </button>
+
+        </div>
+
+
+        <!-- Form -->
+
+        <form method="POST" id="manageKioskForm">
+
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+
+            <div class="modal-body">
+
+                <!-- Kiosk Information -->
+
+                <div class="form-section">
+
+                    <div class="form-section-title">
+                        <span>
+                            Kiosk Information
+                        </span>
+
+                    </div>
+
+
+                    <div class="kiosk-management-info">
+
+                        <div>
+
+                            <span class="info-label">
+                                Kiosk ID
+                            </span>
+
+
+                            <strong id="manageKioskId">
+                                —
+                            </strong>
+
+                        </div>
+
+
+                        <div>
+
+                            <span class="info-label">
+                                Kiosk Name
+                            </span>
+
+
+                            <strong id="manageKioskName">
+                                —
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Status -->
+
+                <div class="form-section">
+
+                    <div class="form-section-title">
+                        <span>
+                            Kiosk Status
+                        </span>
+
+                    </div>
+
+
+                    <div class="mode-option-group">
+
+                        <label class="mode-option">
+
+                            <input type="radio" name="status" value="active" id="kioskStatusActive">
+
+
+                            <span>
+
+                                <strong>
+                                    Active
+                                </strong>
+
+                                <small>
+                                    Allow this kiosk to be used.
+                                </small>
+
+                            </span>
+
+                        </label>
+
+
+                        <label class="mode-option">
+
+                            <input type="radio" name="status" value="disabled" id="kioskStatusDisabled">
+
+
+                            <span>
+
+                                <strong>
+                                    Disabled
+                                </strong>
+
+                                <small>
+                                    Prevent this kiosk account from being used.
+                                </small>
+
+                            </span>
+
+                        </label>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Mode -->
+
+                <div class="form-section">
+
+                    <div class="form-section-title">
+                        <span>
+                            Kiosk Mode
+                        </span>
+
+                    </div>
+
+
+                    <div class="mode-option-group">
+
+                        <label class="mode-option">
+
+                            <input type="radio" name="mode" value="standby" id="kioskModeStandby">
+
+
+                            <span>
+
+                                <strong>
+                                    Standby Mode
+                                </strong>
+
+                                <small>
+                                    Use the kiosk for normal PESO services.
+                                </small>
+
+                            </span>
+
+                        </label>
+
+
+                        <label class="mode-option">
+
+                            <input type="radio" name="mode" value="job_fair" id="kioskModeJobFair">
+
+
+                            <span>
+
+                                <strong>
+                                    Job Fair Mode
+                                </strong>
+
+                                <small>
+                                    Assign this kiosk to an ongoing Job Fair.
+                                </small>
+
+                            </span>
+
+                        </label>
+
+
+
+                        <label class="mode-option">
+
+                            <input type="radio" name="mode" value="queue_display" id="kioskModeQueueDisplay">
+
+                            <span>
+                                <strong>Queue Display</strong>
+                                <small>Lock this kiosk to the live Job Fair queue board only.</small>
+                            </span>
+
+                        </label>
+
+                    </div>
+
+
+                    <!-- Job Fair Selection -->
+
+                    <div class="job-fair-selection" id="jobFairSelection" style="display: none;">
+
+                        <div class="form-group">
+
+                            <label for="manageJobFair">
+
+                                Ongoing Job Fair
+
+                                <span class="required">
+                                    *
+                                </span>
+
+                            </label>
+
+
+                            <select id="manageJobFair" name="job_fair_id">
+
+                                <option value="">
+                                    Select an ongoing Job Fair
+                                </option>
+
+
+                                {% for fair in ongoing_job_fairs %}
+
+                                <option value="{{ fair.job_fair_id }}">
+
+                                    {{ fair.title }}
+
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+
+                            <small class="form-help">
+
+                                Only currently ongoing Job Fairs are
+                                available for kiosk assignment.
+
+                            </small>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Footer -->
+
+            <div class="modal-footer">
+
+                <button type="button" class="btn-cancel" id="cancelManageKiosk">
+
+                    Cancel
+
+                </button>
+
+
+                <button type="submit" class="btn-submit" id="submitManageKiosk">
+
+                    Save Changes
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- ==========================================================
+     EDIT KIOSK MODAL
+========================================================== -->
+
+<div class="modal" id="editKioskModal" aria-hidden="true">
+
+    <div class="kiosk-modal">
+
+        <!-- Header -->
+
+        <div class="modal-header">
+
+            <div>
+                <div class="modal-title-container">
+
+                    <h2>
+                        Edit Kiosk
+                    </h2>
+
+                    <p>
+                        Update kiosk information and login credentials.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <button type="button" class="close-modal" id="closeEditKioskModal" aria-label="Close">
+
+                <i class="fa-solid fa-xmark"></i>
+
+            </button>
+
+        </div>
+
+
+        <form method="POST" id="editKioskForm">
+
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+
+            <div class="modal-body">
+
+                <!-- Kiosk Information -->
+
+                <div class="form-section">
+
+                    <div class="form-section-title">
+                        <span>
+                            Kiosk Information
+                        </span>
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="editKioskName">
+
+                            Kiosk Name
+
+                            <span class="required">
+                                *
+                            </span>
+
+                        </label>
+
+
+                        <input type="text" id="editKioskName" name="kiosk_name" maxlength="100" required>
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="editKioskLocation">
+
+                            Location
+
+                            <span class="required">
+                                *
+                            </span>
+
+                        </label>
+
+
+                        <input type="text" id="editKioskLocation" name="location" maxlength="255" required>
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="editKioskDescription">
+                            Description
+                        </label>
+
+
+                        <textarea id="editKioskDescription" name="description" rows="3" maxlength="5000"></textarea>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Credentials -->
+
+                <div class="form-section">
+
+                    <div class="form-section-title">
+                        <span>
+                            Login Credentials
+                        </span>
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="editKioskUsername">
+
+                            Username
+
+                            <span class="required">
+                                *
+                            </span>
+
+                        </label>
+
+
+                        <div class="input-with-icon">
+                            <input type="text" id="editKioskUsername" name="username" maxlength="50" required>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="editKioskPassword">
+
+                            New Password
+
+                        </label>
+
+
+                        <div class="password-input">
+
+                            <input type="password" id="editKioskPassword" name="password" maxlength="128" autocomplete="new-password"
+                                placeholder="Leave blank to keep current password" minlength="8" maxlength="128">
+
+
+                            <button type="button" class="password-toggle" id="toggleEditKioskPassword"
+                                aria-label="Show password">
+
+                                <i class="fa-solid fa-eye"></i>
+
+                            </button>
+
+                        </div>
+
+
+                        <small class="form-help">
+
+                            Leave this blank if you do not want to
+                            change the kiosk password.
+
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="modal-footer">
+
+                <button type="button" class="btn-cancel" id="cancelEditKiosk">
+
+                    Cancel
+
+                </button>
+
+
+                <button type="submit" class="btn-submit" id="submitEditKiosk">
+
+                    Save Changes
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+{% endblock %}
+
+
+{% block javascript %}
+
+<script src="{{ url_for(
+        'static',
+        filename='javascript/admin/admin_kiosk_management.js'
+    ) }}" defer>
+    </script>
+{% endblock %}
