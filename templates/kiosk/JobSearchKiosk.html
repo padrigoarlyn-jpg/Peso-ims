@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Job Search | PESO</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/JobSearchKiosk.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_keyboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/peso_foundation.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/peso_polish.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_logout.css') }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/table_pagination.css') }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_scrollbar.css') }}">
+    <!-- Shared 15.6-inch kiosk touchscreen scaling (load last) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_screen_15inch.css') }}">
+</head>
+
+<body class="kiosk-app" data-ui-phase="5">
+
+{% include "kiosk/_kiosk_flash.html" %}
+
+<main class="job-search-page">
+
+    <!-- PAGE HEADER -->
+    <header class="page-header">
+        <div class="header-brand">
+            <div class="logo-container">
+                <img src="{{ url_for('static', filename='images/peso_logo.png') }}" alt="PESO Logo" class="peso-logo">
+            </div>
+
+            <div class="header-title">
+                <span class="header-eyebrow">PUBLIC EMPLOYMENT SERVICE OFFICE</span>
+                <h1>Job Search</h1>
+                <p>Explore available employment opportunities</p>
+            </div>
+        </div>
+
+        <div class="header-status">
+            <span class="status-dot"></span>
+            <span>
+                {% if active_tab == 'job-fair' %}
+                    JOB FAIR
+                {% elif active_tab == 'regular' %}
+                    REFERRAL
+                {% else %}
+                    JOB OPPORTUNITIES
+                {% endif %}
+            </span>
+        </div>
+
+        {% if kiosk_mode == 'job_fair' %}
+        <div style="padding:0 24px 16px;text-align:right;">
+            <a href="{{ url_for('kiosk.registration') }}" style="display:inline-block;background:#165da8;color:white;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600;">
+                Go to Job Fair Queue
+            </a>
+        </div>
+        {% endif %}
+    </header>
+
+    <!-- SEARCH SECTION -->
+    <section class="search-section">
+        <div class="search-heading">
+            <div>
+                <span class="section-kicker">FIND OPPORTUNITIES</span>
+                <h2>Search Available Jobs</h2>
+                <p>Browse job openings from participating employers.</p>
+            </div>
+
+            <div class="job-count">
+                <strong id="jobCount">{{ jobs|length }}</strong>
+                <span>JOBS AVAILABLE</span>
+            </div>
+        </div>
+
+        <!-- Source tabs are only applicable to standby Job View mode. -->
+        {% if kiosk_mode != 'job_fair' %}
+        <nav class="job-tabs" aria-label="Job Listing Types">
+            <a href="{{ url_for('kiosk.jobsearch', tab='all', search=search, category=category, salary=salary, work_type=work_type) }}" class="job-tab {% if active_tab == 'all' %}active{% endif %}" data-tab="all">All Jobs</a>
+            <a href="{{ url_for('kiosk.jobsearch', tab='regular', search=search, category=category, salary=salary, work_type=work_type) }}" class="job-tab {% if active_tab == 'regular' %}active{% endif %}" data-tab="regular">Referral</a>
+            <a href="{{ url_for('kiosk.jobsearch', tab='job-fair', search=search, category=category, salary=salary, work_type=work_type) }}" class="job-tab {% if active_tab == 'job-fair' %}active{% endif %}" data-tab="job-fair">Job Fair</a>
+        </nav>
+        {% endif %}
+
+        <!-- SEARCH BAR -->
+        <div class="search-bar-wrapper">
+            <div class="search-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="11" cy="11" r="6.5"></circle>
+                    <path d="M16 16L21 21"></path>
+                </svg>
+            </div>
+
+            <input type="text" id="jobSearch" name="search" class="search-input keyboard-input" data-keyboard="text" value="{{ search or '' }}" placeholder="Search job title or employer" autocomplete="off" autocapitalize="sentences" spellcheck="false">
+            <button type="button" id="clearSearchBtn" class="clear-search-btn" aria-label="Clear search">×</button>
+        </div>
+
+        <!-- SEARCH STATUS -->
+        <div class="search-status" id="searchStatus">
+            <span class="search-status-dot"></span>
+            <span>
+                {% if search %}
+                    Search results for "{{ search }}"
+                {% else %}
+                    Showing all available jobs
+                {% endif %}
+            </span>
+        </div>
+    </section>
+
+    <!-- FILTER BAR -->
+    <section class="filter-section">
+        <div class="filter-label">
+            <span>FILTER BY</span>
+        </div>
+
+        <div class="filter-options">
+            <select id="categoryFilter" class="filter-select">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+
+            <select id="salaryFilter" class="filter-select">
+                <option value="">Any Salary</option>
+                <option value="below-15000" {% if salary == "below-15000" %}selected{% endif %}>Below ₱15,000</option>
+                <option value="15000-25000" {% if salary == "15000-25000" %}selected{% endif %}>₱15,000 - ₱25,000</option>
+                <option value="25000-40000" {% if salary == "25000-40000" %}selected{% endif %}>₱25,000 - ₱40,000</option>
+                <option value="above-40000" {% if salary == "above-40000" %}selected{% endif %}>₱40,000+</option>
+            </select>
+
+            <select id="workTypeFilter" class="filter-select">
+                <option value="">Any Work Type</option>
+                <option value="Full Time" {% if work_type == "Full Time" %}selected{% endif %}>Full Time</option>
+                <option value="Part Time" {% if work_type == "Part Time" %}selected{% endif %}>Part Time</option>
+            </select>
+
+            <button type="button" id="resetFiltersBtn" class="reset-filters-btn" aria-label="Reset search and filters"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11a9 9 0 1 1 2.8 6.5M3 4v7h7"/></svg><span>Reset</span></button>
+        </div>
+    </section>
+
+    <!-- JOB CONTENT -->
+    <section class="job-content">
+        <div class="job-list-header">
+            <div>
+                <span class="section-kicker">AVAILABLE POSITIONS</span>
+                <h2>Job Opportunities</h2>
+            </div>
+            <div class="results-info"><span id="resultsCount">{{ jobs|length }} results</span></div>
+        </div>
+
+        <!-- JOB LIST -->
+        <div class="job-list" id="jobList">
+            {% if jobs %}
+                {% for job in jobs %}
+                <article class="job-card"
+                    data-category="{{ job.category or '' }}"
+                    data-job-title="{{ job.job_title or '' }}"
+                    data-company="{{ job.employer.company_name if job.employer else 'Direct Hire' }}"
+                    data-salary="{{ job.salary_min or job.salary_max or 0 }}"
+                    data-work-type="{{ job.employment_type or '' }}"
+                    data-location="{{ job.location or '' }}"
+                    data-job-type="{{ job.job_type or 'Referral' }}"
+                         >
+
+                    <div class="job-card-main">
+                        <div class="company-logo">
+                            <span>{{ job.employer.company_name[0]|upper if job.employer and job.employer.company_name else 'P' }}</span>
+                        </div>
+
+                        <div class="job-card-details">
+                            <span class="job-category">
+                                {% if job.job_type == "Job Fair" %}
+                                    JOB FAIR
+                                {% elif job.job_type == "Referral" %}
+                                    REFERRAL
+                                {% else %}
+                                    JOB OPPORTUNITY
+                                {% endif %}
+                            </span>
+                            <h3>{{ job.job_title }}</h3>
+                            <p class="company-name">{{ job.employer.company_name if job.employer else 'Direct Hire' }}</p>
+                            <div class="job-meta">
+                                <span>{{ job.employment_type or "Not specified" }}</span>
+                                <span class="meta-divider">•</span>
+                                <span>{{ job.location or "Not specified" }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="view-job-btn"
+                        data-job-id="{{ job.job_id }}"
+                        data-job-title="{{ job.job_title or '' }}"
+                        data-company="{{ job.employer.company_name if job.employer else 'Direct Hire' }}"
+                        data-location="{{ job.location or 'Not specified' }}"
+                        data-employment="{{ job.employment_type or 'Not specified' }}"
+                        data-description="{{ job.description or 'No job description provided.' }}"
+                        data-requirements="{{ job.qualifications or '' }}"
+                        data-qualifications="{{ job.qualifications or '' }}"
+                        data-responsibilities="{{ job.responsibilities or '' }}"
+                        data-job-type="{{ job.job_type or 'Referral' }}"
+                        data-vacancies="{{ job.vacancies if job.vacancies is not none else '' }}"
+                        data-min-salary="{{ job.salary_min if job.salary_min is not none else '' }}"
+                        data-max-salary="{{ job.salary_max if job.salary_max is not none else '' }}"
+                        data-created-at="{{ job.created_at.isoformat() if job.created_at else '' }}"
+                        data-logo="{% if job.employer and (job.employer.company_logo or job.employer.logo) %}{{ url_for('static', filename='uploads/logos/' ~ (job.employer.company_logo or job.employer.logo)) }}{% else %}{{ url_for('static', filename='images/pfp_placeholder.png') }}{% endif %}"
+                        data-map="{{ job.map_url or job.location_map_url or '' }}">
+                        <span>View Job</span>
+                    </button>
+                </article>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="11" cy="11" r="6.5"></circle>
+                            <path d="M16 16L21 21"></path>
+                        </svg>
+                    </div>
+                    <h3>No jobs found</h3>
+                    <p>Try a different job title, employer, or filter.</p>
+                </div>
+            {% endif %}
+        </div>
+        <nav id="kioskJobPagination" class="peso-standard-pagination peso-client-pagination" aria-label="Job search pages"></nav>
+    </section>
+
+    <!-- BOTTOM NAVIGATION -->
+    <footer class="navigation-bar">
+        <div class="navigation-info">
+            <span class="navigation-icon">ℹ</span>
+            <span>Tap <strong>View Job</strong> to see complete job details and employer information.</span>
+        </div>
+
+    </footer>
+</main>
+
+<!-- JOB DETAILS MODAL -->
+<div class="job-modal" id="jobModal" aria-hidden="true">
+    <div class="job-modal-backdrop"></div>
+    <div class="job-modal-card" role="dialog" aria-modal="true" aria-labelledby="modalJobTitle">
+        <div class="job-modal-sticky-header">
+            <div class="modal-header">
+                <button type="button" class="modal-close" id="modalClose" aria-label="Close job details">×</button>
+            </div>
+            <div class="modal-company">
+                <div class="company-logo">
+                    <img id="modalLogo" src="{{ url_for('static', filename='images/pfp_placeholder.png') }}" alt="Company Logo">
+                </div>
+                <div class="modal-title-section">
+                    <div class="modal-badges-header"><span id="modalCategory" class="modal-label">JOB OPPORTUNITY</span></div>
+                    <h2 id="modalJobTitle">Job Title</h2>
+                    <p id="modalCompanyName">Company Name</p>
+                    <span id="modalCompany" hidden></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-section">
+            <h3>Job Overview</h3>
+            <p class="company-description" id="modalDescription">Job description will appear here.</p>
+        </div>
+
+        <div class="job-info-card">
+            <div class="info-item">
+                <div class="info-icon"><i class="fa-solid fa-peso-sign">₱</i></div>
+                <div><span class="info-label">Salary</span><p id="modalSalary">Salary negotiable</p></div>
+            </div>
+            <div class="info-item">
+                <div class="info-icon"><i class="fa-regular fa-clock">◷</i></div>
+                <div><span class="info-label">Posted</span><p id="modalPosted">Not specified</p></div>
+            </div>
+            <div class="info-item">
+                <div class="info-icon"><i class="fa-solid fa-briefcase">▣</i></div>
+                <div><span class="info-label">Employment Type</span><p id="modalEmployment">Not specified</p><span id="modalEmploymentType" hidden></span></div>
+            </div>
+            <div class="info-item">
+                <div class="info-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                <div><span class="info-label">Vacancies Available</span><p id="modalVacancies">Not specified</p></div>
+            </div>
+        </div>
+
+        <div class="details-grid">
+            <div class="details-column">
+                <div class="section-heading"><div class="section-heading-icon"><i class="fa-solid fa-list-check">☑</i></div><h3>Responsibilities</h3></div>
+                <ul id="modalResponsibilities"><li>No responsibilities specified.</li></ul>
+            </div>
+            <div class="details-column">
+                <div class="section-heading"><div class="section-heading-icon"><i class="fa-solid fa-circle-check">✓</i></div><h3>Qualifications</h3></div>
+                <ul id="modalQualifications"><li>No qualifications specified.</li></ul>
+                <span id="modalRequirements" hidden></span>
+            </div>
+        </div>
+
+
+        <div class="modal-footer" id="jobActionContainer">
+            <a href="{{ url_for('kiosk.qr_code_dashboard', source='jobsearch') }}" class="modal-action-btn" id="modalActionBtn"><span>Apply Now</span></a>
+        </div>
+
+        <div hidden aria-hidden="true"><span id="modalDeadline"></span></div>
+    </div>
+</div>
+
+<!-- GLOBAL KIOSK KEYBOARD -->
+{% include "kiosk/components/kiosk_keyboard.html" %}
+
+<script src="{{ url_for('static', filename='javascript/kiosk/kiosk_job_pagination.js') }}"></script>
+<script>document.addEventListener("DOMContentLoaded", function () { window.PesoKioskJobPagination("jobList", "kioskJobPagination"); });</script>
+
+<!-- JOB SEARCH JAVASCRIPT -->
+<script src="{{ url_for('static', filename='javascript/kiosk/jobsearch.js') }}"></script>
+
+<!-- GLOBAL KIOSK KEYBOARD JAVASCRIPT -->
+<script src="{{ url_for('static', filename='javascript/kiosk/kiosk_keyboard.js') }}"></script>
+
+{% include "kiosk/components/kiosk_logout.html" %}
+
+    <script defer src="{{ url_for('static', filename='javascript/kiosk/kiosk_scrollbar.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='javascript/kiosk/kiosk_sleep.js') }}" data-home="{{ url_for('kiosk.dashboard') }}" data-is-home="false"></script>
+</body>
+</html>

@@ -1,0 +1,491 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}jobseeker-app{% endblock %}
+
+{% block title %}
+Job Listing | PESO IMS
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_joblist.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_ui_consistency.css') }}">
+<!-- Shared mobile filter drawer styling -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared_mobile_filter_drawers.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/jobseeker_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+
+<div id="referredJobsData" data-referred-ids="{{ referred_job_ids | default([]) | tojson }}">
+</div>
+
+<div id="appliedJobsData" data-applied-ids="{{ applied_job_ids | default([]) | tojson }}">
+</div>
+
+<div id="jobFairData" data-preselected-job-fair-job-ids='{{ preselected_job_fair_job_ids | default([]) | tojson }}'
+    data-preselected-job-ids='{{ preselected_job_ids | default([]) | tojson }}'
+    data-job-fair-job-map='{{ job_fair_job_map | default({}) | tojson }}'
+    data-job-fair-job-details='{{ job_fair_job_details | default({}) | tojson }}'
+    data-registered-job-fair-ids='{{ registered_job_fair_ids | default([]) | tojson }}'
+    data-job-details-url="{{ url_for('jobseeker.get_job_details', job_id=999999) }}"
+    data-preselect-url="{{ url_for('jobseeker.preselect_job_fair_job') }}"
+    data-remove-preselect-url="{{ url_for('jobseeker.remove_job_fair_preselection') }}">
+</div>
+
+<button type="button" class="mobile-filter-trigger" aria-label="Open job filters" aria-expanded="false">
+    <i class="fa-solid fa-sliders"></i>
+    <span>Filters</span>
+</button>
+
+<div class="mobile-filter-overlay" aria-hidden="true"></div>
+
+<section class="filters dashboard-filter-section">
+    <div class="filter-container">
+
+        <div class="mobile-filter-drawer-header">
+            <div>
+                <span class="mobile-filter-eyebrow">Job Search</span>
+                <h2>Filters</h2>
+            </div>
+
+            <button type="button" class="mobile-filter-close" aria-label="Close job filters">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="job-tabs-wrapper">
+            <select id="tabFilter" class="tab-filter" aria-label="Job Listing Type">
+
+                <option value="all">All Jobs</option>
+                <option value="regular">Referral</option>
+                <option value="job-fair">Job Fair Exclusive</option>
+                <option value="preselected">My Preselected Jobs</option>
+            </select>
+        </div>
+
+        <div class="search-box dashboard-search-box">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+
+            <input type="text" id="searchInput" placeholder="Search jobs, companies, or keywords..." autocomplete="off">
+        </div>
+
+        <div class="filter-dropdowns">
+
+            <div class="select-wrapper dashboard-filter-select-wrapper">
+                <select id="categoryFilter">
+                    <option value="">All Categories</option>
+                </select>
+                <i class="fa-solid fa-chevron-down"></i>
+            </div>
+
+            <div class="select-wrapper dashboard-filter-select-wrapper">
+                <select id="salaryFilter">
+                    <option value="">All Salaries</option>
+                    <option value="5000-15000">₱5,000 - ₱15,000</option>
+                    <option value="15001-25000">₱15,001 - ₱25,000</option>
+                    <option value="25001-50000">₱25,001 - ₱50,000</option>
+                    <option value="50001+">₱50,001+</option>
+                </select>
+                <i class="fa-solid fa-chevron-down"></i>
+            </div>
+
+            <div class="select-wrapper dashboard-filter-select-wrapper">
+                <select id="workTypeFilter">
+                    <option value="">All Work Types</option>
+                    <option value="Full Time">Full Time</option>
+                    <option value="Part Time">Part Time</option>
+                </select>
+                <i class="fa-solid fa-chevron-down"></i>
+            </div>
+
+            <button type="button" id="resetFiltersBtn" class="reset-filter-btn">
+                <i class="fa-solid fa-rotate-left"></i>
+                <span>Reset</span>
+            </button>
+
+        </div>
+    </div>
+</section>
+
+<div class="main-wrapper">
+    <div class="job-container" id="jobContainer">
+
+        {% for job in jobs %}
+
+        {% set is_job_fair_type = job.job_type == "Job Fair" %}
+
+        {% set is_in_job_fair =
+        (
+        job.job_id in job_fair_job_map
+        or
+        job.job_id|string in job_fair_job_map
+        )
+        %}
+
+        {% if job.employer and job.employer.company_logo %}
+        {% set logo_path = url_for(
+        'static',
+        filename='uploads/logos/' ~ job.employer.company_logo
+        ) %}
+        {% else %}
+        {% set logo_path = url_for(
+        'static',
+        filename='images/pfp_placeholder.png'
+        ) %}
+        {% endif %}
+
+        <article class="job-card {% if is_job_fair_type %}job-card-job-fair{% else %}job-card-regular{% endif %}"
+            data-job-id="{{ job.job_id }}" data-job-type="{{ job.job_type or '' }}"
+            data-is-job-fair="{{ 'true' if is_job_fair_type else 'false' }}"
+            data-is-in-job-fair="{{ 'true' if is_in_job_fair else 'false' }}"
+            data-job-fair-job-ids="{{ job_fair_job_map.get(job.job_id, []) | tojson }}"
+            data-title="{{ job.job_title or '' }}"
+            data-company="{{ job.employer.company_name if job.employer else 'Direct Hire' }}"
+            data-description="{{ job.description or '' }}" data-location="{{ job.location or '' }}"
+            data-category="{{ job.category or '' }}" data-work-type="{{ job.employment_type or '' }}"
+            data-min-salary="{{ job.salary_min or 0 }}" data-max-salary="{{ job.salary_max or 0 }}"
+            data-status="{{ job.status or '' }}"
+            data-created-at="{{ job.created_at.isoformat() if job.created_at else '' }}">
+
+            <div class="card-header">
+                <div class="header-left">
+                    <h3 class="job-title-text">
+                        {{ job.job_title }}
+                    </h3>
+
+                    <p class="company-subtitle">
+                        {{
+                        job.employer.company_name
+                        if job.employer
+                        else "Direct Hire"
+                        }}
+                    </p>
+                </div>
+
+                <div class="card-badges-wrapper">
+
+                    {% if is_job_fair_type %}
+                    <span class="job-source job-fair-source">
+                        <i class="fa-solid fa-calendar-days"></i>
+                        Job Fair Exclusive
+                    </span>
+                    {% else %}
+                    <span class="job-source regular-source">
+                       
+                        Referral
+                    </span>
+                    {% endif %}
+
+                    <span class="tag {% if job.employment_type == 'Full Time' %}full{% else %}part{% endif %}">
+                        {{ job.employment_type or "Not specified" }}
+                    </span>
+
+                </div>
+            </div>
+
+            <div class="job-meta">
+                <span>
+                    <i class="fa-solid fa-location-dot"></i>
+                    <strong>Loaction:</strong>
+                    {{ job.location or "Location Not Specified" }}
+                </span>
+
+                <span>
+                    <i class="fa-solid fa-peso-sign"></i>
+                    <strong>Salary:</strong>
+                    {% if job.salary_min is not none and job.salary_max is not none %}
+                    ₱{{ "{:,.0f}".format(job.salary_min) }}
+                    -
+                    ₱{{ "{:,.0f}".format(job.salary_max) }}
+                    {% else %}
+                    Salary Negotiable
+                    {% endif %}
+                </span>
+            </div>
+
+            <p class="job-description">
+                {{ job.description or "No description available." }}
+            </p>
+
+            <div class="card-footer">
+                <span class="job-posted">
+                    <i class="fa-regular fa-clock"></i>
+                    Posted recently
+                </span>
+
+                <button type="button" class="btn-more-details openModal" data-job-id="{{ job.job_id }}"
+                    data-logo="{{ logo_path }}" data-job-type="{{ job.job_type or '' }}"
+                    data-is-job-fair="{{ 'true' if is_job_fair_type else 'false' }}"
+                    data-is-in-job-fair="{{ 'true' if is_in_job_fair else 'false' }}">
+                    View Details
+                </button>
+            </div>
+
+        </article>
+
+        {% else %}
+
+        <div class="no-jobs-card">
+            <div class="empty-icon">
+                <i class="fa-solid fa-folder-open"></i>
+            </div>
+
+            <h3>No Jobs Available</h3>
+
+            <p class="no-jobs-message">
+                No available job listings at this time.
+            </p>
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+    <div id="noMatchingJobs" class="no-jobs-card" style="display: none;">
+
+        <div class="empty-icon">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </div>
+
+        <h3>No Matching Jobs</h3>
+
+        <p class="no-jobs-message">
+            No jobs match your search keywords or selected filter parameters.
+        </p>
+
+        <button type="button" class="empty-reset-btn" onclick="document.getElementById('resetFiltersBtn').click()">
+            Reset Filters
+        </button>
+    </div>
+</div>
+
+<div id="jobModal" class="modal">
+    <div class="modal-content">
+
+        <div class="modal-header">
+            <button type="button" class="close-btn" aria-label="Close modal">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="modal-company">
+            <div class="company-logo">
+                <img src="{{ url_for('static', filename='uploads/logos/' + (employer.company_logo or employer.logo)) if employer and (employer.company_logo or employer.logo) else url_for('static', filename='images/pfp_placeholder.png') }}"
+                        alt="{{ employer.company_name if employer and employer.company_name else 'Company Logo' }}"
+                        class="large-avatar" id="modalLogo">
+            </div>
+
+            <div class="modal-title-section">
+                <div class="modal-badges-header">
+                    <span class="modal-label modal-type-referral" id="modalTypeBadge">
+                        JOB OPPORTUNITY
+                    </span>
+                    <span class="modal-mini-badge" id="modalEmploymentType"></span>
+                    <span class="modal-mini-badge modal-mini-badge-muted" id="modalCategory"></span>
+                </div>
+
+                <h2 id="modalJobTitle"></h2>
+                <p id="modalCompany"></p>
+                <div class="modal-workflow-status" id="modalWorkflowStatus" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div class="modal-section">
+            <h3>Job Overview</h3>
+            <p class="company-description" id="modalDescription">
+            </p>
+        </div>
+
+        <div class="job-info-card">
+
+            <div class="info-item">
+                <div class="info-icon">
+                    <i class="fa-solid fa-location-dot"></i>
+                </div>
+                <div>
+                    <span class="info-label">Location</span>
+                    <p id="modalLocation"></p>
+                </div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-icon">
+                    <i class="fa-solid fa-peso-sign"></i>
+                </div>
+                <div>
+                    <span class="info-label">Salary</span>
+                    <p id="modalSalary"></p>
+                </div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-icon">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                    <span class="info-label">Vacancies</span>
+                    <p id="modalVacancies"></p>
+                </div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-icon">
+                    <i class="fa-solid fa-building"></i>
+                </div>
+                <div>
+                    <span class="info-label">Industry</span>
+                    <p id="modalIndustry"></p>
+                </div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-icon">
+                    <i class="fa-regular fa-calendar-xmark"></i>
+                </div>
+                <div>
+                    <span class="info-label">Deadline</span>
+                    <p id="modalDeadline"></p>
+                </div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-icon">
+                    <i class="fa-regular fa-clock"></i>
+                </div>
+                <div>
+                    <span class="info-label">Posted</span>
+                    <p id="modalPosted"></p>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="modal-requirements-section" id="modalStructuredRequirementsSection">
+            <div class="section-heading">
+                <div class="section-heading-icon">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                </div>
+                <div>
+                    <h3>Structured Requirements</h3>
+                    <p class="section-subtext">Requirements specified by the employer for this position.</p>
+                </div>
+            </div>
+
+            <div class="requirements-summary-grid">
+                <div class="requirement-summary-item">
+                    <span class="requirement-summary-label">Education</span>
+                    <strong id="modalMinimumEducation">Not specified</strong>
+                </div>
+
+                <div class="requirement-summary-item">
+                    <span class="requirement-summary-label">Relevant Experience</span>
+                    <strong id="modalMinimumExperience">Not specified</strong>
+                </div>
+            </div>
+
+            <div class="structured-requirement-groups" id="modalStructuredRequirementGroups">
+                <div class="structured-requirement-empty">No additional structured requirements specified.</div>
+            </div>
+        </div>
+
+        <div class="details-grid">
+
+            <div class="details-column">
+                <div class="section-heading">
+                    <div class="section-heading-icon">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <h3>Responsibilities</h3>
+                </div>
+
+                <ul id="modalResponsibilities"></ul>
+            </div>
+
+            <div class="details-column">
+                <div class="section-heading">
+                    <div class="section-heading-icon">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <h3>Qualifications</h3>
+                </div>
+
+                <ul id="modalQualifications"></ul>
+            </div>
+
+        </div>
+
+        <div class="map-section">
+            <div class="section-heading">
+                <div class="section-heading-icon">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                </div>
+                <h3>Job Location</h3>
+            </div>
+
+            <div id="modalMap" class="map-embed-wrapper">
+            </div>
+        </div>
+
+        <div class="modal-action-context" id="modalActionContext" style="display: none;"></div>
+
+        <div id="jobActionContainer">
+
+            <form action="{{ url_for('jobseeker.request_referral') }}" method="POST" id="referralForm">
+
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <input type="hidden" id="modalJobId" name="job_id">
+
+                <button type="submit" id="requestReferralBtn" class="apply-btn">
+                    Request Referral
+                </button>
+
+                <button type="button" id="referralRequestedBtn" class="apply-btn requested" disabled
+                    style="display: none;">
+                    Referral Requested
+                </button>
+            </form>
+
+            <div id="preselectionActionContainer" style="display: none;">
+
+                <input type="hidden" id="preselectionJobFairJobId">
+
+                <button type="button" id="preselectJobBtn" class="apply-btn btn-job-fair-preselect"
+                    style="display: none;">
+                    Preselect Job
+                </button>
+
+                <button type="button" id="jobPreselectedBtn" class="apply-btn requested" style="display: none;">
+                    Job Preselected
+                </button>
+
+                <button type="button" id="preRegisterJobFairBtn" class="apply-btn btn-job-fair-preregister"
+                    style="display: none;" disabled>
+                    <i class="fa-solid fa-calendar-plus me-1"></i>
+                    Pre-Register First
+                </button>
+
+            </div>
+
+            <div id="jobFairUnregisteredNotice" class="job-fair-notice" style="display: none;">
+                <i class="fa-solid fa-circle-info"></i>
+
+                <p>
+                    You must pre-register for the associated Job Fair before
+                    preselecting this position.
+                </p>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/jobseeker/jobseeker_joblist.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/jobseeker/jobseeker_joblist_preselection.js') }}"></script>
+{% endblock %}

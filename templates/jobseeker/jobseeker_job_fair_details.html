@@ -1,0 +1,417 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}jobseeker-app{% endblock %}
+
+{% block title %}
+{{ fair.title }} | PESO IMS
+{% endblock %}
+
+{% block css %}
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<!-- Job Fair Details CSS -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_job_fair_details.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_ui_consistency.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/jobseeker_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="details-page-main">
+    <div class="page-container">
+
+        <!-- Back Navigation -->
+        <div class="back-navigation">
+            <a href="{{ url_for('jobseeker.announcement') }}" class="btn-back-custom">
+                <i class="bi bi-arrow-left"></i>
+                <span>Back to Announcements</span>
+            </a>
+        </div>
+
+        <!-- Main Two-Column Layout -->
+        <div class="details-layout">
+
+            <!-- Left Side / Main Content -->
+            <section class="main-content-card">
+
+                <!-- Event Poster -->
+                {% if fair.poster_image %}
+                <div class="poster-wrapper">
+                    <img src="{{ url_for('static', filename='uploads/posters/' + fair.poster_image) }}"
+                        alt="{{ fair.title }}">
+                </div>
+                {% endif %}
+
+                <!-- Event Type -->
+                <div class="event-type">
+                    <i class="bi bi-briefcase-fill"></i>
+                    {{ fair.event_type or "Job Fair" }}
+                </div>
+
+                <!-- Event Title -->
+                <h1 class="event-title">{{ fair.title }}</h1>
+
+                <!-- Venue -->
+                <div class="venue-text">
+                    <i class="bi bi-geo-alt-fill"></i>
+                    <span>{{ fair.venue or "Venue to be announced" }}</span>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <!-- Event Requirements -->
+                {% if fair.enforce_dress_code or fair.require_gov_ids or fair.require_srs_id %}
+                <section class="requirements-section">
+                    <div class="section-heading">
+                        <div class="section-icon">
+                            <i class="bi bi-list-check"></i>
+                        </div>
+                        <div>
+                            <h2>Event Requirements & Reminders</h2>
+                            <p>Please review these requirements before attending.</p>
+                        </div>
+                    </div>
+
+                    <div class="requirements-list">
+                        {% if fair.enforce_dress_code %}
+                        <div class="requirement-item">
+                            <div class="requirement-icon">
+                                <i class="bi bi-person-badge"></i>
+                            </div>
+                            <div>
+                                <strong>Proper Attire</strong>
+                                <p>Proper attire is required and will be strictly enforced for all attendees.</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if fair.require_gov_ids %}
+                        <div class="requirement-item">
+                            <div class="requirement-icon">
+                                <i class="bi bi-card-heading"></i>
+                            </div>
+                            <div>
+                                <strong>Government ID</strong>
+                                <p>Bring a valid government-issued ID for verification.</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if fair.require_srs_id %}
+                        <div class="requirement-item">
+                            <div class="requirement-icon">
+                                <i class="bi bi-person-vcard"></i>
+                            </div>
+                            <div>
+                                <strong>SRS ID</strong>
+                                <p>Present your SRS ID card upon entry to the event.</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </section>
+
+                <div class="section-divider"></div>
+                {% endif %}
+
+                <!-- About the Event -->
+                <section class="about-section">
+                    <h2 class="section-title">About the Event</h2>
+                    <p class="event-description">
+                        {{ fair.description or "No event description is currently available." }}
+                    </p>
+                </section>
+
+                <div class="section-divider"></div>
+
+                <!-- Participating Employers -->
+                <section class="employers-section">
+                    <div class="section-heading employer-heading">
+                        <div class="section-icon">
+                            <i class="bi bi-building"></i>
+                        </div>
+                        <div>
+                            <h2>Participating Employers</h2>
+                            <p>Employers and their assigned booths.</p>
+                        </div>
+                    </div>
+
+                    {% set approved_registrations = fair.employer_registrations | selectattr('status', 'equalto',
+                    'Approved') | list %}
+
+                    {% if approved_registrations %}
+                    <div class="employer-grid">
+                        {% for reg in approved_registrations %}
+                        <div class="employer-card">
+                            <div class="employer-info">
+                                {% if reg.employer.company_logo %}
+                                <img src="{{ url_for('static', filename='uploads/logos/' + reg.employer.company_logo) }}"
+                                    alt="{{ reg.employer.company_name }}" class="company-logo">
+                                {% else %}
+                                <div class="company-avatar">
+                                    {{ reg.employer.company_name[0] | upper }}
+                                </div>
+                                {% endif %}
+
+                                <div class="company-details">
+                                    <h3 title="{{ reg.employer.company_name }}">{{ reg.employer.company_name }}</h3>
+                                    <span>
+                                        {{ reg.selected_jobs|length }} Job Opening{% if reg.selected_jobs|length != 1
+                                        %}s{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="booth-number">
+                                <i class="bi bi-geo-alt"></i>
+                                {% if reg.booth_number %}
+                                Booth {{ reg.booth_number }}
+                                {% else %}
+                                Booth TBA
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="employers-empty">
+                        <i class="bi bi-building"></i>
+                        <div>
+                            <strong>Participating employers coming soon</strong>
+                            <p>Employer participating list and booth assignments will be announced soon.</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </section>
+            </section>
+
+            <!-- Right Side / Event Schedule -->
+            <aside class="schedule-sidebar-card">
+                <div class="sidebar-header">
+                    <span class="sidebar-eyebrow">{{ fair.event_type or "JOB FAIR" }}</span>
+                    <h2>Event Schedule</h2>
+                </div>
+                
+
+                <!-- Event Status -->
+                {% if fair.status == "Finished" %}
+                <div class="event-status finished">
+                    <span class="status-dot"></span>
+                    <span>Finished</span>
+                </div>
+                {% elif fair.status == "Ongoing" %}
+                <div class="event-status ongoing">
+                    <span class="status-dot"></span>
+                    <span>Ongoing</span>
+                </div>
+                {% else %}
+                <div class="event-status upcoming">
+                    <span class="status-dot"></span>
+                    <span>Upcoming</span>
+                </div>
+                {% endif %}
+
+                <!-- Capacity -->
+                    {% if fair.capacity %}
+                    <div class="schedule-item">
+                        <div class="schedule-icon">
+                            <i class="bi bi-people"></i>
+                        </div>
+                        <div>
+                            <span class="schedule-label">Capacity Limit</span>
+                            <strong>{{ fair.capacity }} attendees</strong>
+                            <span class="schedule-subtext">{{ registrations_count }} registered</span>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                <!-- Event Schedule List -->
+                <div class="schedule-list">
+                    <!-- Start Time -->
+                    <div class="schedule-item">
+                        <div class="schedule-icon">
+                            <i class="bi bi-calendar-event"></i>
+                        </div>
+                        <div>
+                            <span class="schedule-label">Start Time</span>
+                            <strong>
+                                {% if fair.start_datetime %}
+                                {{ fair.start_datetime.strftime('%B %d, %Y') }}
+                                {% else %}
+                                TBA
+                                {% endif %}
+                            </strong>
+                            <span class="schedule-subtext">
+                                {% if fair.start_datetime %}
+                                {{ fair.start_datetime.strftime('%I:%M %p') }}
+                                {% else %}
+                                Time to be announced
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- End Time -->
+                    <div class="schedule-item">
+                        <div class="schedule-icon">
+                            <i class="bi bi-calendar-check"></i>
+                        </div>
+                        <div>
+                            <span class="schedule-label">End Time</span>
+                            <strong>
+                                {% if fair.end_datetime %}
+                                {{ fair.end_datetime.strftime('%B %d, %Y') }}
+                                {% else %}
+                                TBA
+                                {% endif %}
+                            </strong>
+                            <span class="schedule-subtext">
+                                {% if fair.end_datetime %}
+                                {{ fair.end_datetime.strftime('%I:%M %p') }}
+                                {% else %}
+                                Time to be announced
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Registration Deadline -->
+                    <div class="schedule-item deadline">
+                        <div class="schedule-icon">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <div>
+                            <span class="schedule-label">Registration Deadline</span>
+                            <strong>
+                                {% if fair.registration_deadline %}
+                                {{ fair.registration_deadline.strftime('%B %d, %Y') }}
+                                {% elif fair.start_datetime %}
+                                {{ fair.start_datetime.strftime('%B %d, %Y') }}
+                                {% else %}
+                                TBA
+                                {% endif %}
+                            </strong>
+                            {% if fair.registration_deadline %}
+                            <span class="schedule-subtext">
+                                {{ fair.registration_deadline.strftime('%I:%M %p') }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Queue Entry Cutoff -->
+                    <div class="schedule-item deadline">
+                        <div class="schedule-icon">
+                            <i class="bi bi-ticket-perforated"></i>
+                        </div>
+                        <div>
+                            <span class="schedule-label">Queue Entry Cutoff</span>
+                            <strong>
+                                {% if fair.queue_entry_deadline %}
+                                {{ fair.queue_entry_deadline.strftime('%B %d, %Y') }}
+                                {% else %}
+                                TBA
+                                {% endif %}
+                            </strong>
+                            {% if fair.queue_entry_deadline %}
+                            <span class="schedule-subtext">
+                                {{ fair.queue_entry_deadline.strftime('%I:%M %p') }} · After this time, no new employer queues can be added.
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Registration Actions -->
+                <div class="registration-section">
+                    {% if fair.status == "Finished" %}
+                    <div class="registration-note note-neutral">
+                        <i class="bi bi-info-circle"></i>
+                        <span>This event has already ended.</span>
+                    </div>
+
+                    {% if existing_reg %}
+                    <a href="{{ url_for('jobseeker.job_fair_confirmation', reg_id=existing_reg.registration_id) }}"
+                        class="btn-dark-custom">
+                        <i class="bi bi-card-checklist"></i>
+                        View Your Reference
+                    </a>
+                    {% else %}
+                    <button type="button" class="btn-primary-custom" disabled>Event Finished</button>
+                    {% endif %}
+
+                    {% elif existing_reg %}
+                    <div class="registration-note note-success">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>You are already registered for this job fair.</span>
+                    </div>
+                    <a href="{{ url_for('jobseeker.job_fair_confirmation', reg_id=existing_reg.registration_id) }}"
+                        class="btn-dark-custom">
+                        <i class="bi bi-card-checklist"></i>
+                        View Reference
+                    </a>
+
+                    {% elif not registration_open %}
+                    <div class="registration-note note-warning">
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                        <span>Registration for this Job Fair has closed.</span>
+                    </div>
+                    <button type="button" class="btn-primary-custom" disabled>Registration Closed</button>
+
+                {% elif fair.capacity and registrations_count >= fair.capacity %}
+                <div class="registration-note note-danger">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <span>This job fair has reached its maximum capacity.</span>
+                </div>
+                <button type="button" class="btn-primary-custom" disabled>Capacity Reached</button>
+
+                {% else %}
+                <div class="registration-note note-open">
+                    <i class="bi bi-info-circle"></i>
+                    <span>Registration is currently open.</span>
+                </div>
+
+                <form action="{{ url_for('jobseeker.register_job_fair', fair_id=fair.job_fair_id) }}" method="POST"
+                    id="registrationForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <button type="submit" class="btn-primary-custom" id="registerBtn">
+                        <span id="btnText">
+                            Register for Job Fair
+                        </span>
+                        <span id="btnSpinner" style="display: none;">
+                            <i class="bi bi-hourglass-split"></i>
+                            Processing...
+                        </span>
+                    </button>
+                </form>
+                {% endif %}
+        </div>
+        </aside>
+
+    </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const registrationForm = document.getElementById("registrationForm");
+        if (!registrationForm) return;
+
+        registrationForm.addEventListener("submit", function () {
+            const registerButton = document.getElementById("registerBtn");
+            const buttonText = document.getElementById("btnText");
+            const buttonSpinner = document.getElementById("btnSpinner");
+
+            if (registerButton) registerButton.disabled = true;
+            if (buttonText) buttonText.style.display = "none";
+            if (buttonSpinner) buttonSpinner.style.display = "inline-flex";
+        });
+    });
+</script>
+{% endblock %}

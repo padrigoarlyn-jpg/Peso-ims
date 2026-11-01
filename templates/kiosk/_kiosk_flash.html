@@ -1,0 +1,25 @@
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="kiosk-flash-stack" aria-live="polite" aria-atomic="false">
+  {% for category, message in messages %}
+  {% set kind = 'error' if category in ['error', 'danger'] else ('warning' if category == 'warning' else 'info') %}
+  <div class="kiosk-flash kiosk-flash-{{ kind }}" role="{{ 'alert' if kind == 'error' else 'status' }}">
+    <div class="kiosk-flash-content">
+      <strong>{% if kind == 'error' %}Unable to continue{% elif kind == 'warning' %}Please check{% else %}Notice{% endif %}</strong>
+      <span>{{ message }}</span>
+    </div>
+    <button type="button" class="kiosk-flash-dismiss" aria-label="Dismiss notification" onclick="this.closest('.kiosk-flash').remove()">&times;</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+<style>
+.kiosk-flash-stack{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9998;width:min(680px,calc(100% - 32px));display:grid;gap:10px;pointer-events:none}
+.kiosk-flash{pointer-events:auto;background:#fff;border-left:5px solid #1557a6;border-radius:12px;padding:14px 16px;box-shadow:0 12px 35px rgba(15,23,42,.18);display:flex;align-items:flex-start;gap:12px;color:#334155;font:400 14px/1.5 Inter,Poppins,Arial,sans-serif}
+.kiosk-flash-content{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;overflow-wrap:anywhere}
+.kiosk-flash strong{color:#123b72;font-weight:700}.kiosk-flash-error{border-left-color:#b42318}.kiosk-flash-warning{border-left-color:#b7791f}
+.kiosk-flash-dismiss{flex:0 0 auto;border:0;background:transparent;color:#475569;font:600 24px/1 Arial,sans-serif;cursor:pointer;border-radius:6px;min-width:32px;min-height:32px}
+.kiosk-flash-dismiss:hover,.kiosk-flash-dismiss:focus-visible{background:#eaf1fb;outline:2px solid #1557a6;outline-offset:1px}
+@media(max-width:480px){.kiosk-flash-stack{top:10px;width:calc(100% - 20px)}.kiosk-flash{padding:12px}}
+</style>

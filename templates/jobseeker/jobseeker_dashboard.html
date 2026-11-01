@@ -1,0 +1,318 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}jobseeker-app{% endblock %}
+
+{% block title %}Jobseeker Dashboard{% endblock %}
+
+{% block navbar %}
+{% include "layouts/jobseeker_navbar.html" %}
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_dashboard.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_ui_consistency.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_email_prompt.css') }}">
+{% endblock %}
+
+{% block content %}
+{% if not current_user.email_verified and (not current_user.email or current_user.email.endswith('@peso.invalid')) %}
+<div class="peso-email-overlay" id="pesoEmailReminder" data-user="{{ current_user.user_id }}" hidden>
+  <section class="peso-email-dialog" role="dialog" aria-modal="true" aria-labelledby="pesoEmailReminderTitle" aria-describedby="pesoEmailReminderDesc">
+    <div class="peso-email-dialog-icon" aria-hidden="true">✉</div>
+    <h2 id="pesoEmailReminderTitle">Stay updated with PESO</h2>
+    <p id="pesoEmailReminderDesc">Please add an email address to your profile as soon as possible so you can receive important account, referral, and job fair updates. You can continue using your account without one.</p>
+    <div class="peso-email-dialog-actions"><a class="peso-email-button" href="{{ url_for('jobseeker.profile') }}#profileEmailSettings">Add email now</a><button type="button" class="peso-email-secondary" id="pesoEmailRemindLater">Remind me later</button></div>
+  </section>
+</div>
+<script src="{{ url_for('static', filename='javascript/jobseeker/jobseeker_email_prompt.js') }}" defer></script>
+{% endif %}
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-content">
+        <h1>Welcome back, {{ jobseeker.first_name }}!</h1>
+        <p>Here is an overview of your job search progress, active applications, and new opportunities.</p>
+    </div>
+</section>
+
+<!-- STATS -->
+<section class="stats">
+    <div class="card">
+        <div class="stat-icon">
+            <i class="fa-solid fa-file-circle-check"></i>
+        </div>
+        <div class="stat-content">
+            <h2>{{ jobs_applied }}</h2>
+            <span>Jobs Applied</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="stat-icon">
+            <i class="fa-solid fa-calendar-check"></i>
+        </div>
+        <div class="stat-content">
+            <h2>{{ scheduled_interviews }}</h2>
+            <span>Scheduled Interviews</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="stat-icon">
+            <i class="fa-solid fa-envelope-open-text"></i>
+        </div>
+        <div class="stat-content">
+            <h2>{{ pending_offers }}</h2>
+            <span>Pending Offers</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="stat-icon">
+            <i class="fa-solid fa-users"></i>
+        </div>
+        <div class="stat-content">
+            <h2>{{ upcoming_job_fairs_count }}</h2>
+            <span>Job Fairs Registered</span>
+        </div>
+    </div>
+</section>
+
+<!-- DASHBOARD -->
+<div class="dashboard-grid">
+    <!-- Recommended Jobs -->
+    <section class="chart-box">
+        <div class="job-header">
+            <div class="section-title">
+                <span class="section-icon">
+                    <i class="fa-solid fa-briefcase"></i>
+                </span>
+                <div>
+                    <h3>Recommended Jobs for You</h3>
+                    <p class="section-subtitle">Opportunities that may match your profile.</p>
+                </div>
+            </div>
+            <a href="{{ url_for('jobseeker.joblist') }}" class="view-all-link">
+                <span>View All Jobs</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
+
+        <div class="job-list">
+            {% if recommended_jobs %}
+            {% for job in recommended_jobs %}
+            <div class="job-item">
+                <div class="job-info recommended-job-info">
+                    <div class="job-text">
+                        <h4>{{ job.job_title }}</h4>
+                        <p>
+                            <span class="job-company">{{ job.employer.company_name if job.employer else 'Direct Hire'
+                                }}</span>
+                            <span class="info-separator">•</span>
+                            <span class="job-salary">
+                                {% if job.salary_min and job.salary_max %}
+                                ₱{{ "{:,.0f}".format(job.salary_min) }} - ₱{{ "{:,.0f}".format(job.salary_max) }}
+                                {% elif job.salary_min %}
+                                ₱{{ "{:,.0f}".format(job.salary_min) }}
+                                {% else %}
+                                Salary Negotiable
+                                {% endif %}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+                <div class="job-right">
+                    <span class="{% if job.employment_type == 'Full Time' %}approved{% else %}pending{% endif %}">
+                        {{ job.employment_type or 'Full Time' }}
+                    </span>
+                    <a href="{{ url_for('jobseeker.joblist') }}" class="manage-link">
+                        <span>More Details</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="fa-solid fa-briefcase"></i>
+                </div>
+                <h4>No Recommended Jobs Yet</h4>
+                <p>New opportunities will appear here once they become available.</p>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- RECENT APPLICATION STATUS -->
+    <section class="applicants-box">
+        <div class="application-heading">
+            <span class="section-icon">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </span>
+            <div>
+                <h3>Recent Application Status</h3>
+                <p class="section-subtitle">Track your latest applications.</p>
+            </div>
+        </div>
+
+        <div class="applicant-list">
+            {% if recent_applications %}
+            {% for app in recent_applications %}
+            <div class="applicant-item">
+                {% set company_logo = ('uploads/logos/' ~ app.job.employer.logo) if (app.job and app.job.employer and
+                app.job.employer.logo) else 'images/peso_logo.png' %}
+                <div class="applicant-logo-wrapper">
+                    <img src="{{ url_for('static', filename='uploads/logos/' + (app.job.employer.company_logo or app.job.employer.logo)) if app.job and app.job.employer and (app.job.employer.company_logo or app.job.employer.logo) else url_for('static', filename='images/pfp_placeholder.png') }}"
+                        alt="{{ (app.job.employer.company_name if app.job and app.job.employer else 'Company') ~ ' Logo' }}">
+                </div>
+                <div class="applicant-info">
+                    <h4>{{ app.job.job_title if app.job else 'Position Unavailable' }}</h4>
+                    <p>
+                        <span>{{ app.job.employer.company_name if app.job and app.job.employer else 'Direct Hire'
+                            }}</span>
+                        <span class="info-separator">•</span>
+                        <span>
+                            {% if app.status == 'Interview' %}
+                            Interview Scheduled
+                            {% else %}
+                            Applied on {{ app.application_date.strftime('%b %d, %Y') if app.application_date else 'N/A'
+                            }}
+                            {% endif %}
+                        </span>
+                    </p>
+                </div>
+                <span
+                    class="application-status {% if app.status == 'Interview' or app.status == 'Accepted' %}approved{% else %}pending{% endif %}">
+                    {{ app.status }}
+                </span>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="empty-state application-empty-state">
+                <div class="empty-state-icon">
+                    <i class="fa-solid fa-file-circle-xmark"></i>
+                </div>
+                <h4>No Recent Applications</h4>
+                <p>Your latest job applications will appear here.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <a href="{{ url_for('jobseeker.application') }}" class="view-all-applicants">
+            <span>View Application Details</span>
+        </a>
+    </section>
+</div>
+
+<!-- ANNOUNCEMENTS & JOB FAIRS -->
+<section class="table-section">
+    <div class="job-header events-header">
+        <div class="section-title">
+            <span class="section-icon">
+                <i class="fa-solid fa-calendar-days"></i>
+            </span>
+            <div>
+                <h3>Upcoming Local Events, Job Fairs & Announcements</h3>
+                <p class="section-subtitle">Stay updated with upcoming PESO opportunities and activities.</p>
+            </div>
+        </div>
+        <a href="{{ url_for('jobseeker.announcement') }}" class="view-all-link">
+            <span>View All Events</span>
+        </a>
+    </div>
+
+    <div class="job-list event-list">
+        <!-- JOB FAIRS -->
+        {% if job_fairs %}
+        {% for fair in job_fairs %}
+        <div class="job-item event-item">
+            <div class="job-info">
+                <div class="event-icon">
+                    <i class="fa-solid fa-people-group"></i>
+                </div>
+                <div class="job-text">
+                    <h4>{{ fair.title }}</h4>
+                    <div class="event-details">
+                        <span>
+                            <i class="fa-regular fa-calendar"></i>
+                            {{ fair.start_datetime.strftime('%B %d, %Y') }}
+                        </span>
+                        <span>
+                            <i class="fa-solid fa-location-dot"></i>
+                            {{ fair.venue }}
+                        </span>
+                        <span>
+                            <i class="fa-regular fa-clock"></i>
+                            {{ fair.start_datetime.strftime('%I:%M %p') }} - {{ fair.end_datetime.strftime('%I:%M %p')
+                            }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="job-right">
+                <span class="approved">Job Fair</span>
+                <a href="{{ url_for('jobseeker.announcement') }}" class="manage-link primary-mobile-action">
+                    <span>Pre-Register Now</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <!-- REGULAR ANNOUNCEMENTS -->
+        {% if announcements %}
+        {% for announcement in announcements %}
+        <div class="job-item event-item">
+            <div class="job-info">
+                <div class="event-icon announcement-icon">
+                    <i class="fa-solid fa-bullhorn"></i>
+                </div>
+                <div class="job-text">
+                    <h4>{{ announcement.title }}</h4>
+                    <div class="event-details">
+                        <span>
+                            <i class="fa-regular fa-calendar"></i>
+                            {{ announcement.event_date.strftime('%B %d, %Y') }}
+                        </span>
+                        <span>
+                            <i class="fa-solid fa-location-dot"></i>
+                            {{ announcement.location }}
+                        </span>
+                        <span>
+                            <i class="fa-regular fa-clock"></i>
+                            {{ announcement.start_time.strftime('%I:%M %p') }} - {{
+                            announcement.end_time.strftime('%I:%M %p') }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="job-right">
+                {% if announcement.companies %}
+                <span class="approved">{{ announcement.companies }}+ Companies</span>
+                {% else %}
+                <span class="approved">Featured Event</span>
+                {% endif %}
+                <a href="{{ url_for('jobseeker.announcement') }}" class="manage-link">
+                    <span>View Details</span>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <!-- FALLBACK -->
+        {% if not job_fairs and not announcements %}
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="fa-regular fa-calendar-xmark"></i>
+            </div>
+            <h4>No Upcoming Events</h4>
+            <p>There are currently no upcoming events or job fairs.</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

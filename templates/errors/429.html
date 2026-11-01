@@ -1,0 +1,30 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Too Many Requests | PESO{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/errors/error_pages.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="error-page" aria-labelledby="error-title">
+    <div class="error-card">
+        <div class="error-icon" aria-hidden="true">
+            <i class="fa-solid fa-clock"></i>
+        </div>
+        <p class="error-code">Error 429</p>
+        <h1 id="error-title">Please Slow Down</h1>
+        <p class="error-message">{{ error_message or "Too many requests were made in a short period. Please wait a moment before trying again." }}</p>
+        <div class="error-actions">
+            <button type="button" class="error-btn error-btn-secondary" onclick="history.back()">
+                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                Go Back
+            </button>
+            <button type="button" class="error-btn error-btn-primary" onclick="window.location.reload()">
+                <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+                Try Again
+            </button>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Registration Complete | PESO</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/supervised_registration/supervised_ui.css') }}">
+  <style>
+    body.peso-complete{margin:0;min-height:100vh;background:#f2f6fc!important;color:#193554!important;font-family:Inter,'Segoe UI',Arial,sans-serif!important}
+    .peso-complete *{box-sizing:border-box}
+    .peso-complete .complete-shell{max-width:790px;margin:clamp(24px,5vw,64px) auto;padding:0 18px 35px}
+    .peso-complete .complete-card{background:#fff;border:1px solid #dce6f3;border-radius:18px;box-shadow:0 12px 32px rgba(16,48,96,.06);padding:clamp(22px,5vw,42px)}
+    .peso-complete .complete-status{display:inline-flex;align-items:center;gap:9px;color:#166534;background:#eefbf2;border:1px solid #d1efdc;border-radius:30px;padding:7px 13px;font-size:13px;font-weight:750;margin-bottom:16px}
+    .peso-complete h1{font-size:clamp(26px,4vw,34px);margin:0 0 10px;color:#102f60;letter-spacing:-.03em}
+    .peso-complete .intro{margin:0 0 27px;color:#536780;line-height:1.65}
+    .peso-complete .section-label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:#536e91;margin:0 0 9px}
+    .peso-complete .reference-box{background:#edf5ff;border:1px solid #cfdef3;border-radius:13px;padding:22px;margin-bottom:13px}
+    .peso-complete .reference-value{font-size:clamp(20px,4.2vw,31px);font-weight:850;letter-spacing:.11em;color:#14549d;overflow-wrap:anywhere;line-height:1.4}
+    .peso-complete .help{font-size:14px;line-height:1.65;color:#5b6d84;margin:12px 0 0}
+    .peso-complete .claim-section{border-top:1px solid #e2eaf5;margin-top:30px;padding-top:25px}
+    .peso-complete h2{font-size:19px;color:#153e79;margin:0 0 8px}
+    .peso-complete .credentials{display:grid;gap:13px;margin:18px 0}
+    .peso-complete .credential{padding:15px 17px;border:1px solid #dfe8f3;border-radius:11px;background:#fbfcff}
+    .peso-complete .credential-label{font-size:13px;color:#586d88;font-weight:700;margin-bottom:6px}
+    .peso-complete .credential-value{font-size:clamp(14px,2.5vw,18px);font-weight:800;color:#123f81;overflow-wrap:anywhere;letter-spacing:.045em;line-height:1.6;user-select:text}
+    .peso-complete .private-note{background:#fff8e9;border:1px solid #f1ddb1;border-radius:11px;padding:14px 16px;color:#725016;font-size:13px;line-height:1.65}
+    .peso-complete .finish-note{margin:20px 0 0;color:#536780;font-size:14px;line-height:1.7}
+    .peso-complete .complete-footer{margin-top:26px;padding-top:20px;border-top:1px solid #e5edf6;font-size:13px;color:#6a7d95;text-align:center}
+    @media(max-width:540px){.peso-complete .complete-shell{padding:0 12px 24px}.peso-complete .complete-card{padding:22px 17px}.peso-complete .reference-box{padding:16px}.peso-complete .reference-value{letter-spacing:.06em}}
+    @media print{body.peso-complete{display:none!important}}
+  </style>
+</head>
+<body class="peso-complete">
+  <main class="complete-shell">
+    <article class="complete-card" aria-labelledby="complete-title">
+      <div class="complete-status"><span aria-hidden="true">✓</span> Registration successful</div>
+      <h1 id="complete-title">Registration completed</h1>
+      <p class="intro">Your supervised JSRF and on-site registration for <strong>{{ fair_title }}</strong> have been saved.</p>
+      <section aria-labelledby="reference-label">
+        <p class="section-label" id="reference-label">Job Fair Reference ID</p>
+        <div class="reference-box"><div class="reference-value">{{ reference_id }}</div></div>
+        <p class="help">Save this reference ID. You will use it at the job fair kiosk to select jobs and receive your queue ticket.</p>
+      </section>
+      <section class="claim-section" aria-labelledby="claim-heading">
+        <h2 id="claim-heading">Activate your account later</h2>
+        <p class="help">Your account is currently unclaimed. Keep the following credentials private so you can set your password and access your account.</p>
+        <div class="credentials">
+          <div class="credential"><div class="credential-label">Applicant Login ID</div><div class="credential-value">{{ login_id }}</div></div>
+          <div class="credential"><div class="credential-label">One-time claim code</div><div class="credential-value">{{ claim_code }}</div></div>
+        </div>
+        <div class="private-note"><strong>Keep your claim code confidential.</strong> This page is shown only once. The claim code expires 30 days after registration and can be used only once. Do not share it with other applicants or include it on a public queue ticket.</div>
+        <p class="finish-note">To activate your account, open the PESO website on your own device and go to <strong>Supervised Registration → Claim Account</strong>. Enter your Job Fair Reference ID and claim code, then create a password. If you cannot access the claim page or your code expires, ask PESO staff for assistance.</p>
+        <p class="help">Before leaving this shared computer, securely record your credentials, then close this tab. The page cannot be reopened after it is closed or refreshed.</p>
+      </section>
+      <div class="complete-footer">Public Employment Service Office · Secure supervised registration</div>
+    </article>
+  </main>
+  <script>
+    // Remove supervised form drafts only after a successful registration.
+    try {
+      for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const key = sessionStorage.key(i);
+        if (key && (key.startsWith('peso_supervised_') || key.startsWith('supervised_jsrf_'))) sessionStorage.removeItem(key);
+      }
+    } catch (_) { /* Session storage may be disabled. */ }
+  </script>
+</body>
+</html>

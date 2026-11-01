@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>
+        {% block title %}PESO IMS{% endblock %}
+    </title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/ui/peso_foundation.css') }}">
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/auth/auth.css') }}">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    {% block css %}{% endblock %}
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/ui/peso_polish.css') }}">
+
+</head>
+
+<body class="auth-app" data-ui-phase="5">
+
+{% block content %}
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/auth.js') }}"></script>
+{% endblock %}
+
+</body>
+</html>

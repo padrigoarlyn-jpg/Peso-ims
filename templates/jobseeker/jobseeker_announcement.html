@@ -1,0 +1,140 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}jobseeker-app{% endblock %}
+
+{% block title %}
+Announcements | PESO IMS
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_announcement.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_ui_consistency.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/jobseeker_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="announcement-page">
+    <div class="announcements-container">
+        <!-- PAGE HEADER -->
+        <header class="section-header">
+            <p class="page-eyebrow">Event Management</p>
+            <h1>Job Fair Announcements</h1>
+            <p class="page-subtitle">Explore upcoming career events and pre-register online.</p>
+        </header>
+
+        <!-- ANNOUNCEMENTS -->
+        {% if announcements %}
+        <div class="announcements-grid">
+            {% for announcement in announcements %}
+            <div class="announcement-card-wrapper">
+
+                <!-- POSTER -->
+                <div class="poster-card">
+                    <img
+                        src="{{
+                            url_for('static', filename='uploads/posters/' + announcement.poster_image)
+                            if announcement.poster_image
+                            else url_for('static', filename='images/announcement_banner.jpg')
+                        }}"
+                        alt="{{ announcement.title }}">
+                </div>
+
+                <!-- DETAILS -->
+                <div class="details-card">
+                    <h2>{{ announcement.title|upper }}</h2>
+
+                    <div class="details-grid">
+                        <!-- START DATE -->
+                        <div class="detail-item">
+                            <span>Start Date</span>
+                            <h3>
+                                {{ announcement.event_date.strftime('%B %d, %Y') if announcement.event_date else 'TBA' }}
+                            </h3>
+                        </div>
+
+                        <!-- TIME -->
+                        <div class="detail-item">
+                            <span>Time</span>
+                            <h3>
+                                {% if announcement.start_time and announcement.end_time %}
+                                    {{ announcement.start_time.strftime('%I:%M %p') }} - {{ announcement.end_time.strftime('%I:%M %p') }}
+                                {% else %}
+                                    TBA
+                                {% endif %}
+                            </h3>
+                        </div>
+
+                        <!-- VENUE -->
+                        <div class="detail-item">
+                            <span>Venue</span>
+                            <h3 title="{{ announcement.venue or 'TBA' }}">
+                                {{ announcement.venue or 'TBA' }}
+                            </h3>
+                        </div>
+
+
+                        <!-- STATUS -->
+                        <div class="detail-item">
+                            <span>Status</span>
+                            <h3>
+                                {% if announcement.is_registered %}
+                                    <span class="announcement-status-text registered">
+                                        Registered
+                                    </span>
+                                {% else %}
+                                    {% set fair_status = announcement.status or 'Upcoming' %}
+                                    <span class="announcement-status-text {{ fair_status | lower | replace(' ', '-') }}">
+                                        {{ fair_status }}
+                                    </span>
+                                {% endif %}
+                            </h3>
+                        </div>
+
+                    </div>
+
+                    <!-- ACTIONS -->
+                    <div class="announcement-actions">
+                        <!-- VIEW DETAILS -->
+                        <a href="{{ url_for('jobseeker.job_fair_details', fair_id=announcement.job_fair_id) }}" class="btn-secondary-custom">
+                            View Details
+                        </a>
+
+                        <!-- ALREADY REGISTERED / NOT REGISTERED -->
+                        {% if announcement.is_registered %}
+                            <a href="{{ url_for('jobseeker.job_fair_confirmation', reg_id=announcement.reg_id) }}" class="btn-info-custom">
+                                View Reference ID
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('jobseeker.job_fair_details', fair_id=announcement.job_fair_id) }}" class="register-btn">
+                                Pre Register
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- EMPTY STATE -->
+        {% else %}
+        <div class="empty-announcements">
+            <div class="empty-announcements-card">
+                <div class="empty-icon">
+                    <i class="fa-regular fa-calendar"></i>
+                </div>
+                <h2>No Upcoming Job Fairs</h2>
+                <p>There are no active announcements or job fairs scheduled at this time.</p>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</main>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/jobseeker/jobseeker_announcement.js') }}"></script>
+{% endblock %}

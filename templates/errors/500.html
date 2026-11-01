@@ -1,0 +1,30 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Server Error | PESO{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/errors/error_pages.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="error-page" aria-labelledby="error-title">
+    <div class="error-card">
+        <div class="error-icon" aria-hidden="true">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <p class="error-code">Error 500</p>
+        <h1 id="error-title">Something Went Wrong</h1>
+        <p class="error-message">{{ error_message or "We could not complete your request right now. Please try again, or return to the home page." }}</p>
+        <div class="error-actions">
+            <button type="button" class="error-btn error-btn-secondary" onclick="history.back()">
+                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                Go Back
+            </button>
+            <a href="{{ url_for('home.index') }}" class="error-btn error-btn-primary">
+                <i class="fa-solid fa-house" aria-hidden="true"></i>
+                Return Home
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}

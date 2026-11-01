@@ -1,0 +1,16 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}jobseeker-app{% endblock %}
+{% block title %}Confirm Email | PESO IMS{% endblock %}
+{% block navbar %}{% include "layouts/jobseeker_navbar.html" %}{% endblock %}
+{% block content %}
+<section style="max-width:540px;margin:48px auto;padding:28px;border:1px solid #dbe4f0;border-radius:12px;background:#fff;">
+  <h1 style="font-size:24px;color:#174c88;margin:0 0 14px;">Confirm Email Address</h1>
+  <p>Confirm that you want to use <strong>{{ email_address }}</strong> as your verified PESO-IMS email address.</p>
+  <p style="color:#64748b;">This will update your sign-in email and sign you out. Sign in again afterward.</p>
+  <form method="post" action="{{ confirmation_action }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" style="padding:12px 18px;background:#175ca5;color:#fff;border:0;border-radius:7px;cursor:pointer;">Confirm Email Address</button>
+    <a href="{{ url_for('jobseeker.profile') }}" style="margin-left:14px;">Cancel</a>
+  </form>
+</section>
+{% endblock %}

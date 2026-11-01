@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Fair Queue Display | PESO</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/QueueDisplayKiosk.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_logout.css') }}">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_scrollbar.css') }}">
+    <!-- Shared 15.6-inch kiosk touchscreen scaling (load last) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_screen_15inch.css') }}">
+</head>
+<body>
+    {% include "kiosk/_kiosk_flash.html" %}
+    <main class="queue-display" data-feed-url="{{ url_for('kiosk.queue_display_data') if display_unavailable_message is not defined else '' }}">
+        <header class="display-header">
+            <div class="brand">
+                <img src="{{ url_for('static', filename='images/peso_logo.png') }}" alt="PESO Logo">
+                <div>
+                    <span class="eyebrow">PESO JOB FAIR</span>
+                    <h1>Live Queue</h1>
+                    <p>{{ job_fair.title if job_fair else "Queue display unavailable" }}</p>
+                </div>
+            </div>
+            <div class="display-meta">
+                <span class="live-dot" aria-hidden="true"></span>
+                <span id="liveStatus">{{ "UNAVAILABLE" if display_unavailable_message is defined else "LIVE" }}</span>
+                <time id="displayClock" aria-label="Current time"></time>
+            </div>
+        </header>
+
+        <section class="queue-board" aria-label="Live Job Fair booth queue">
+            <div class="board-head" aria-hidden="true">
+                <span>BOOTH</span>
+                <span>EMPLOYER</span>
+                <span>NOW SERVING</span>
+                <span>NEXT</span>
+            </div>
+            <div class="board-body" id="queueBoard" aria-live="polite">{% if display_unavailable_message is defined %}<div class="empty-state" role="status">{{ display_unavailable_message }}</div>{% endif %}</div>
+        </section>
+
+        <footer class="display-footer">
+            <span class="footer-message">Watch your queue number and proceed to your booth when called.</span>
+            <span class="page-status" id="pageStatus" aria-live="polite"></span>
+            <span id="lastUpdated">{{ "Waiting for a Job Fair assignment." if display_unavailable_message is defined else "Live queue updates automatically." }}</span>
+            <a href="{{ url_for('kiosk.dashboard') }}" class="exit-display">Exit Display</a>
+        </footer>
+    </main>
+
+    <script id="initialQueueData" type="application/json">{{ booths|tojson }}</script>
+    <script src="{{ url_for('static', filename='javascript/kiosk/queue_display.js') }}"></script>
+{% include "kiosk/components/kiosk_logout.html" %}
+    <script defer src="{{ url_for('static', filename='javascript/kiosk/kiosk_scrollbar.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='javascript/kiosk/kiosk_mode_watch.js') }}" data-mode-url="{{ url_for('kiosk.kiosk_mode_status') }}" data-home-url="{{ url_for('kiosk.dashboard') }}" data-initial-mode="queue_display"></script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}
+About Us
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home/about.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="about-page">
+
+    <!-- HERO SECTION -->
+    <section class="about-hero">
+        <div class="about-hero-overlay"></div>
+        <div class="about-hero-content">
+            <div class="about-hero-logo-wrapper">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" class="about-hero-logo" alt="PESO Logo">
+            </div>
+            <span class="about-hero-label">PUBLIC EMPLOYMENT SERVICE OFFICE</span>
+            <h1>Connecting People<br>With Opportunities</h1>
+            <p>Helping job seekers find meaningful employment and supporting employers in building their workforce.</p>
+        </div>
+    </section>
+
+    <!-- ABOUT PESO -->
+    <section class="about-introduction-section">
+        <div class="about-container">
+            <div class="about-section-heading">
+                <span class="about-section-label">ABOUT PESO</span>
+                <h2>Empowering Job Seekers.<br>Supporting Employers.</h2>
+            </div>
+
+            <div class="about-introduction-grid">
+                <!-- LEFT CONTENT -->
+                <div class="about-introduction-text">
+                    <p class="about-lead">
+                        The Public Employment Service Office (PESO) is a government employment service facility that provides accessible and free employment assistance to job seekers and employers.
+                    </p>
+                    <p>
+                        Through employment facilitation, career guidance, job matching, and other workforce services, PESO helps connect qualified individuals with employment opportunities while supporting employers in finding suitable applicants.
+                    </p>
+                </div>
+
+                <!-- PURPOSE CARD -->
+                <div class="about-purpose-card reveal">
+                    <div class="about-purpose-icon">
+                        <i class="fa-solid fa-briefcase"></i>
+                    </div>
+                    <div class="about-purpose-content">
+                        <span>OUR PURPOSE</span>
+                        <h3>Making Employment<br>Opportunities Accessible</h3>
+                        <p>We aim to bridge the gap between job seekers and employers through accessible and reliable employment services.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- WHAT WE DO -->
+    <section class="about-what-we-do">
+        <div class="about-container">
+            <div class="about-section-heading about-heading-centered">
+                <span class="about-section-label">WHAT WE DO</span>
+                <h2>Employment Services That Connect</h2>
+                <p>PESO provides services designed to support both job seekers and employers throughout the employment process.</p>
+            </div>
+
+            <div class="about-info-grid">
+                <!-- JOB MATCHING -->
+                <article class="about-info-card reveal">
+                    <div class="about-card-image">
+                        <img src="{{ url_for('static', filename='images/jobmatching.jpg') }}" alt="Job Matching">
+                        <div class="about-image-icon">
+                            <i class="fa-solid fa-link"></i>
+                        </div>
+                    </div>
+                    <div class="about-card-body">
+                        <span class="about-card-number">01</span>
+                        <h3>Job Matching</h3>
+                        <p>We connect job seekers with available employment opportunities that match their qualifications and interests.</p>
+                    </div>
+                </article>
+
+                <!-- CAREER GUIDANCE -->
+                <article class="about-info-card reveal">
+                    <div class="about-card-image">
+                        <img src="{{ url_for('static', filename='images/careerguidance.jpg') }}" alt="Career Guidance">
+                        <div class="about-image-icon">
+                            <i class="fa-solid fa-compass"></i>
+                        </div>
+                    </div>
+                    <div class="about-card-body">
+                        <span class="about-card-number">02</span>
+                        <h3>Career Guidance</h3>
+                        <p>We provide guidance and information to help individuals make informed career decisions.</p>
+                    </div>
+                </article>
+
+                <!-- JOB LISTINGS -->
+                <article class="about-info-card reveal">
+                    <div class="about-card-image">
+                        <img src="{{ url_for('static', filename='images/joblisting.jpg') }}" alt="Job Listings">
+                        <div class="about-image-icon">
+                            <i class="fa-solid fa-list-check"></i>
+                        </div>
+                    </div>
+                    <div class="about-card-body">
+                        <span class="about-card-number">03</span>
+                        <h3>Job Listings</h3>
+                        <p>We provide access to updated job opportunities from participating and trusted employers.</p>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- OUR SERVICES -->
+    <section class="about-services-section">
+        <div class="about-container">
+            <div class="about-section-heading about-heading-centered">
+                <span class="about-section-label">OUR SERVICES</span>
+                <h2>Supporting Every Step of Employment</h2>
+            </div>
+
+            <div class="about-services-grid">
+                <!-- EMPLOYMENT ASSISTANCE -->
+                <article class="about-service-box reveal">
+                    <div class="about-service-icon">
+                        <i class="fa-solid fa-user-tie"></i>
+                    </div>
+                    <div class="about-service-content">
+                        <h3>Employment Assistance</h3>
+                        <p>Assistance in finding suitable employment opportunities based on job seeker qualifications.</p>
+                    </div>
+                </article>
+
+                <!-- EMPLOYER SUPPORT -->
+                <article class="about-service-box reveal">
+                    <div class="about-service-icon">
+                        <i class="fa-solid fa-building"></i>
+                    </div>
+                    <div class="about-service-content">
+                        <h3>Employer Support</h3>
+                        <p>Support for employers looking to connect with qualified and suitable applicants.</p>
+                    </div>
+                </article>
+
+                <!-- CAREER DEVELOPMENT -->
+                <article class="about-service-box reveal">
+                    <div class="about-service-icon">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <div class="about-service-content">
+                        <h3>Career Development</h3>
+                        <p>Programs and initiatives that encourage career growth and workforce development.</p>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- CALL TO ACTION -->
+    <section class="about-cta-section reveal">
+        <div class="about-cta-content">
+            <div class="about-cta-text">
+                <span>FIND YOUR NEXT OPPORTUNITY</span>
+                <h2>Ready to take the next step?</h2>
+                <p>Explore available opportunities and employment services through PESO.</p>
+            </div>
+
+            <a href="{{ url_for('home.joblist') }}" class="about-cta-button">
+                <span>Explore Job Listings</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
+    </section>
+
+</div>
+
+<!-- SCROLL REVEAL -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const revealElements = document.querySelectorAll(".reveal");
+
+    if (!("IntersectionObserver" in window)) {
+        revealElements.forEach(function (element) {
+            element.classList.add("show");
+        });
+        return;
+    }
+
+    const revealObserver = new IntersectionObserver(
+        function (entries, observer) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add("show");
+                    observer.unobserve(entry.target);
+                }
+            });
+        },
+        { threshold: 0.12 }
+    );
+
+    revealElements.forEach(function (element) {
+        revealObserver.observe(element);
+    });
+});
+</script>
+{% endblock %}

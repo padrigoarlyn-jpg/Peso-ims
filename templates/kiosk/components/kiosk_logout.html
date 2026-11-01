@@ -1,0 +1,109 @@
+    <div
+        id="kioskLogoutModal"
+        class="kiosk-logout-modal"
+        aria-hidden="true"
+    >
+
+        <div
+            class="kiosk-logout-overlay"
+            data-logout-close
+        ></div>
+
+
+        <div
+            class="kiosk-logout-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="kioskLogoutTitle"
+        >
+
+            <div class="kiosk-logout-header">
+
+                <span class="eyebrow">
+                    KIOSK EXIT
+                </span>
+
+                <h2 id="kioskLogoutTitle">
+                    Exit Kiosk?
+                </h2>
+
+                <p>
+                    Enter the kiosk account password
+                    to confirm logout.
+                </p>
+
+            </div>
+
+
+            <form
+                id="kioskLogoutForm"
+                class="kiosk-logout-form"
+            >
+
+                <div class="kiosk-logout-field">
+
+                    <label for="kioskLogoutPassword">
+                        Password
+                    </label>
+
+                    <div class="kiosk-logout-password-wrap">
+                        <input
+                            type="password"
+                            id="kioskLogoutPassword"
+                            name="password"
+                            autocomplete="current-password"
+                            required
+                        >
+
+                        <button
+                            type="button"
+                            class="password-toggle kiosk-logout-password-toggle"
+                            aria-label="Show password"
+                            title="Show password"
+                        >
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="kioskLogoutError"
+                    class="kiosk-logout-error"
+                    role="alert"
+                    aria-live="polite"
+                ></div>
+
+
+                <div class="kiosk-logout-actions">
+
+                    <button
+                        type="button"
+                        class="kiosk-logout-cancel"
+                        data-logout-close
+                    >
+                        Cancel
+                    </button>
+
+
+                    <button
+                        type="submit"
+                        class="kiosk-logout-confirm"
+                    >
+                        Confirm Logout
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+
+
+<script>window.kioskLogoutUrl = {{ url_for("kiosk.logout")|tojson }};</script>
+<script src="{{ url_for('static', filename='javascript/kiosk/kiosk_logout.js') }}"></script>

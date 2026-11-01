@@ -1,0 +1,558 @@
+<!-- =====================================================
+     GLOBAL KIOSK ONSCREEN KEYBOARD
+====================================================== -->
+
+<div
+    id="kioskKeyboardOverlay"
+    class="kiosk-keyboard-overlay"
+    aria-hidden="true"
+>
+
+    <div
+        id="kioskKeyboard"
+        class="kiosk-keyboard"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Onscreen keyboard"
+    >
+
+        <!-- =================================================
+             TEXT KEYBOARD
+        ================================================== -->
+
+        <div
+            id="keyboardTextLayout"
+            class="keyboard-layout"
+        >
+
+            <!-- =================================================
+                 ROW 1
+            ================================================== -->
+
+            <div class="keyboard-row">
+
+                <button type="button" class="keyboard-key" data-key="q">Q</button>
+                <button type="button" class="keyboard-key" data-key="w">W</button>
+                <button type="button" class="keyboard-key" data-key="e">E</button>
+                <button type="button" class="keyboard-key" data-key="r">R</button>
+                <button type="button" class="keyboard-key" data-key="t">T</button>
+                <button type="button" class="keyboard-key" data-key="y">Y</button>
+                <button type="button" class="keyboard-key" data-key="u">U</button>
+                <button type="button" class="keyboard-key" data-key="i">I</button>
+                <button type="button" class="keyboard-key" data-key="o">O</button>
+                <button type="button" class="keyboard-key" data-key="p">P</button>
+
+            </div>
+
+
+            <!-- =================================================
+                 ROW 2
+            ================================================== -->
+
+            <div class="keyboard-row keyboard-row-middle">
+
+                <button type="button" class="keyboard-key" data-key="a">A</button>
+                <button type="button" class="keyboard-key" data-key="s">S</button>
+                <button type="button" class="keyboard-key" data-key="d">D</button>
+                <button type="button" class="keyboard-key" data-key="f">F</button>
+                <button type="button" class="keyboard-key" data-key="g">G</button>
+                <button type="button" class="keyboard-key" data-key="h">H</button>
+                <button type="button" class="keyboard-key" data-key="j">J</button>
+                <button type="button" class="keyboard-key" data-key="k">K</button>
+                <button type="button" class="keyboard-key" data-key="l">L</button>
+
+            </div>
+
+
+            <!-- =================================================
+                 ROW 3
+            ================================================== -->
+
+            <div class="keyboard-row keyboard-row-middle">
+
+                <button
+                    type="button"
+                    id="keyboardShift"
+                    class="
+                        keyboard-key
+                        keyboard-function-key
+                        keyboard-shift
+                    "
+                >
+                    ⇧
+                </button>
+
+
+                <button type="button" class="keyboard-key" data-key="z">Z</button>
+                <button type="button" class="keyboard-key" data-key="x">X</button>
+                <button type="button" class="keyboard-key" data-key="c">C</button>
+                <button type="button" class="keyboard-key" data-key="v">V</button>
+                <button type="button" class="keyboard-key" data-key="b">B</button>
+                <button type="button" class="keyboard-key" data-key="n">N</button>
+                <button type="button" class="keyboard-key" data-key="m">M</button>
+
+
+                <button
+                    type="button"
+                    id="keyboardBackspace"
+                    class="
+                        keyboard-key
+                        keyboard-function-key
+                        keyboard-backspace
+                    "
+                >
+                    ⌫
+                </button>
+
+            </div>
+
+
+            <!-- =================================================
+                 ROW 4
+            ================================================== -->
+
+            <div class="keyboard-row keyboard-bottom-row">
+
+                <button
+                    type="button"
+                    id="keyboardNumbers"
+                    class="
+                        keyboard-key
+                        keyboard-function-key
+                        keyboard-special-key
+                    "
+                >
+                    123
+                </button>
+
+
+                <button
+                    type="button"
+                    id="keyboardAt"
+                    class="
+                        keyboard-key
+                        keyboard-special-key
+                    "
+                >
+                    @
+                </button>
+
+
+                <button
+                    type="button"
+                    id="keyboardDot"
+                    class="
+                        keyboard-key
+                        keyboard-special-key
+                    "
+                >
+                    .
+                </button>
+
+
+                <button
+                    type="button"
+                    id="keyboardSpace"
+                    class="
+                        keyboard-key
+                        keyboard-space
+                    "
+                >
+                    SPACE
+                </button>
+
+
+                <button
+                    type="button"
+                    id="keyboardClear"
+                    class="
+                        keyboard-key
+                        keyboard-function-key
+                        keyboard-clear
+                    "
+                >
+                    CLEAR
+                </button>
+
+
+                <button
+                    type="button"
+                    id="keyboardDone"
+                    class="
+                        keyboard-key
+                        keyboard-done
+                    "
+                >
+                    DONE
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             NUMERIC / SYMBOL KEYBOARD
+             
+             Smartphone-style horizontal layout:
+             
+             1 2 3 4 5 6 7 8 9 0
+              - _ / : ; ( ) $ & @
+               . , ? ! ' " + = #
+             ABC       SPACE       CLEAR   DONE
+        ================================================== -->
+
+        <div
+            id="keyboardNumericLayout"
+            class="
+                keyboard-layout
+                keyboard-numeric-layout
+            "
+            hidden
+        >
+
+            <!-- =================================================
+                 NUMBER ROW
+            ================================================== -->
+
+            <div class="keyboard-row numeric-row">
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-key"
+                    data-key="1"
+                >
+                    1
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-key"
+                    data-key="2"
+                >
+                    2
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-key"
+                    data-key="3"
+                >
+                    3
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-key"
+                    data-key="4"
+                >
+                    4
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-key"
+                    data-key="5"
+                >
+                    5
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-key"
+                    data-key="6"
+                >
+                    6
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-key"
+                    data-key="7"
+                >
+                    7
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-key"
+                    data-key="8"
+                >
+                    8
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-key"
+                    data-key="9"
+                >
+                    9
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-key"
+                    data-key="0"
+                >
+                    0
+                </button>
+
+            </div>
+
+
+            <!-- =================================================
+                 SYMBOL ROW 1
+            ================================================== -->
+
+            <div class="keyboard-row numeric-symbol-row">
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key="-"
+                >
+                    -
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key="_"
+                >
+                    _
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key="/"
+                >
+                    /
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key=":"
+                >
+                    :
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key=";"
+                >
+                    ;
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key="("
+                >
+                    (
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key=")"
+                >
+                    )
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key="$"
+                >
+                    $
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key="&"
+                >
+                    &
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key="@"
+                >
+                    @
+                </button>
+
+            </div>
+
+
+            <!-- =================================================
+                 SYMBOL ROW 2
+            ================================================== -->
+
+            <div class="keyboard-row numeric-symbol-row numeric-symbol-row-bottom">
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key="."
+                >
+                    .
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key=","
+                >
+                    ,
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key="?"
+                >
+                    ?
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key="!"
+                >
+                    !
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key="'"
+                >
+                    '
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key="&quot;"
+                >
+                    "
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key="+"
+                >
+                    +
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key="="
+                >
+                    =
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key="#"
+                >
+                    #
+                </button>
+
+                <button
+                    type="button"
+                    class="keyboard-key numeric-horizontal-symbol"
+                    data-key="%"
+                >
+                    %
+                </button>
+
+                <button
+                    type="button"
+                    id="keyboardNumericBackspace"
+                    class="
+                        keyboard-key
+                        keyboard-function-key
+                        keyboard-backspace
+                    "
+                >
+                    ⌫
+                </button>
+
+            </div>
+
+
+            <!-- =================================================
+                 NUMERIC BOTTOM ROW
+
+                 ABC | SPACE | CLEAR | DONE
+            ================================================== -->
+
+            <div class="keyboard-row numeric-bottom-row">
+
+                <button
+                    type="button"
+                    id="keyboardAlphabet"
+                    class="
+                        keyboard-key
+                        keyboard-function-key
+                        numeric-alphabet
+                    "
+                >
+                    ABC
+                </button>
+
+
+                <button
+                    type="button"
+                    id="keyboardNumericSpace"
+                    class="
+                        keyboard-key
+                        keyboard-space
+                        numeric-space
+                    "
+                >
+                    SPACE
+                </button>
+
+
+                <button
+                    type="button"
+                    id="keyboardNumericClear"
+                    class="
+                        keyboard-key
+                        keyboard-function-key
+                        numeric-clear
+                    "
+                >
+                    CLEAR
+                </button>
+
+
+                <button
+                    type="button"
+                    id="keyboardNumericDone"
+                    class="
+                        keyboard-key
+                        keyboard-done
+                        numeric-done
+                    "
+                >
+                    DONE
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

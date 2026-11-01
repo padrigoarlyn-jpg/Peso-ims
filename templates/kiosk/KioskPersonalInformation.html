@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Personal Information | PESO Job Fair</title>
+
+
+    <!-- =========================================================
+         MAIN PAGE CSS
+    ========================================================== -->
+
+    <link rel="stylesheet" href="{{ url_for(
+            'static',
+            filename='css/kiosk/KioskPersonalInformation.css'
+        ) }}">
+
+
+    <!-- =========================================================
+         MODAL CSS
+    ========================================================== -->
+
+    <link rel="stylesheet" href="{{ url_for(
+            'static',
+            filename='css/kiosk/KioskPersonalInformationModal.css'
+        ) }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/peso_foundation.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/peso_polish.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_logout.css') }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_scrollbar.css') }}">
+    <!-- Shared 15.6-inch kiosk touchscreen scaling (load last) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_screen_15inch.css') }}">
+</head>
+
+
+<body class="kiosk-app" data-ui-phase="5">
+    {% include "kiosk/_kiosk_flash.html" %}
+
+
+
+    <main class="personal-page">
+
+
+        <!-- =========================================================
+         HEADER
+    ========================================================== -->
+
+        <header class="page-header">
+
+            <div class="header-brand">
+
+                <img src="{{ url_for(
+                    'static',
+                    filename='images/peso_logo.png'
+                ) }}" alt="PESO Logo" class="peso-logo">
+
+                <div class="header-text">
+
+                    <span class="eyebrow">
+                        PESO JOB FAIR
+                    </span>
+
+                    <h1>
+                        Personal Information
+                    </h1>
+
+                    <p>
+                        Review your information before continuing.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- =====================================================
+             BACK BUTTON
+        ====================================================== -->
+
+            <a href="{{ url_for('kiosk.registration') }}" class="back-btn">
+
+                <span class="back-arrow">
+                    ←
+                </span>
+
+                <span>
+                    Back
+                </span>
+
+            </a>
+
+        </header>
+
+
+
+        <!-- =========================================================
+         INFORMATION LAYOUT
+    ========================================================== -->
+
+        <div class="info-layout">
+
+
+            <!-- =====================================================
+             LEFT COLUMN
+        ====================================================== -->
+
+            <div class="left-column">
+
+
+                <!-- =================================================
+                 PROFILE + CONTACT
+            ================================================== -->
+
+                <section class="info-card main-info">
+
+                    <div class="name-box">
+
+                        <span class="profile-label">
+                            REGISTERED JOB SEEKER
+                        </span>
+
+                        <h2>
+                            {{ job_seeker.full_name or 'N/A' }}
+                        </h2>
+
+                        <p>
+
+                            {{ job_seeker.city or '' }}
+
+                            {% if job_seeker.city and job_seeker.province %}
+                            ,
+                            {% endif %}
+
+                            {{ job_seeker.province or '' }}
+
+                        </p>
+
+                    </div>
+
+
+
+                    <!-- =================================================
+                     CONTACT INFORMATION
+                ================================================== -->
+
+                    <div class="contact-section">
+
+                        <div class="section-heading">
+
+                            <span class="section-number">
+                                01
+                            </span>
+
+                            <h3>
+                                Contact Information
+                            </h3>
+
+                        </div>
+
+
+                        <div class="contact-grid">
+
+
+                            <!-- EMPLOYMENT STATUS -->
+
+                            <div class="contact-item">
+
+                                <span class="item-label">
+                                    Employment Status
+                                </span>
+
+                                <strong>
+                                    {{ job_seeker.employment_status or 'N/A' }}
+                                </strong>
+
+                            </div>
+
+
+
+                            <!-- MOBILE -->
+
+                            <div class="contact-item">
+
+                                <span class="item-label">
+                                    Mobile
+                                </span>
+
+                                <strong>
+                                    {{ job_seeker.contact_number or 'N/A' }}
+                                </strong>
+
+                            </div>
+
+
+
+                            <!-- EMAIL -->
+
+                            <div class="contact-item">
+
+                                <span class="item-label">
+                                    Email
+                                </span>
+
+                                <strong>
+
+                                    {{ job_seeker.user.email
+                                    if job_seeker.user
+                                    else 'N/A' }}
+
+                                </strong>
+
+                            </div>
+
+
+
+                            <!-- ADDRESS -->
+
+                            <div class="contact-item">
+
+                                <span class="item-label">
+                                    Address
+                                </span>
+
+                                <strong>
+
+                                    {% if job_seeker.street %}
+                                    {{ job_seeker.street }},
+                                    {% endif %}
+
+                                    {% if job_seeker.barangay %}
+                                    {{ job_seeker.barangay }},
+                                    {% endif %}
+
+                                    {% if job_seeker.city %}
+                                    {{ job_seeker.city }},
+                                    {% endif %}
+
+                                    {{ job_seeker.province or 'N/A' }}
+
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+
+                <!-- =================================================
+                 CERTIFICATIONS
+            ================================================== -->
+
+                <section class="info-card side-card">
+
+                    <div class="card-heading">
+
+                        <div class="heading-left">
+
+                            <span class="section-number">
+                                03
+                            </span>
+
+                            <h3>
+                                Certifications
+                            </h3>
+
+                        </div>
+
+
+                        <span class="count-badge">
+                            {{ certifications|length }}
+                        </span>
+
+                    </div>
+
+
+
+                    {% if certifications %}
+
+                    <ul class="certification-list">
+
+                        {% for certification in certifications %}
+
+                        <li>
+
+                            <div class="cert-icon">
+                                ✓
+                            </div>
+
+
+                            <div class="cert-content">
+
+                                <strong>
+                                    {{ certification.training_course
+                                    or 'Training' }}
+                                </strong>
+
+
+                                {% if certification.institution %}
+
+                                <small>
+                                    {{ certification.institution }}
+                                </small>
+
+                                {% endif %}
+
+
+                                {% if certification.certificate_received %}
+
+                                <small class="cert-status">
+                                    {{ certification.certificate_received }}
+                                </small>
+
+                                {% endif %}
+
+                            </div>
+
+                        </li>
+
+                        {% endfor %}
+
+                    </ul>
+
+                    {% else %}
+
+                    <div class="certification-empty" role="status">
+                        <span class="certification-empty-icon" aria-hidden="true">&#10003;</span>
+                        <div class="certification-empty-copy">
+                            <strong>No certifications added</strong>
+                            <span>No certifications or training records are available for this jobseeker.</span>
+                        </div>
+                    </div>
+
+                    {% endif %}
+
+                </section>
+
+            </div>
+
+
+
+            <!-- =====================================================
+             RIGHT COLUMN
+        ====================================================== -->
+
+            <div class="right-column">
+
+
+                <!-- =================================================
+                 EDUCATIONAL BACKGROUND
+            ================================================== -->
+
+                <section class="info-card side-card">
+
+                    <div class="card-heading">
+
+                        <div class="heading-left">
+
+                            <span class="section-number">
+                                02
+                            </span>
+
+                            <h3>
+                                Educational Background
+                            </h3>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="education-list">
+
+
+                        <!-- SECONDARY -->
+
+                        {% if job_seeker.sec_school %}
+
+                        <div class="education-item">
+
+                            <span class="education-level">
+
+                                {% if job_seeker.sec_type %}
+                                {{ job_seeker.sec_type }}
+                                {% else %}
+                                Secondary
+                                {% endif %}
+
+                            </span>
+
+
+                            <strong>
+
+                                {% if job_seeker.senior_high_strand %}
+                                {{ job_seeker.senior_high_strand }}
+                                {% else %}
+                                High School
+                                {% endif %}
+
+                            </strong>
+
+
+                            <p>
+                                {{ job_seeker.sec_school }}
+                            </p>
+
+
+                            {% if job_seeker.sec_year_grad %}
+
+                            <small>
+                                Graduated:
+                                {{ job_seeker.sec_year_grad }}
+                            </small>
+
+                            {% endif %}
+
+                        </div>
+
+                        {% endif %}
+
+
+
+                        <!-- COLLEGE -->
+
+                        {% if job_seeker.tertiary_school %}
+
+                        <div class="education-item">
+
+                            <span class="education-level">
+                                College
+                            </span>
+
+
+                            <strong>
+                                {{ job_seeker.tertiary_course
+                                or 'College' }}
+                            </strong>
+
+
+                            <p>
+                                {{ job_seeker.tertiary_school }}
+                            </p>
+
+
+                            {% if job_seeker.tertiary_year_grad %}
+
+                            <small>
+                                Graduated:
+                                {{ job_seeker.tertiary_year_grad }}
+                            </small>
+
+                            {% endif %}
+
+                        </div>
+
+                        {% endif %}
+
+
+
+                        <!-- GRADUATE STUDIES -->
+
+                        {% if job_seeker.grad_school %}
+
+                        <div class="education-item">
+
+                            <span class="education-level">
+                                Graduate Studies
+                            </span>
+
+
+                            <strong>
+                                {{ job_seeker.grad_course
+                                or 'Graduate Studies' }}
+                            </strong>
+
+
+                            <p>
+                                {{ job_seeker.grad_school }}
+                            </p>
+
+
+                            {% if job_seeker.grad_year_grad %}
+
+                            <small>
+                                Graduated:
+                                {{ job_seeker.grad_year_grad }}
+                            </small>
+
+                            {% endif %}
+
+                        </div>
+
+                        {% endif %}
+
+
+
+                        <!-- NO EDUCATION -->
+
+                        {% if not job_seeker.sec_school
+                        and not job_seeker.tertiary_school
+                        and not job_seeker.grad_school %}
+
+                        <div class="education-empty" role="status">
+                            <span class="education-empty-icon" aria-hidden="true">&#127891;</span>
+                            <div class="education-empty-copy">
+                                <strong>No educational records found</strong>
+                                <span>No educational background records are available for this job seeker.</span>
+                            </div>
+                        </div>
+
+                        {% endif %}
+
+                    </div>
+
+                </section>
+
+
+
+                <!-- =================================================
+                 PERSONAL DETAILS
+            ================================================== -->
+
+                <section class="info-card side-card">
+
+                    <div class="card-heading">
+
+                        <div class="heading-left">
+
+                            <span class="section-number">
+                                04
+                            </span>
+
+                            <h3>
+                                Personal Details
+                            </h3>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="details-grid">
+
+
+                        <!-- GENDER -->
+
+                        <div class="detail-item">
+
+                            <span>
+                                Gender
+                            </span>
+
+                            <strong>
+                                {{ job_seeker.sex or 'N/A' }}
+                            </strong>
+
+                        </div>
+
+
+
+                        <!-- AGE -->
+
+                        <div class="detail-item">
+
+                            <span>
+                                Age
+                            </span>
+
+                            <strong>
+
+                                {% if age is not none %}
+                                {{ age }} Years Old
+                                {% else %}
+                                N/A
+                                {% endif %}
+
+                            </strong>
+
+                        </div>
+
+
+
+                        <!-- BIRTH DATE -->
+
+                        <div class="detail-item">
+
+                            <span>
+                                Birth Date
+                            </span>
+
+                            <strong>
+
+                                {% if job_seeker.birthdate %}
+
+                                {{ job_seeker.birthdate.strftime(
+                                '%B %d, %Y'
+                                ) }}
+
+                                {% else %}
+
+                                N/A
+
+                                {% endif %}
+
+                            </strong>
+
+                        </div>
+
+
+
+                        <!-- HEIGHT -->
+
+                        <div class="detail-item">
+
+                            <span>
+                                Height
+                            </span>
+
+                            <strong>
+                                {{ job_seeker.height or 'N/A' }}
+                            </strong>
+
+                        </div>
+
+
+
+                        <!-- CIVIL STATUS -->
+
+                        <div class="detail-item">
+
+                            <span>
+                                Civil Status
+                            </span>
+
+                            <strong>
+                                {{ job_seeker.civil_status or 'N/A' }}
+                            </strong>
+
+                        </div>
+
+
+
+                        <!-- RELIGION -->
+
+                        <div class="detail-item">
+
+                            <span>
+                                Religion
+                            </span>
+
+                            <strong>
+                                {{ job_seeker.religion or 'N/A' }}
+                            </strong>
+
+                        </div>
+
+
+
+                        <!-- TIN -->
+
+                        <div class="detail-item">
+
+                            <span>
+                                TIN
+                            </span>
+
+                            <strong>
+                                {{ job_seeker.tin or 'N/A' }}
+                            </strong>
+
+                        </div>
+
+
+
+                        <!-- OFW STATUS -->
+
+                        <div class="detail-item">
+
+                            <span>
+                                OFW Status
+                            </span>
+
+                            <strong>
+                                {{ job_seeker.ofw_status or 'N/A' }}
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =========================================================
+         ACTIONS
+    ========================================================== -->
+
+        <div class="action-row">
+
+            <div class="action-note">
+
+                <span class="action-dot"></span>
+
+                <span>
+                    Please verify that all information is correct.
+                </span>
+
+            </div>
+
+
+            <button type="button" class="confirm-btn" id="confirmInformationBtn">
+
+                Confirm Information
+
+                <span class="confirm-arrow">
+                    →
+                </span>
+
+            </button>
+
+        </div>
+
+
+    </main>
+
+
+
+    <!-- =========================================================
+     CONFIRMATION MODAL
+========================================================== -->
+
+    <div class="confirmation-modal" id="confirmationModal" aria-hidden="true">
+
+        <!-- BACKDROP -->
+
+        <div class="modal-backdrop" id="modalBackdrop"></div>
+
+
+
+        <!-- MODAL -->
+
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmationModalTitle">
+
+
+            <!-- CLOSE BUTTON -->
+
+            <button type="button" class="modal-close" id="modalCloseBtn" aria-label="Close confirmation dialog">
+                ×
+            </button>
+
+
+
+            <!-- MODAL ICON -->
+
+            <div class="modal-icon">
+                ✓
+            </div>
+
+
+
+            <!-- MODAL CONTENT -->
+
+            <div class="modal-content">
+
+                <span class="modal-eyebrow">
+                    FINAL CHECK
+                </span>
+
+                <h2 id="confirmationModalTitle">
+                    Confirm Your Information
+                </h2>
+
+                <p>
+                    Please make sure that all the information you provided
+                    is correct before continuing to the job fair job list.
+                </p>
+
+
+                <div class="modal-warning">
+
+                    <span class="modal-warning-icon">
+                        !
+                    </span>
+
+                    <span>
+                        Once you continue, you will proceed to the
+                        available Job Fair positions.
+                    </span>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- MODAL ACTIONS -->
+
+            <div class="modal-actions">
+
+                <button type="button" class="modal-cancel-btn" id="modalCancelBtn">
+                    Review Again
+                </button>
+
+
+                <button type="button" class="modal-confirm-btn" id="modalConfirmBtn" data-next-url="{{ url_for(
+                    'kiosk.job_fair_jobs',
+                    reference_id=registration.reference_id
+                ) }}">
+
+                    Confirm & Continue
+
+                    <span>
+                        →
+                    </span>
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =========================================================
+     JAVASCRIPT
+========================================================== -->
+
+    <script src="{{ url_for(
+        'static',
+        filename='javascript/kiosk/KioskPersonalInformation.js'
+    ) }}"></script>
+
+
+    {% include "kiosk/components/kiosk_logout.html" %}
+    <script defer src="{{ url_for('static', filename='javascript/kiosk/kiosk_scrollbar.js') }}"></script>
+</body>
+
+</html>

@@ -1,0 +1,495 @@
+{% extends "layouts/base.html" %}
+{% block title %}PESO-IMS | Public Employment Service Office{% endblock %}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home/home.css', v='98') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home/home_landing_redesign.css', v='101') }}">
+{% endblock %}
+{% block content %}
+<div class="home-redesign">
+    <section class="hero">
+
+
+        <!-- Background decorative elements -->
+
+        <div class="hero-orb orb-one"></div>
+
+        <div class="hero-orb orb-two"></div>
+
+        <div class="hero-ring ring-bg-one"></div>
+
+        <div class="hero-ring ring-bg-two"></div>
+
+
+        <div class="hero-content">
+
+
+            <!-- =================================================
+                     HERO LEFT
+                ================================================== -->
+
+            <div class="hero-text">
+
+
+                <div class="eyebrow">
+
+                    <span class="eyebrow-line"></span>
+
+                    PUBLIC EMPLOYMENT SERVICE OFFICE
+
+                </div>
+
+
+
+                <!-- Brand -->
+
+
+
+                <h1>
+                    Connecting people<br>
+                    to <span>opportunities.</span>
+                </h1>
+
+                <!-- Description -->
+
+                <p class="hero-description">
+
+                    Helping job seekers find employment
+                    opportunities through accessible,
+                    reliable, and organized employment
+                    services.
+
+                </p>
+
+
+
+                <!-- Buttons -->
+
+                <div class="hero-buttons">
+
+
+                    <a href="{{ url_for('auth.register') }}" class="btn-primary">
+
+
+                        Sign Up
+
+                    </a>
+
+
+
+                    <a href="{{ url_for('auth.login') }}" class="btn-secondary">
+
+                        Log In
+
+
+
+                    </a>
+
+
+                </div>
+
+
+
+                <!-- Hero Note -->
+
+                <div class="hero-note">
+
+
+
+                    Your employment journey starts here.
+
+                </div>
+
+
+            </div>
+
+
+
+            <!-- =================================================
+                     HERO RIGHT / MINIMALIST ILLUSTRATION
+                ================================================== -->
+
+            <div class="hero-visual">
+
+                <!-- Main illustration -->
+                <div class="illustration-wrapper">
+                    <img src="{{ url_for('static', filename='images/hero.png') }}"
+                        alt="PESO-IMS Employment Services Illustration" class="hero-illustration">
+                </div>
+
+
+                <!-- Floating Job Matching Card -->
+                <div class="visual-info-card visual-card-top">
+
+                    <div class="visual-card-icon">
+                        <i class="fa-solid fa-user-check"></i>
+                    </div>
+
+                    <div class="visual-card-content">
+                        <strong>Job Matching</strong>
+                        <span>Find suitable opportunities</span>
+                    </div>
+
+                </div>
+
+
+                <!-- Floating Digital Documents Card -->
+                <div class="visual-info-card visual-card-bottom">
+
+                    <div class="visual-card-icon">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+
+                    <div class="visual-card-content">
+                        <strong>Digital Documents</strong>
+                        <span>Submit requirements securely</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+             PARTNERS
+        ====================================================== -->
+
+    <section class="partners">
+
+
+        <div class="section-heading">
+
+            <span>
+                OUR GOVERNMENT PARTNERS
+            </span>
+
+
+            <h2>
+                Supporting employment services
+            </h2>
+
+
+            <p>
+
+                Working together with government agencies
+                to connect individuals with opportunities.
+
+            </p>
+
+        </div>
+
+
+
+        <div class="partner-logos">
+
+
+            <div class="partner partner--dole">
+
+                <img src="{{ url_for('static', filename='images/dole.png') }}" alt="DOLE">
+
+            </div>
+
+
+
+            <div class="partner partner--peso">
+
+                <img src="{{ url_for('static', filename='images/peso_logo.png') }}" alt="PESO">
+
+            </div>
+
+
+
+            <div class="partner partner--sjdm">
+
+                <img src="{{ url_for('static', filename='images/sjdm_logo.png') }}" alt="City of San Jose del Monte">
+
+            </div>
+
+
+
+            <div class="partner partner--tesda">
+
+                <img src="{{ url_for('static', filename='images/tesda.png') }}" alt="TESDA">
+
+            </div>
+
+
+
+            <div class="partner partner--csc">
+
+                <img src="{{ url_for('static', filename='images/csc.svg') }}" alt="Civil Service Commission">
+
+            </div>
+
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+             FEATURES
+        ====================================================== -->
+
+    <section class="features">
+
+
+        <div class="features-heading">
+
+
+            <div>
+
+                <span class="section-label">
+                    HOW IT WORKS
+                </span>
+
+
+                <h2>
+
+                    Your path to employment,
+
+                    <span>
+                        made simpler.
+                    </span>
+
+                </h2>
+
+            </div>
+
+
+
+            <p>
+
+                PESO-IMS provides a streamlined way to
+                manage your profile, requirements, and
+                employment opportunities.
+
+            </p>
+
+
+        </div>
+
+
+
+        <div class="feature-grid">
+
+
+            <!-- FEATURE 1 -->
+
+            <div class="feature-card">
+
+                <div class="feature-number">
+                    01
+                </div>
+
+
+                <div class="feature-icon">
+
+                    <i class="fa-solid fa-user"></i>
+
+                </div>
+
+
+                <h3>
+                    Create Profile
+                </h3>
+
+
+                <p>
+
+                    Build your professional profile
+                    and provide the information needed
+                    for employment services.
+
+                </p>
+
+
+                <a href="#">
+
+                    Get started
+
+                    <i class="fa-solid fa-arrow-right"></i>
+
+                </a>
+
+            </div>
+
+
+
+            <!-- FEATURE 2 -->
+
+            <div class="feature-card">
+
+                <div class="feature-number">
+                    02
+                </div>
+
+
+                <div class="feature-icon">
+
+                    <i class="fa-solid fa-file-arrow-up"></i>
+
+                </div>
+
+
+                <h3>
+                    Upload Documents
+                </h3>
+
+
+                <p>
+
+                    Securely submit your requirements
+                    and keep important employment
+                    documents organized.
+
+                </p>
+
+
+                <a href="#">
+
+                    Learn more
+
+                    <i class="fa-solid fa-arrow-right"></i>
+
+                </a>
+
+            </div>
+
+
+
+            <!-- FEATURE 3 -->
+
+            <div class="feature-card">
+
+                <div class="feature-number">
+                    03
+                </div>
+
+
+                <div class="feature-icon">
+
+                    <i class="fa-solid fa-handshake"></i>
+
+                </div>
+
+
+                <h3>
+                    Get Matched
+                </h3>
+
+
+                <p>
+
+                    Explore local job opportunities
+                    and discover employment options
+                    suited to your profile.
+
+                </p>
+
+
+                <a href="#">
+
+                    Find opportunities
+
+                    <i class="fa-solid fa-arrow-right"></i>
+
+                </a>
+
+            </div>
+
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+             CTA
+        ====================================================== -->
+
+    <section class="cta-section">
+
+
+        <div class="cta-content">
+
+
+            <div class="cta-icon">
+
+                <i class="fa-solid fa-briefcase"></i>
+
+            </div>
+
+
+
+            <div class="cta-text">
+
+                <span>
+                    READY TO GET STARTED?
+                </span>
+
+
+                <h2>
+
+                    Take the next step
+                    toward your career.
+
+                </h2>
+
+
+                <p>
+
+                    Create your profile and explore
+                    employment opportunities through
+                    PESO-IMS.
+
+                </p>
+
+            </div>
+
+
+
+            <a href="#" class="cta-button">
+
+                Create Your Profile
+
+                <i class="fa-solid fa-arrow-right"></i>
+
+            </a>
+
+
+        </div>
+
+    </section>
+
+
+
+</div>
+{% if current_user.is_authenticated %}
+<form id="shortcutLogoutForm" method="POST" action="{{ url_for('auth.logout') }}" hidden>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% endif %}
+
+<script>
+    document.addEventListener("keydown", function (event) {
+        if (
+            event.ctrlKey &&
+            event.shiftKey &&
+            event.altKey &&
+            event.key.toLowerCase() === "p"
+        ) {
+            event.preventDefault();
+            document.getElementById("shortcutLogoutForm")?.submit();
+        }
+    });
+</script>
+
+<script defer src="{{ url_for('static', filename='javascript/home/home_landing_reveal.js') }}"></script>
+{% endblock %}

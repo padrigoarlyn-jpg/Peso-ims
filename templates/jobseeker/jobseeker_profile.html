@@ -1,0 +1,847 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}jobseeker-app{% endblock %}
+
+{% block title %}
+Job Seeker Profile | PESO IMS
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_profile.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_ui_consistency.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_email_prompt.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_email_settings.css') }}">
+    <style>
+        .personal-header-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+        .personal-header-actions .peso-email-open,
+        .personal-header-actions .btn-edit-sm { width: auto; min-height: 40px; margin: 0; padding: 9px 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; font: inherit; font-size: 14px; font-weight: 600; line-height: 1.2; cursor: pointer; }
+        .personal-header-actions .peso-email-open { background: #fff; color: #174a9c; border: 1px solid #c9d8f1; border-radius: 8px; }
+        .personal-header-actions .peso-email-open:hover { background: #f0f5ff; }
+        .personal-header-actions .btn-edit-sm { border-radius: 8px; }
+        @media (max-width: 600px) {
+            .profile-main-content > .card:first-child .card-header-flex { align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+            .personal-header-actions { width: 100%; justify-content: flex-start; }
+        }
+    </style>
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/jobseeker_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <header class="page-header">
+        <h1>Job Seeker Profile</h1>
+        <p>Manage your personal information, skills, job preferences, and professional experience.</p>
+    </header>
+
+    <div class="profile-grid-layout">
+        <!-- LEFT COLUMN -->
+        <aside class="profile-sidebar">
+            <div class="card profile-overview-card">
+                <div class="avatar-container">
+                    <img src="{{ url_for('static', filename='uploads/jobseekers/' ~ jobseeker.profile_picture) if jobseeker.profile_picture else url_for('static', filename='images/pfp_placeholder.png') }}"
+                        alt="{{ jobseeker.first_name }} {{ jobseeker.last_name }}" class="large-avatar">
+                    <button type="button" class="camera-badge" title="Change photo" data-modal="pfp">
+                        <i class="fa-solid fa-camera"></i>
+                    </button>
+                </div>
+
+                <div class="overview-info">
+                    <h2>
+                        {{ jobseeker.last_name or '—' }}, {{ jobseeker.first_name or '—' }} {{ jobseeker.middle_name or
+                        '' }} {{
+                        jobseeker.suffix or '' }}
+                        {% if jobseeker.is_verified %}
+                        <i class="fa-solid fa-circle-check verified-icon" title="Verified Account"></i>
+                        {% endif %}
+                    </h2>
+
+                    <div class="badge-group">
+                        {% set employment_label = (jobseeker.employment_status or '') | trim | lower %}
+                        <span class="role-tag" title="Employment status recorded in the Job Seeker Registration Form">
+                            {% if employment_label == 'employed' %}Employed{% elif employment_label == 'unemployed' %}Unemployed{% else %}Not Specified{% endif %}
+                        </span>
+                        {% if jobseeker.jsrf_completed %}
+                        <span class="badge badge-jsrf-complete" title="Your JSRF / NSRP Form 1 has been completed.">JSRF Complete</span>
+                        {% else %}
+                        <span class="badge badge-jsrf-incomplete" title="Complete your JSRF / NSRP Form 1 before account verification.">JSRF Incomplete</span>
+                        {% endif %}
+                        {% if jobseeker.fourps_beneficiary %}
+                        <span class="badge badge-4ps" title="4Ps Household ID: {{ jobseeker.masked_fourps_id }}">4Ps
+                            Member</span>
+                        {% endif %}
+                        {% if jobseeker.is_pwd %}<span class="badge">PWD — {{ jobseeker.disability }}{% if jobseeker.disability_other %}: {{ jobseeker.disability_other }}{% endif %}</span>{% endif %}
+                        {% if jobseeker.is_senior_citizen %}<span class="badge">Senior Citizen</span>{% endif %}
+                        {% if jobseeker.ofw_status == 'yes' or jobseeker.former_ofw == 'yes' %}
+                        <span class="badge badge-ofw">OFW</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="meta-row">
+                        <span class="meta-label">Location</span>
+                        <span class="meta-val">
+                            {% if jobseeker.city and jobseeker.province %}
+                            {{ jobseeker.city }}, {{ jobseeker.province }}
+                            {% elif jobseeker.street %}
+                            {{ jobseeker.street }}, {{ jobseeker.barangay }}
+                            {% else %}
+                            —
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="meta-row">
+                        <span class="meta-label">Job Seeker ID</span>
+                        <span class="meta-val">{{ jobseeker.user.public_id if jobseeker.user else 'N/A' }}</span>
+                    </div>
+
+                    <div class="summary-section">
+                        <div class="section-header-row">
+                            <h3>Professional Summary</h3>
+                            <button type="button" class="btn-edit-sm" data-modal="summary">Edit</button>
+                        </div>
+                        <p id="summaryText">
+                            {{ jobseeker.summary or 'No professional summary provided yet.' }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- RIGHT COLUMN -->
+        <section class="profile-main-content">
+            <!-- PERSONAL INFORMATION -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <div>
+                        <h3>Personal Information</h3>
+                        <small class="text-muted">
+                            <i class="fa-solid fa-lock"></i>
+                            Official identity fields are verified and locked from manual edits.
+                        </small>
+                    </div>
+
+                    <div class="personal-header-actions">
+                        <button type="button" class="peso-email-open" id="openEmailSettings" aria-haspopup="dialog" aria-controls="emailSettingsModal">
+                            <i class="fa-solid fa-envelope" aria-hidden="true"></i> Email settings
+                        </button>
+                        <button type="button" class="btn-edit-sm" data-modal="personal">Edit</button>
+                    </div>
+                </div>
+
+                <div class="contact-grid">
+
+                    <div class="contact-item">
+                        <span class="field-label">Email Address</span>
+
+                        <span class="field-value" id="emailValue">
+                            {{ (jobseeker.user.email if jobseeker.user and not jobseeker.user.email.endswith('@peso.invalid') else 'Not provided') }}
+                        </span>
+
+                    </div>
+
+                    <div class="contact-item">
+                        <span class="field-label">Mobile Contact Number <small class="profile-readonly-note">(Read-only)</small></span>
+
+                        <span class="field-value" id="phoneValue">
+                            {{ jobseeker.contact_number or '—' }}
+                        </span>
+                    </div>
+
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">
+                            Full Name
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+
+                        <span class="field-value">
+                            {{ jobseeker.last_name }}, {{ jobseeker.first_name }} {{ jobseeker.middle_name or '' }} {{
+                            jobseeker.suffix or '' }}
+                        </span>
+                    </div>
+
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">
+                            Date of Birth
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+
+                        <span class="field-value">
+                            {{ jobseeker.birthdate.strftime('%B %d, %Y') if jobseeker.birthdate else '—' }}
+                        </span>
+                    </div>
+
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">
+                            Sex
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+
+                        <span class="field-value">
+                            {{ jobseeker.sex or '—' }}
+                        </span>
+                    </div>
+
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">
+                            Civil Status
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+
+                        <span class="field-value">
+                            {{ jobseeker.civil_status or '—' }}
+                        </span>
+                    </div>
+
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">
+                            TIN
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+
+                        <span class="field-value">
+                            {{ jobseeker.tin or '—' }}
+                        </span>
+                    </div>
+
+                    <div class="contact-item readonly-field">
+                        <span class="field-label">
+                            Religion
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+
+                        <span class="field-value">
+                            {{ jobseeker.religion or '—' }}
+                        </span>
+                    </div>
+
+                    <div class="contact-item">
+                        <span class="field-label">Barangay</span>
+
+                        <span class="field-value" id="barangayValue">
+                            {{ jobseeker.barangay or '—' }}
+                        </span>
+                    </div>
+
+                    <div class="contact-item">
+                        <span class="field-label">City / Municipality</span>
+
+                        <span class="field-value" id="cityValue">
+                            {{ jobseeker.city or '—' }}
+                        </span>
+                    </div>
+
+                    <div class="contact-item">
+                        <span class="field-label">Province</span>
+
+                        <span class="field-value" id="provinceValue">
+                            {{ jobseeker.province or '—' }}
+                        </span>
+                    </div>
+
+                    <div class="contact-item">
+                        <span class="field-label">House No. / Street Address</span>
+
+                        <span class="field-value" id="addressValue">
+                            {{ jobseeker.street or '—' }}
+                        </span>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- JOB PREFERENCES & SALARY -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3>Job Preferences & Target Salary</h3>
+                    <button type="button" class="btn-edit-sm" data-modal="preferences">Edit</button>
+                </div>
+                <div class="details-list">
+                    <div class="detail-row">
+                        <div>
+                            <span class="d-label">Preferred Occupations</span>
+                            <span class="d-value">
+                                1st: {{ jobseeker.pref_occupation_1 or 'None' }}
+                                {% if jobseeker.pref_occupation_2 %} | 2nd: {{ jobseeker.pref_occupation_2 }}{% endif %}
+                                {% if jobseeker.pref_occupation_3 %} | 3rd: {{ jobseeker.pref_occupation_3 }}{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div>
+                            <span class="d-label">Preferred Employment Type</span>
+                            <span class="d-value">{{ jobseeker.pref_job_type | join(', ') if jobseeker.pref_job_type is
+                                iterable and jobseeker.pref_job_type is not string else (jobseeker.pref_job_type or
+                                'Any')
+                                }}</span>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div>
+                            <span class="d-label">Target Preferred Locations</span>
+                            <span class="d-value">
+                                Local: {{ [jobseeker.local_location_1, jobseeker.local_location_2,
+                                jobseeker.local_location_3] |
+                                select | join(', ') or 'N/A' }}
+                                {% if jobseeker.overseas_location_1 %}
+                                | Overseas: {{ [jobseeker.overseas_location_1, jobseeker.overseas_location_2,
+                                jobseeker.overseas_location_3] | select | join(', ') }}
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-two-col">
+                <!-- SKILLS -->
+                <div class="card">
+                    <div class="card-header-flex">
+                        <h3>Skills & Competencies</h3>
+                        <button type="button" class="btn-edit-sm" data-modal="skills">Edit</button>
+                    </div>
+                    <div class="skills-tags">
+                        {% set skill_list = jobseeker.skills.split(',') if jobseeker.skills is string else (jobseeker.skills or []) %}
+                        {% set custom_skills = jobseeker.skills_other.split(',') if jobseeker.skills_other else [] %}
+                        {% for skill in skill_list %}
+                            {% if skill.strip() and not (skill.strip()|lower == 'others' and custom_skills) %}
+                            <span class="tag">{{ skill.strip() }}</span>
+                            {% endif %}
+                        {% endfor %}
+                        {% for skill in custom_skills %}
+                            {% if skill.strip() %}<span class="tag">{{ skill.strip() }}</span>{% endif %}
+                        {% endfor %}
+                        {% if not skill_list and not custom_skills %}
+                            <p class="text-muted">No skills listed.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- EDUCATION -->
+                <div class="card">
+                    <div class="card-header-flex">
+                        <h3>Educational Background</h3>
+                        <button type="button" class="btn-edit-sm" data-modal="education">Edit</button>
+                    </div>
+                    <div class="timeline">
+                        {% if jobseeker.tertiary_school %}
+                        <div class="timeline-item">
+                            <h4>{{ jobseeker.tertiary_course or 'Tertiary Education' }}</h4>
+                            <p class="text-muted">{{ jobseeker.tertiary_school }}</p>
+                            <small>Graduated: {{ jobseeker.tertiary_year_grad or 'N/A' }}</small>
+                        </div>
+                        {% endif %}
+
+                        {% if jobseeker.sec_school %}
+                        <div class="timeline-item">
+                            <h4>Secondary: {{ jobseeker.senior_high_strand or 'General High School' }}</h4>
+                            <p class="text-muted">{{ jobseeker.sec_school }}</p>
+                            <small>Graduated: {{ jobseeker.sec_year_grad or 'N/A' }}</small>
+                        </div>
+                        {% endif %}
+
+                        {% if not jobseeker.tertiary_school and not jobseeker.sec_school %}
+                        <p class="text-muted">No detailed education background specified.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- WORK EXPERIENCE -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3>Work Experience</h3>
+                    <button type="button" class="btn-edit-sm" data-modal="experience">
+                        Edit
+                    </button>
+                </div>
+
+                <div class="timeline">
+                    {% if jobseeker.work_history %}
+                    {% for work in jobseeker.work_history %}
+                    <div class="timeline-item">
+                        <h4>{{ work.position or 'Position not specified' }}</h4>
+
+                        <p class="text-muted">
+                            {{ work.company or 'Company not specified' }}
+                        </p>
+                        <small>{{ work.company_address or 'Address not yet supplied' }}{% if work.number_of_months is not none %} · {{ work.number_of_months }} month{% if work.number_of_months != 1 %}s{% endif %}{% endif %}</small>
+
+                        {% if work.appointment_status %}
+                        <div class="work-status-wrapper">
+                            <span class="work-status">{{ work.appointment_status }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted">No work experience specified.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- RESUME ATTACHMENT -->
+            <div class="card resume-card">
+                <div class="card-header-flex">
+                    <h3>Resume Attachment</h3>
+                    <button type="button" class="btn-edit-sm" data-modal="resume">Edit</button>
+                </div>
+                <div class="resume-container">
+                    {% if jobseeker.resume or jobseeker.resume_filename %}
+                    <div class="resume-icon">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <div class="resume-info">
+                        <h4>{{ jobseeker.resume_filename or "Resume File" }}</h4>
+                        <span>Uploaded Resume</span>
+                    </div>
+                    <a href="{{ url_for('jobseeker.download_resume') }}" class="btn-action" id="downloadResumeBtn">
+                      Download
+                    </a>
+                    {% else %}
+                    <div class="resume-info">
+                        <h4>No resume uploaded</h4>
+                        <span>Please upload a PDF or DOC file</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+
+<!-- NSRP FORM 1 DOWNLOAD -->
+<div class="card resume-card">
+    <div class="card-header-flex">
+        <h3>NSRP Form 1 / JSRF</h3>
+    </div>
+
+    <div class="resume-container">
+        <div class="resume-icon">
+            <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+        </div>
+
+        <div class="resume-info">
+            <h4>Jobseeker Registration Form</h4>
+
+            {% if jobseeker.jsrf_completed %}
+                <span>Registration completed</span>
+            {% else %}
+                <span>Complete your JSRF registration to enable download.</span>
+            {% endif %}
+        </div>
+
+        {% if jobseeker.jsrf_completed %}
+            <a
+                href="{{ url_for('jobseeker.download_nsrp_form') }}"
+                class="btn-action"
+                id="downloadNsrpFormBtn"
+            >
+                <i class="fa-solid fa-download" aria-hidden="true"></i>
+                Download PDF
+            </a>
+        {% else %}
+            <button type="button" class="btn-action" disabled aria-disabled="true">
+                <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                Not Available
+            </button>
+        {% endif %}
+    </div>
+</div>
+
+
+<!-- UNIVERSAL EDIT MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="edit-modal">
+        <div class="modal-header">
+            <div class="modal-heading">
+                <h2 id="modalTitle">Edit Information</h2>
+                <p id="modalSubtitle">Update your profile information.</p>
+            </div>
+            <button type="button" class="modal-close" id="modalClose" aria-label="Close modal">&times;</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-footer">
+            <button type="button" class="modal-cancel" id="modalCancel">Cancel</button>
+            <button type="button" class="modal-save" id="modalSave">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL TEMPLATES WITH ACTION DIRECTIVES -->
+
+<!-- PROFILE PICTURE TEMPLATE -->
+<template id="tpl-pfp">
+    <form method="POST" action="{{ url_for('jobseeker.profile') }}" enctype="multipart/form-data" class="modal-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="upload_pfp">
+        <div class="form-group">
+            <label for="profile_picture">Select Profile Photo</label>
+            <input type="file" id="profile_picture" name="profile_picture" class="form-control" accept="image/*">
+            <small class="form-help form-help-muted">Accepted formats: PNG, JPG, JPEG, WEBP.</small>
+        </div>
+    </form>
+</template>
+
+<!-- SUMMARY TEMPLATE -->
+<template id="tpl-summary">
+    <form method="POST" action="{{ url_for('jobseeker.profile') }}" class="modal-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="update_summary">
+        <div class="form-group">
+            <label for="summary">Professional Summary</label>
+            <textarea id="summary" name="summary" class="form-control" rows="5">{{ jobseeker.summary or '' }}</textarea>
+        </div>
+    </form>
+</template>
+
+<div class="peso-email-settings-overlay" id="emailSettingsModal" hidden>
+  <div class="peso-email-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="profileEmailTitle" tabindex="-1">
+    <button type="button" class="peso-email-settings-close" id="closeEmailSettings" aria-label="Close email settings"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+<section class="peso-email-card" id="profileEmailSettings" aria-labelledby="profileEmailTitle">
+  <div class="peso-email-heading">
+    <div>
+      <span class="peso-email-eyebrow">EMAIL FOR ACCOUNT UPDATES</span>
+      <h3 id="profileEmailTitle">Add your email address</h3>
+      <p>If you registered at the PESO office or kiosk, you can add an email here to receive account updates and messages.</p>
+      <p class="peso-email-login-note"><strong>Your Applicant Login ID stays the same.</strong> Adding an email does not replace the ID you use to sign in.</p>
+    </div>
+    {% if current_user.email_verified and current_user.email and not current_user.email.endswith('@peso.invalid') %}
+      <span class="peso-email-status verified">Email verified</span>
+    {% else %}<span class="peso-email-status pending">{{ 'Email not yet verified' if current_user.email and not current_user.email.endswith('@peso.invalid') else 'No email added yet' }}</span>{% endif %}
+  </div>
+  {% if current_user.email and not current_user.email.endswith('@peso.invalid') %}
+    <p class="peso-email-current"><strong>Email currently on your account:</strong> {{ current_user.email }}</p>
+  {% endif %}
+  <form method="POST" action="{{ url_for('jobseeker.request_email_verification') }}" class="peso-email-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="new_email">{{ 'New email address' if current_user.email_verified and not current_user.email.endswith('@peso.invalid') else 'Your email address' }}</label>
+    <div class="peso-email-actions">
+      <input type="email" id="new_email" name="new_email" maxlength="100" required class="form-control" autocomplete="email" placeholder="name@example.com" aria-describedby="emailVerificationHelp">
+      <button type="submit" class="peso-email-button">Send verification email</button>
+    </div>
+    <p id="emailVerificationHelp" class="peso-email-help"><strong>What happens next?</strong> Check the inbox of the email address you entered and open the verification link within 30 minutes. The email will be added or changed only after you verify it.</p>
+  </form>
+</section>
+  </div>
+</div>
+<!-- PERSONAL CONTACT & ADDRESS TEMPLATE -->
+<template id="tpl-personal">
+    <form method="POST" action="{{ url_for('jobseeker.profile') }}" class="modal-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="update_personal">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="street">House No. / Street</label>
+                <input type="text" id="street" name="street" maxlength="150" value="{{ jobseeker.street or '' }}" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="barangay">Barangay</label>
+                <select id="barangay" name="barangay" class="form-control" required data-selected="{{ jobseeker.barangay or '' }}" disabled><option value="">Select city first</option></select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="city">Municipality / City</label>
+                <select id="city" name="city" class="form-control" required data-selected="{{ jobseeker.city or '' }}" disabled><option value="">Select province first</option></select>
+            </div>
+            <div class="form-group">
+                <label for="province">Province</label>
+                <select id="province" name="province" class="form-control" required data-selected="{{ jobseeker.province or '' }}"><option value="">Loading provinces...</option></select>
+            </div>
+        </div>
+
+    </form>
+</template>
+
+<!-- PREFERENCES TEMPLATE -->
+<template id="tpl-preferences">
+    <form method="POST" action="{{ url_for('jobseeker.profile') }}" class="modal-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="update_preferences">
+
+        <h4 class="form-section-title">Preferred Occupations</h4>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="pref_occupation_1">1st Choice Occupation</label>
+                <input type="text" id="pref_occupation_1" name="pref_occupation_1"
+                    value="{{ jobseeker.pref_occupation_1 or '' }}" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="pref_occupation_2">2nd Choice Occupation</label>
+                <input type="text" id="pref_occupation_2" name="pref_occupation_2"
+                    value="{{ jobseeker.pref_occupation_2 or '' }}" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="pref_occupation_3">3rd Choice Occupation</label>
+                <input type="text" id="pref_occupation_3" name="pref_occupation_3"
+                    value="{{ jobseeker.pref_occupation_3 or '' }}" class="form-control">
+            </div>
+        </div>
+
+        <h4 class="form-section-title">Preferred Employment Type</h4>
+        <div class="form-row">
+            {% set job_types = jobseeker.pref_job_type if jobseeker.pref_job_type is iterable and
+            jobseeker.pref_job_type is not
+            string else ([jobseeker.pref_job_type] if jobseeker.pref_job_type else []) %}
+
+            <div class="form-group">
+                <label class="checkbox-inline">
+                    <input type="checkbox" name="pref_job_type" value="Full Time" {% if 'Full Time' in job_types
+                        %}checked{% endif %}>
+                    <span>Full Time</span>
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-inline">
+                    <input type="checkbox" name="pref_job_type" value="Part Time" {% if 'Part Time' in job_types
+                        %}checked{% endif %}>
+                    <span>Part Time</span>
+                </label>
+            </div>
+        </div>
+
+        <h4 class="form-section-title">Preferred Local Locations</h4>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="local_location_1">1st Choice Local</label>
+                <input type="text" id="local_location_1" name="local_location_1"
+                    value="{{ jobseeker.local_location_1 or '' }}" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="local_location_2">2nd Choice Local</label>
+                <input type="text" id="local_location_2" name="local_location_2"
+                    value="{{ jobseeker.local_location_2 or '' }}" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="local_location_3">3rd Choice Local</label>
+                <input type="text" id="local_location_3" name="local_location_3"
+                    value="{{ jobseeker.local_location_3 or '' }}" class="form-control">
+            </div>
+        </div>
+
+        <h4 class="form-section-title">Preferred Overseas Locations</h4>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="overseas_location_1">1st Choice Overseas</label>
+                <input type="text" id="overseas_location_1" name="overseas_location_1"
+                    value="{{ jobseeker.overseas_location_1 or '' }}" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="overseas_location_2">2nd Choice Overseas</label>
+                <input type="text" id="overseas_location_2" name="overseas_location_2"
+                    value="{{ jobseeker.overseas_location_2 or '' }}" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="overseas_location_3">3rd Choice Overseas</label>
+                <input type="text" id="overseas_location_3" name="overseas_location_3"
+                    value="{{ jobseeker.overseas_location_3 or '' }}" class="form-control">
+            </div>
+        </div>
+    </form>
+</template>
+
+<!-- SKILLS TEMPLATE -->
+<template id="tpl-skills">
+    <form method="POST" action="{{ url_for('jobseeker.profile') }}" class="modal-form" id="form-skills">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="update_skills">
+        <div class="form-group">
+            <label class="skills-section-title">Other Skills Acquired Without Certificate</label>
+            <p class="skills-help">Select all skills that apply.</p>
+            <div class="skills-choice-grid">
+                <label><input type="checkbox" name="skills" value="Auto Mechanic" {% if jobseeker.skills and 'Auto Mechanic' in jobseeker.skills %}checked{% endif %}> Auto Mechanic</label>
+                <label><input type="checkbox" name="skills" value="Beautician" {% if jobseeker.skills and 'Beautician' in jobseeker.skills %}checked{% endif %}> Beautician</label>
+                <label><input type="checkbox" name="skills" value="Carpentry Work" {% if jobseeker.skills and 'Carpentry Work' in jobseeker.skills %}checked{% endif %}> Carpentry Work</label>
+                <label><input type="checkbox" name="skills" value="Computer Literate" {% if jobseeker.skills and 'Computer Literate' in jobseeker.skills %}checked{% endif %}> Computer Literate</label>
+                <label><input type="checkbox" name="skills" value="Domestic Chores" {% if jobseeker.skills and 'Domestic Chores' in jobseeker.skills %}checked{% endif %}> Domestic Chores</label>
+                <label><input type="checkbox" name="skills" value="Driver" {% if jobseeker.skills and 'Driver' in jobseeker.skills %}checked{% endif %}> Driver</label>
+                <label><input type="checkbox" name="skills" value="Electrician" {% if jobseeker.skills and 'Electrician' in jobseeker.skills %}checked{% endif %}> Electrician</label>
+                <label><input type="checkbox" name="skills" value="Embroidery" {% if jobseeker.skills and 'Embroidery' in jobseeker.skills %}checked{% endif %}> Embroidery</label>
+                <label><input type="checkbox" name="skills" value="Gardening" {% if jobseeker.skills and 'Gardening' in jobseeker.skills %}checked{% endif %}> Gardening</label>
+                <label><input type="checkbox" name="skills" value="Masonry" {% if jobseeker.skills and 'Masonry' in jobseeker.skills %}checked{% endif %}> Masonry</label>
+                <label><input type="checkbox" name="skills" value="Painter/Artist" {% if jobseeker.skills and 'Painter/Artist' in jobseeker.skills %}checked{% endif %}> Painter/Artist</label>
+                <label><input type="checkbox" name="skills" value="Painting Jobs" {% if jobseeker.skills and 'Painting Jobs' in jobseeker.skills %}checked{% endif %}> Painting Jobs</label>
+                <label><input type="checkbox" name="skills" value="Photography" {% if jobseeker.skills and 'Photography' in jobseeker.skills %}checked{% endif %}> Photography</label>
+                <label><input type="checkbox" name="skills" value="Plumbing" {% if jobseeker.skills and 'Plumbing' in jobseeker.skills %}checked{% endif %}> Plumbing</label>
+                <label><input type="checkbox" name="skills" value="Sewing Dresses" {% if jobseeker.skills and 'Sewing Dresses' in jobseeker.skills %}checked{% endif %}> Sewing Dresses</label>
+                <label><input type="checkbox" name="skills" value="Stenography" {% if jobseeker.skills and 'Stenography' in jobseeker.skills %}checked{% endif %}> Stenography</label>
+                <label><input type="checkbox" name="skills" value="Tailoring" {% if jobseeker.skills and 'Tailoring' in jobseeker.skills %}checked{% endif %}> Tailoring</label>
+                <label><input type="checkbox" name="skills" value="Others" {% if jobseeker.skills and 'Others' in jobseeker.skills %}checked{% endif %}> Others</label>
+            </div>
+            <div class="skills-other-field">
+                <label for="skills_other">Other skills (optional)</label>
+                <p class="skills-help">Separate multiple skills with a comma. Example: Video Editing, Graphic Design, Data Encoding.</p>
+                <input type="text" id="skills_other" name="skills_other" maxlength="150" value="{{ jobseeker.skills_other or '' }}" placeholder="e.g., Video Editing, Graphic Design" class="form-control">
+            </div>
+        </div>
+    </form>
+</template>
+
+<!-- EDUCATION TEMPLATE -->
+<template id="tpl-education">
+    <form method="POST" action="{{ url_for('jobseeker.profile') }}" class="modal-form" id="form-education">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="update_education">
+
+        <h4 class="form-section-title">Tertiary Education</h4>
+        <div class="form-group">
+            <label for="tertiary_course">Course / Degree Program</label>
+            <input type="text" id="tertiary_course" name="tertiary_course" value="{{ jobseeker.tertiary_course or '' }}"
+                class="form-control" placeholder="e.g. BS Information Technology">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="tertiary_school">School Name</label>
+                <input type="text" id="tertiary_school" name="tertiary_school"
+                    value="{{ jobseeker.tertiary_school or '' }}" class="form-control"
+                    placeholder="e.g. State University">
+            </div>
+            <div class="form-group">
+                <label for="tertiary_year_grad">Year Graduated</label>
+                <input type="text" id="tertiary_year_grad" name="tertiary_year_grad"
+                    value="{{ jobseeker.tertiary_year_grad or '' }}" class="form-control" placeholder="e.g. 2024">
+            </div>
+        </div>
+
+        <h4 class="form-section-title section-title-spacing">Secondary / High School</h4>
+        <div class="form-group">
+            <label for="senior_high_strand">Senior High Strand / Curriculum</label>
+            <input type="text" id="senior_high_strand" name="senior_high_strand"
+                value="{{ jobseeker.senior_high_strand or '' }}" class="form-control"
+                placeholder="e.g. TVL - ICT / STEM">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="sec_school">Secondary School Name</label>
+                <input type="text" id="sec_school" name="sec_school" value="{{ jobseeker.sec_school or '' }}"
+                    class="form-control" placeholder="e.g. Central High School">
+            </div>
+            <div class="form-group">
+                <label for="sec_year_grad">Year Graduated</label>
+                <input type="text" id="sec_year_grad" name="sec_year_grad" value="{{ jobseeker.sec_year_grad or '' }}"
+                    class="form-control" placeholder="e.g. 2020">
+            </div>
+        </div>
+    </form>
+</template>
+
+<!-- EXPERIENCE TEMPLATE -->
+<template id="tpl-experience">
+    <form method="POST" action="{{ url_for('jobseeker.profile') }}" class="modal-form" id="form-experience">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="update_experience">
+
+        <div id="workHistoryContainer">
+            {% if jobseeker.work_history %}
+            {% for work in jobseeker.work_history %}
+            <div class="work-history-form-item">
+                <input type="hidden" name="work_id[]" value="{{ work.work_id }}">
+
+                <div class="work-history-form-header">
+                    <h4>Work Experience {{ loop.index }}</h4>
+                    <button type="button" class="remove-work-history-btn">
+                        <i class="fa-solid fa-trash"></i> Remove
+                    </button>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Company / Employer</label>
+                        <input type="text" name="company[]" class="form-control" value="{{ work.company or '' }}"
+                            placeholder="e.g. Zip Co." required>
+                    </div>
+                    <div class="form-group">
+                        <label>Position</label>
+                        <input type="text" name="position[]" class="form-control" value="{{ work.position or '' }}"
+                            placeholder="e.g. Barista / Kitchen Staff">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Address (City / Municipality)</label>
+                        <input type="text" name="company_address[]" maxlength="150" class="form-control" value="{{ work.company_address or '' }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Number of Months</label>
+                        <input type="number" name="number_of_months[]" min="0" max="1200" step="1" class="form-control" value="{{ work.number_of_months if work.number_of_months is not none else '' }}" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Appointment Status</label>
+                    <input type="text" name="appointment_status[]" maxlength="50" class="form-control" value="{{ work.appointment_status or '' }}" placeholder="e.g., Permanent">
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="work-history-form-item">
+                <input type="hidden" name="work_id[]" value="">
+
+                <div class="work-history-form-header">
+                    <h4>Work Experience 1</h4>
+                    <button type="button" class="remove-work-history-btn">
+                        <i class="fa-solid fa-trash"></i> Remove
+                    </button>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Company / Employer</label>
+                        <input type="text" name="company[]" class="form-control" placeholder="e.g. Zip Co." required>
+                    </div>
+                    <div class="form-group">
+                        <label>Position</label>
+                        <input type="text" name="position[]" class="form-control"
+                            placeholder="e.g. Barista / Kitchen Staff">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Address (City / Municipality)</label>
+                        <input type="text" name="company_address[]" maxlength="150" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Number of Months</label>
+                        <input type="number" name="number_of_months[]" min="0" max="1200" step="1" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Appointment Status</label>
+                    <input type="text" name="appointment_status[]" maxlength="50" class="form-control" placeholder="e.g., Permanent">
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <button type="button" id="addWorkHistory" class="btn-add-work-history">
+            <i class="fa-solid fa-plus"></i> Add Another Work Experience
+        </button>
+    </form>
+</template>
+
+<!-- RESUME TEMPLATE -->
+<template id="tpl-resume">
+    <form method="POST" action="{{ url_for('jobseeker.profile') }}" enctype="multipart/form-data" class="modal-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="upload_resume">
+        <div class="form-group">
+            <label for="resume">Upload Resume</label>
+            <input type="file" id="resume" name="resume" class="form-control">
+            <small class="form-help form-help-muted">Accepted formats: PDF, DOC, DOCX</small>
+        </div>
+    </form>
+</template>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/jobseeker/jobseeker_profile.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/jobseeker/profile_address_dropdown.js') }}" defer></script>
+<script src="{{ url_for('static', filename='javascript/jobseeker/jobseeker_email_settings.js') }}"></script>
+{% endblock %}

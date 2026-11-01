@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PESO Information Management System{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/readability.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/peso_foundation.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/table_pagination.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    {% block css %}{% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/supervised_flash_safety.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/peso_polish.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared/dashboard_idle_warning.css', v='20261022d') }}">
+</head>
+<body class="peso-app {% block body_class %}public-app{% endblock %}" data-ui-phase="5">
+    {% block navbar %}
+        {% include "layouts/navbar.html" %}
+    {% endblock %}
+
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {# Collapse identical flash messages, including messages left by old redirect loops. #}
+                {% set unique_messages = [] %}
+                {% for item in messages %}
+                    {% if item not in unique_messages %}
+                        {% set _ = unique_messages.append(item) %}
+                    {% endif %}
+                {% endfor %}
+                {% set category, message = unique_messages[0] %}
+                <div class="flash-modal-overlay" id="flashModal" role="dialog" aria-modal="true"
+                    aria-labelledby="flashModalTitle" aria-describedby="flashModalMessage">
+                    <div class="flash-modal-card">
+                        <button type="button" class="flash-modal-close" id="flashModalClose" aria-label="Close message">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+
+                        <div class="flash-modal-icon flash-modal-{{ category }}">
+                            {% if category == "success" %}
+                                <i class="fa-solid fa-circle-check"></i>
+                            {% elif category == "danger" or category == "error" %}
+                                <i class="fa-solid fa-circle-xmark"></i>
+                            {% elif category == "warning" %}
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            {% else %}
+                                <i class="fa-solid fa-circle-info"></i>
+                            {% endif %}
+                        </div>
+
+                        <div class="flash-modal-content">
+                            <h2 id="flashModalTitle">
+                                {% if category == "success" %}
+                                    Success
+                                {% elif category == "danger" or category == "error" %}
+                                    Something Went Wrong
+                                {% elif category == "warning" %}
+                                    Attention
+                                {% else %}
+                                    Notice
+                                {% endif %}
+                            </h2>
+                            <p id="flashModalMessage">{{ message }}</p>
+
+                            {% if unique_messages|length > 1 %}
+                                <div class="flash-modal-more" role="region" aria-label="Additional notifications" tabindex="0">
+                                    {% for extra_category, extra_message in unique_messages[1:] %}
+                                        <p>{{ extra_message }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <button type="button" class="flash-modal-confirm" id="flashModalConfirm">OK</button>
+                    </div>
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    {% block footer %}
+        {% include "layouts/footer.html" %}
+    {% endblock %}
+
+    <script src="{{ url_for('static', filename='javascript/navbar.js') }}"></script>
+    <script src="{{ url_for('static', filename='javascript/flash.js') }}"></script>
+    <script src="{{ url_for('static', filename='javascript/table_pagination.js') }}"></script>
+    {% block javascript %}
+    {% endblock %}
+    <script src="{{ url_for('static', filename='javascript/admin/admin_shared.js') }}"></script>
+    {% if current_user.is_authenticated and current_user.role != 'kiosk' %}
+    <script src="{{ url_for('static', filename='javascript/shared/dashboard_idle_timeout.js', v='20261022d') }}" defer></script>
+    {% endif %}
+</body>
+</html>

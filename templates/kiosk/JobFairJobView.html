@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0"
+
+>
+
+<title>
+    {{ ongoing_job_fair.title }} | PESO
+</title>
+
+<link
+    rel="stylesheet"
+    href="{{ url_for(
+        'static',
+        filename='css/kiosk/JobFairJobView.css'
+    ) }}"
+>
+
+<link
+    rel="stylesheet"
+    href="{{ url_for(
+        'static',
+        filename='css/kiosk/kiosk_keyboard.css'
+    ) }}"
+>
+
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/peso_foundation.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/peso_polish.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_logout.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ui/table_pagination.css') }}">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_scrollbar.css') }}">
+    <!-- Shared 15.6-inch kiosk touchscreen scaling (load last) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_screen_15inch.css') }}">
+</head>
+
+<body class="kiosk-app" data-ui-phase="5">
+{% include "kiosk/_kiosk_flash.html" %}
+
+
+<!-- =====================================================
+     FIXED PESO BACKGROUND WATERMARK
+     This is OUTSIDE the main page so it stays centered
+     independently from the page content.
+====================================================== -->
+
+<div
+    class="peso-watermark"
+    aria-hidden="true"
+>
+
+<img
+src="{{ url_for(
+'static',
+filename='images/peso_logo.png'
+) }}"
+alt=""
+
+>
+
+</div>
+
+<!-- =====================================================
+     MAIN PAGE
+===================================================== -->
+
+<main class="kiosk-page">
+
+<!-- =================================================
+     HEADER
+================================================== -->
+
+<header class="site-header">
+
+ 
+<div class="brand">
+
+    <img
+        src="{{ url_for(
+            'static',
+            filename='images/peso_logo.png'
+        ) }}"
+        alt="PESO Logo"
+        class="peso-logo"
+    >
+
+    <div class="brand-text">
+
+        <span class="office-name">
+            PUBLIC EMPLOYMENT SERVICE OFFICE
+        </span>
+
+        <span class="city-name">
+            San Jose del Monte City
+        </span>
+
+    </div>
+
+</div>
+ 
+
+</header>
+
+<!-- =================================================
+     JOB FAIR INFORMATION
+================================================== -->
+
+<section class="fair-info">
+
+ 
+<div class="fair-details">
+
+    <span class="section-label">
+        CURRENT JOB FAIR
+    </span>
+
+    <h2>
+        {{ ongoing_job_fair.title }}
+    </h2>
+
+    <div class="fair-meta">
+
+
+        <!-- VENUE -->
+
+        {% if ongoing_job_fair.venue %}
+
+            <div class="meta-item">
+
+                <span class="meta-label">
+                    VENUE
+                </span>
+
+                <span>
+                    {{ ongoing_job_fair.venue }}
+                </span>
+
+            </div>
+
+        {% endif %}
+
+
+        <!-- DIVIDER -->
+
+        {% if ongoing_job_fair.venue
+              and ongoing_job_fair.start_datetime %}
+
+            <div class="meta-divider"></div>
+
+        {% endif %}
+
+
+        <!-- DATE -->
+
+        {% if ongoing_job_fair.start_datetime %}
+
+            <div class="meta-item">
+
+                <span class="meta-label">
+                    DATE
+                </span>
+
+                <span>
+                    {{ ongoing_job_fair.start_datetime.strftime(
+                        "%B %d, %Y"
+                    ) }}
+                </span>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+
+<!-- =================================================
+     AVAILABLE JOB COUNT
+================================================== -->
+
+<div class="job-count">
+
+    <strong>
+        {{ "%02d"|format(job_fair_jobs|length) }}
+    </strong>
+
+    <span>
+        AVAILABLE<br>
+        POSITIONS
+    </span>
+
+</div>
+ 
+
+</section>
+
+<!-- =================================================
+     SEARCH / FILTER BAR
+================================================== -->
+
+<section class="toolbar">
+
+ 
+<form
+    id="searchForm"
+    class="search-box"
+>
+
+    <span class="search-icon">
+        ⌕
+    </span>
+
+    <input
+        type="search"
+        id="jobSearch"
+        class="keyboard-input"
+        placeholder="Search job title, company, or location..."
+        autocomplete="off"
+    >
+
+</form>
+
+
+<div class="toolbar-note">
+    Select a position to continue
+</div>
+ 
+
+</section>
+
+<!-- =================================================
+     JOB LIST
+================================================== -->
+
+<section
+    class="job-list"
+    id="jobFairJobGrid"
+>
+
+ 
+{% if job_fair_jobs %}
+
+
+    {% for job_fair_job in job_fair_jobs %}
+
+        {% set job = job_fair_job.job %}
+
+        {% set already_applied =
+            job.job_id in applied_job_ids
+        %}
+
+
+        <!-- =================================================
+             JOB CARD
+        ================================================== -->
+
+        <article
+            class="job-card
+                {% if already_applied %}
+                    applied
+                {% endif %}"
+
+            data-job-fair-job-id="{{
+                job_fair_job.job_fair_job_id
+            }}"
+
+            data-job-id="{{ job.job_id }}"
+
+            data-created-at="{{
+                job.created_at.timestamp()
+                if job.created_at
+                else 0
+            }}"
+        >
+
+
+
+
+            <!-- =================================================
+                 JOB CONTENT
+            ================================================== -->
+
+            <div class="job-content">
+
+
+                <!-- JOB TITLE -->
+
+                <h2>
+                    {{ job.job_title }}
+                </h2>
+
+
+                <!-- COMPANY -->
+
+                <p class="company">
+                    {{ job.employer.company_name }}
+                </p>
+
+
+                <!-- =================================================
+                     JOB DETAILS
+                ================================================== -->
+
+                <div class="job-details">
+
+
+                    <!-- LOCATION -->
+
+                    <div>
+
+                        <span>
+                            LOCATION
+                        </span>
+
+                        <strong>
+                            {{ job.location
+                               or "Not specified" }}
+                        </strong>
+
+                    </div>
+
+
+                    <!-- EMPLOYMENT -->
+
+                    <div>
+
+                        <span>
+                            EMPLOYMENT
+                        </span>
+
+                        <strong>
+                            {{ job.employment_type
+                               or "Not specified" }}
+                        </strong>
+
+                    </div>
+
+
+                    <!-- VACANCIES -->
+
+                    <div>
+
+                        <span>
+                            VACANCIES
+                        </span>
+
+                        <strong>
+                            {{ job.vacancies }}
+                            positions
+                        </strong>
+
+                    </div>
+
+
+                    <!-- SALARY -->
+
+                    <div>
+
+                        <span>
+                            SALARY
+                        </span>
+
+                        <strong>
+
+                            {% if job.salary_min is not none
+                                  and job.salary_max is not none %}
+
+                                ₱{{ "{:,.2f}".format(
+                                    job.salary_min
+                                ) }}
+
+                                –
+
+                                ₱{{ "{:,.2f}".format(
+                                    job.salary_max
+                                ) }}
+
+                            {% elif job.salary_min is not none %}
+
+                                ₱{{ "{:,.2f}".format(
+                                    job.salary_min
+                                ) }}
+
+                            {% elif job.salary_max is not none %}
+
+                                ₱{{ "{:,.2f}".format(
+                                    job.salary_max
+                                ) }}
+
+                            {% else %}
+
+                                Not specified
+
+                            {% endif %}
+
+                        </strong>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         CATEGORY
+
+                         This is only displayed when a category exists.
+                         If your CSS has room for it, you can add a
+                         category field here later.
+                    ================================================== -->
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 JOB CARD BOTTOM
+            ================================================== -->
+
+            <div class="job-card-bottom">
+
+
+                <!-- DEADLINE -->
+
+                <span class="deadline">
+
+                    Deadline:
+
+                    {{ job.deadline.strftime(
+                        "%B %d, %Y"
+                    )
+                    if job.deadline
+                    else "No deadline" }}
+
+                </span>
+
+
+                <!-- =================================================
+                     PRESELECT BUTTON
+                ================================================== -->
+
+
+                <button
+                    type="button"
+
+                    class="select-job-btn
+                        preselect-button
+                        {% if already_applied %}
+                            already-applied
+                        {% endif %}"
+
+                    data-job-fair-job-id="{{
+                        job_fair_job.job_fair_job_id
+                    }}"
+
+                    aria-pressed="false"
+
+                    {% if already_applied %}
+                        disabled
+                    {% endif %}
+                >
+
+                    {% if already_applied %}
+
+                        Already Applied
+
+                    {% else %}
+
+                        Select Job
+
+                    {% endif %}
+
+                </button>
+
+            </div>
+
+        </article>
+
+    {% endfor %}
+
+
+{% else %}
+
+
+    <!-- =================================================
+         NO JOBS
+    ================================================== -->
+
+    <div class="no-jobs">
+
+        <p>
+            No jobs are currently available
+            for this job fair.
+        </p>
+
+    </div>
+
+
+{% endif %}
+ 
+
+</section>
+<nav id="kioskFairJobPagination" class="peso-standard-pagination peso-client-pagination" aria-label="Job fair job pages"></nav>
+
+<!-- =================================================
+     JOB FAIR PRESELECTION DATA
+
+     This is used by jobfairjoblist.js
+================================================== -->
+
+<div
+    id="jobFairData"
+
+ 
+data-preselected-job-fair-job-ids='{{ 
+    preselected_job_fair_job_ids | tojson 
+}}'
+
+data-applied-job-ids='{{ 
+    applied_job_ids | tojson 
+}}'
+
+data-preselect-url="{{ preselect_url }}"
+
+hidden
+ 
+
+> </div>
+
+<!-- =================================================
+     CSRF TOKEN
+================================================== -->
+
+<form
+    id="csrfForm"
+    style="display: none;"
+>
+
+ 
+<input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}"
+>
+ 
+
+</form>
+
+<!-- =================================================
+     BOTTOM ACTIONS
+================================================== -->
+
+<footer class="action-footer">
+
+ 
+<!-- BACK -->
+
+<a
+    href="{{ url_for(
+        'kiosk.personal_information',
+        reference_id=registration.reference_id
+    ) }}"
+    class="back-btn"
+>
+    <span aria-hidden="true">←</span>
+    Back
+</a>
+
+
+<!-- INSTRUCTION -->
+
+<div class="footer-instruction">
+    Select a job before proceeding
+</div>
+
+
+<!-- =================================================
+     PROCEED TO QUEUE
+================================================== -->
+
+<a
+    href="{{ url_for(
+        'kiosk.queuing_number',
+        reference_id=registration.reference_id
+    ) }}"
+    class="proceed-btn"
+    id="proceedQueueButton"
+>
+    Proceed to Queue
+    <span aria-hidden="true">→</span>
+</a>
+ 
+
+</footer>
+
+</main>
+
+<!-- =====================================================
+     CUSTOM MODAL
+====================================================== -->
+
+<div
+    class="modal-overlay"
+    id="kioskModal"
+    aria-hidden="true"
+>
+
+ 
+<div
+    class="kiosk-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="kioskModalTitle"
+>
+
+    <div class="modal-icon" id="kioskModalIcon">
+        !
+    </div>
+
+    <div class="modal-content">
+
+        <h2 id="kioskModalTitle">
+            Notice
+        </h2>
+
+        <p id="kioskModalMessage">
+            Please select at least one job before proceeding.
+        </p>
+
+    </div>
+
+    <div class="modal-actions">
+
+        <button
+            type="button"
+            class="modal-cancel-btn"
+            id="kioskModalCancel"
+        >
+            Cancel
+        </button>
+
+        <button
+            type="button"
+            class="modal-confirm-btn"
+            id="kioskModalConfirm"
+        >
+            OK
+        </button>
+
+    </div>
+
+</div>
+ 
+
+</div>
+
+<!-- =====================================================
+     ONSCREEN KEYBOARD
+====================================================== -->
+
+{% include "kiosk/components/kiosk_keyboard.html" %}
+
+
+<!-- =====================================================
+     JAVASCRIPT
+====================================================== -->
+
+<script
+    src="{{ url_for(
+        'static',
+        filename='javascript/kiosk/kiosk_keyboard.js'
+    ) }}"
+></script>
+
+<script src="{{ url_for('static', filename='javascript/kiosk/kiosk_job_pagination.js') }}"></script>
+
+<script
+    src="{{ url_for(
+        'static',
+        filename='javascript/kiosk/jobfairjoblist.js'
+    ) }}"
+></script>
+
+{% include "kiosk/components/kiosk_logout.html" %}
+    <script defer src="{{ url_for('static', filename='javascript/kiosk/kiosk_scrollbar.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='javascript/kiosk/kiosk_sleep.js') }}" data-home="{{ url_for('kiosk.dashboard') }}" data-is-home="false"></script>
+</body>
+
+</html>

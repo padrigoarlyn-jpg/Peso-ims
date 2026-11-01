@@ -1,0 +1,30 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Bad Request | PESO{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/errors/error_pages.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="error-page" aria-labelledby="error-title">
+    <div class="error-card">
+        <div class="error-icon" aria-hidden="true">
+            <i class="fa-solid fa-circle-exclamation"></i>
+        </div>
+        <p class="error-code">Error 400</p>
+        <h1 id="error-title">Invalid Request</h1>
+        <p class="error-message">{{ error_message or "The request could not be processed. Please check the information provided and try again." }}</p>
+        <div class="error-actions">
+            <button type="button" class="error-btn error-btn-secondary" onclick="history.back()">
+                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                Go Back
+            </button>
+            <a href="{{ url_for('home.index') }}" class="error-btn error-btn-primary">
+                <i class="fa-solid fa-house" aria-hidden="true"></i>
+                Return Home
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Queue Confirmed | PESO</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/kiosk/QueueConfirmationKiosk.css') }}"
+    >
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/peso_foundation.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/peso_polish.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_logout.css') }}">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_scrollbar.css') }}">
+    <!-- Shared 15.6-inch kiosk touchscreen scaling (load last) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_screen_15inch.css') }}">
+</head>
+
+<body class="kiosk-app" data-ui-phase="5">
+{% include "kiosk/_kiosk_flash.html" %}
+
+
+<main class="confirmation-page">
+
+    <!-- =========================================================
+         SUCCESS HEADER
+    ========================================================== -->
+
+    <section class="confirmation-card">
+
+
+        <!-- =====================================================
+             SUCCESS ICON
+        ====================================================== -->
+
+        <div class="success-icon">
+
+            <div class="success-icon-circle">
+                ✓
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             TITLE
+        ====================================================== -->
+
+        <span class="confirmation-eyebrow">
+            PESO JOB FAIR
+        </span>
+
+        <h1>
+            You're All Set!
+        </h1>
+
+        <p class="confirmation-message">
+            {% if existing_queue_view %}
+            Your existing queue is still active. No new ticket was printed.
+            Keep your original ticket and follow the queue instructions.
+            {% else %}
+            Your queue has been saved. Keep your ticket and follow the queue instructions.
+            {% endif %}
+        </p>
+
+
+        <!-- =====================================================
+             QUEUE NUMBERS
+        ====================================================== -->
+
+        <section class="confirmed-queues">
+
+            <div class="queue-section-header">
+
+                <span>
+                    {% if existing_queue_view %}YOUR EXISTING QUEUE{% else %}YOUR QUEUE NUMBERS{% endif %}
+                </span>
+
+            </div>
+
+
+            <div class="confirmation-queue-list">
+
+                {% for queue in queue_data %}
+
+                    <div class="confirmation-queue-card">
+
+                        <!-- QUEUE NUMBER -->
+
+                        <div class="confirmation-queue-number">
+                            {{ queue.queue_number }}
+                        </div>
+
+
+                        <!-- QUEUE DETAILS -->
+
+                        <div class="confirmation-queue-details">
+
+                            <span class="confirmation-company">
+                                {{ queue.company }}
+                            </span>
+
+                            {% for job in queue.jobs %}
+
+                                <span class="confirmation-job">
+                                    {{ job.job_title }}
+                                </span>
+
+                            {% endfor %}
+
+                        </div>
+
+
+                        <!-- QUEUE STATUS -->
+
+                        <div
+                            class="confirmation-queue-status {% if queue.group_status == 'Active' %}active{% else %}waiting{% endif %}"
+                        >
+
+                            {% if queue.group_status == "Active" %}
+
+                                NOW
+
+                            {% else %}
+
+                                WAIT
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================================
+             INSTRUCTIONS
+        ====================================================== -->
+
+        <div class="confirmation-instructions">
+
+            <div class="instruction-icon">
+                !
+            </div>
+
+            <div class="instruction-text">
+
+                <strong>
+                    What happens next?
+                </strong>
+
+                <span>
+                    {% if existing_queue_view %}
+                    Your previous queue number remains valid. You do not need another ticket.
+                    {% else %}
+                    Keep your ticket with you. Your queue number will be called when it is your turn to visit the employer booth.
+                    {% endif %}
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             FINISH BUTTON
+        ====================================================== -->
+
+        <a
+            href="{{ url_for('kiosk.dashboard') }}"
+            class="finish-button"
+        >
+
+            <span>
+                Return to Home
+            </span>
+
+            <span class="finish-arrow">
+                →
+            </span>
+
+        </a>
+
+
+        <p class="finish-hint">
+            Tap Return to Home to start again for the next applicant.
+        </p>
+
+
+    </section>
+
+</main>
+
+<script
+    src="{{ url_for('static', filename='javascript/kiosk/QueueConfirmation.js') }}"
+></script>
+
+{% include "kiosk/components/kiosk_logout.html" %}
+    <script defer src="{{ url_for('static', filename='javascript/kiosk/kiosk_scrollbar.js') }}"></script>
+</body>
+
+</html>

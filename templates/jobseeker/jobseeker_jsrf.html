@@ -1,0 +1,1473 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}jobseeker-app{% endblock %}
+
+{% block title %}NSRP Registration Form | PESO IMS{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared/jsrf_education_layout_refine.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared/jsrf_eligibility_tvet_dropdowns.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared/jsrf_step3_scope_secondary_ui.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared/jsrf_education_step.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared/jsrf_choice_selects.css') }}">
+<style>
+.jsrf-preferred-employment-row{display:block;width:100%;min-width:0}
+.jsrf-preferred-employment-row>.input-group{width:100%;min-width:0}
+.jsrf-preferred-employment-row .jsrf-preferred-types{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;width:100%!important;max-width:none!important}
+.jsrf-preferred-employment-row .jsrf-preferred-types>.check-card{width:100%!important;min-width:0!important;margin:0!important;box-sizing:border-box;justify-content:center}
+@media(max-width:420px){.jsrf-preferred-employment-row .jsrf-preferred-types{gap:8px!important}}
+</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared/jsrf_dropdown_enhancements.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared/jsrf_usability_polish.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared/jsrf_age_validation.css') }}">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_jsrf.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_ui_consistency.css') }}">
+<style id="jsrf-step8-attestation-compact-v2">
+/* Scoped to Step 8, after all linked stylesheets; overrides old inline sizes. */
+#step8 .jsrf-attestation-section {margin-top:26px!important;padding-top:22px!important;border-top:1px solid #d9e3f0;min-width:0}
+#step8 .jsrf-attestation-heading {display:block;margin:0 0 14px!important;padding:0 0 0 12px!important;border-left:3px solid #94a3b8;color:#0b2853!important;font-size:15px!important;line-height:1.4!important;font-weight:750!important;letter-spacing:.015em!important;text-transform:uppercase}
+#step8 .privacy-terms-container {min-height:0!important;padding:14px 16px!important;margin-bottom:14px!important;font-size:13px!important;line-height:1.5!important}
+#step8 .privacy-terms-container p {font-size:13px!important;line-height:1.5!important;margin-bottom:8px!important}
+#step8 .privacy-terms-container p:first-child {font-size:15px!important;line-height:1.4!important;margin-bottom:9px!important}
+#step8 .privacy-terms-container p:last-child {margin-bottom:0!important}
+#step8 .jsrf-attestation-section .attestation-card {display:flex!important;align-items:flex-start!important;gap:10px!important;min-width:0!important;padding:11px 13px!important;margin:0!important;line-height:1.45!important}
+#step8 .jsrf-attestation-section .attestation-card span,#step8 .jsrf-attestation-section .attestation-card strong {font-size:13px!important;line-height:1.45!important;letter-spacing:normal!important}
+#step8 .jsrf-attestation-section .attestation-card input[type=checkbox] {appearance:auto!important;-webkit-appearance:checkbox!important;width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;max-width:16px!important;max-height:16px!important;flex:0 0 16px!important;margin:2px 0 0!important;padding:0!important}
+@media(max-width:600px){ #step8 .jsrf-attestation-heading{font-size:13px!important}#step8 .privacy-terms-container{padding:12px!important}#step8 .privacy-terms-container p{font-size:12px!important}#step8 .privacy-terms-container p:first-child{font-size:13px!important}#step8 .jsrf-attestation-section .attestation-card{padding:10px!important;gap:9px!important}#step8 .jsrf-attestation-section .attestation-card span,#step8 .jsrf-attestation-section .attestation-card strong{font-size:12px!important}}
+</style>
+
+<style>
+.jsrf-answer-card{margin-bottom:20px;padding:18px;border:1px solid #d9e3f1;border-radius:12px;background:#fff}
+.jsrf-answer-question{margin:0 0 12px;font-size:15px;font-weight:700;color:#334155}
+.jsrf-answer-required{font-size:12px;font-weight:600;color:#b91c1c;margin-left:7px}
+.jsrf-original-bypass{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.jsrf-answer-options{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.jsrf-answer-option{min-width:0;min-height:48px;padding:11px;border:1px solid #cbd5e1;border-radius:9px;background:#f8fafc;color:#475569;font:inherit;font-weight:600;cursor:pointer;text-align:center;white-space:normal}
+.jsrf-answer-option[aria-pressed="true"]{background:#edf4ff;border:1px solid #1746a2;color:#123b8a;box-shadow:0 0 0 1px #1746a2 inset}
+.jsrf-answer-option:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+.jsrf-answer-help{font-size:12px;color:#64748b;margin:10px 0 0}
+@media(max-width:520px){.jsrf-answer-card{padding:13px}.jsrf-answer-options{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/jobseeker_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper" data-user-id="{{ current_user.public_id }}">
+
+    <!-- SIDEBAR PROCESS TRACKER -->
+    <aside class="sidebar-tracker">
+        <div class="tracker-header">
+            <h3>Registration Progress</h3>
+            <p>National Skills Registration (NSRP Form 1)</p>
+        </div>
+
+        <div class="vertical-timeline">
+            <div class="timeline-step active" id="node1" onclick="goToStep(1)">
+                <div class="step-icon" id="icon1">1</div>
+                <div class="step-text">
+                    <span class="step-label">STEP 1</span>
+                    <strong>Personal & Contact Info</strong>
+                </div>
+            </div>
+            <div class="timeline-step" id="node2" onclick="goToStep(2)">
+                <div class="step-icon" id="icon2">2</div>
+                <div class="step-text">
+                    <span class="step-label">STEP 2</span>
+                    <strong>Employment Status</strong>
+                </div>
+            </div>
+            <div class="timeline-step" id="node3" onclick="goToStep(3)">
+                <div class="step-icon" id="icon3">3</div>
+                <div class="step-text">
+                    <span class="step-label">STEP 3</span>
+                    <strong>Job Preferences</strong>
+                </div>
+            </div>
+            <div class="timeline-step" id="node4" onclick="goToStep(4)">
+                <div class="step-icon" id="icon4">4</div>
+                <div class="step-text">
+                    <span class="step-label">STEP 4</span>
+                    <strong>Language Proficiency</strong>
+                </div>
+            </div>
+            <div class="timeline-step" id="node5" onclick="goToStep(5)">
+                <div class="step-icon" id="icon5">5</div>
+                <div class="step-text">
+                    <span class="step-label">STEP 5</span>
+                    <strong>Education & Training</strong>
+                </div>
+            </div>
+            <div class="timeline-step" id="node6" onclick="goToStep(6)">
+                <div class="step-icon" id="icon6">6</div>
+                <div class="step-text">
+                    <span class="step-label">STEP 6</span>
+                    <strong>Eligibility & License</strong>
+                </div>
+            </div>
+            <div class="timeline-step" id="node7" onclick="goToStep(7)">
+                <div class="step-icon" id="icon7">7</div>
+                <div class="step-text">
+                    <span class="step-label">STEP 7</span>
+                    <strong>Work History</strong>
+                </div>
+            </div>
+            <div class="timeline-step" id="node8" onclick="goToStep(8)">
+                <div class="step-icon" id="icon8">8</div>
+                <div class="step-text">
+                    <span class="step-label">STEP 8</span>
+                    <strong>Skills & Attestation</strong>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- FORM ENGINE AREA -->
+    <div class="form-content-area">
+
+        <!-- Dynamic Progress Banner -->
+        <div class="reward-banner">
+            <span id="rewardText">Let's start with the basics! Help employers learn who you are.</span>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progressBar" style="width: 14%;"></div>
+            </div>
+        </div>
+
+        <form id="nsrpMultiForm" action="{{ url_for('jobseeker.jsrf') }}" method="POST" autocomplete="off"
+            onsubmit="return validateForm(event)">
+
+            {{ form.csrf_token }}
+
+            <!-- STEP 1: Personal & Contact Details -->
+            <div class="form-step active-step" id="step1">
+                <div class="step-header">
+                    <h2>Personal & Contact Details</h2>
+                    <p>Where can employers reach you regarding hiring processes?</p>
+                </div>
+
+                <div class="form-card-section">
+                    <label class="subsection-title">Legal Identification</label>
+                    <div class="input-grid grid-3">
+                        <div class="input-group">
+                            <label>Surname</label>
+                            {{ form.last_name(placeholder="Surname", required=True, value=jobseeker.last_name if
+                            jobseeker and jobseeker.last_name else '') }}
+                        </div>
+                        <div class="input-group">
+                            <label>First Name</label>
+                            {{ form.first_name(placeholder="First Name", required=True, value=jobseeker.first_name if
+                            jobseeker and jobseeker.first_name else '') }}
+                        </div>
+                        <div class="input-group">
+                            <label>Middle Name</label>
+                            {{ form.middle_name(placeholder="Middle Name", value=jobseeker.middle_name if jobseeker and
+                            jobseeker.middle_name else '') }}
+                        </div>
+                    </div>
+                    <div class="input-grid grid-3" style="margin-top: 15px;">
+                        <div class="input-group">
+                            <label>Suffix (e.g., Jr., Sr.)</label>
+                            {{ form.suffix(placeholder="Suffix", value=jobseeker.suffix if jobseeker and
+                            jobseeker.suffix else '') }}
+                        </div>
+                        <div class="input-group">
+                            <label>Date of Birth <span style="color:#a33232;font-size:.85em">(Required)</span></label>
+                            {{ form.birthdate(type="date", required=True, value=jobseeker.birthdate if jobseeker and
+                            jobseeker.birthdate else '') }}
+                        </div>
+                        <div class="input-group">
+                            <label for="religionSelect">Religion</label>
+
+                            <input type="hidden" name="religion" id="religionValue"
+                                value="{{ jobseeker.religion if jobseeker and jobseeker.religion else '' }}">
+
+                            <select id="religionSelect" class="form-control" onchange="toggleReligionOther(this)">
+                                <option value="">-- Select Religion --</option>
+                                <option value="Roman Catholic">Roman Catholic</option>
+                                <option value="Islam">Islam</option>
+                                <option value="Iglesia ni Cristo">Iglesia ni Cristo</option>
+                                <option value="Evangelical / Protestant">Evangelical / Protestant</option>
+                                <option value="Born Again Christian">Born Again Christian</option>
+                                <option value="Seventh-day Adventist">Seventh-day Adventist</option>
+                                <option value="Jehovah's Witnesses">Jehovah's Witnesses</option>
+                                <option value="Aglipayan / Philippine Independent Church">Aglipayan / Philippine
+                                    Independent Church</option>
+                                <option value="The Church of Jesus Christ of Latter-day Saints">The Church of Jesus
+                                    Christ of Latter-day Saints</option>
+                                <option value="Buddhism">Buddhism</option>
+                                <option value="Hinduism">Hinduism</option>
+                                <option value="Indigenous / Traditional Beliefs">Indigenous / Traditional Beliefs
+                                </option>
+                                <option value="None / No Religion">None / No Religion</option>
+                                <option value="Others">Others</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="religionOtherDrawer" class="conditional-drawer religion-other-drawer input-group">
+                        <label for="religionOtherInput">Please specify your religion</label>
+                        <input type="text" id="religionOtherInput" placeholder="Enter religion" autocomplete="off"
+                            maxlength="100">
+                    </div>
+
+                    <div class="input-grid grid-2" style="margin-top: 15px;">
+                        <div class="input-group">
+                            <label>TIN</label>
+                            {{ form.tin(
+                            id="tinField",
+                            placeholder="000-000-000 or 000-000-000-000",
+                            maxlength="15",
+                            inputmode="numeric",
+                            autocomplete="off",
+                            pattern="[0-9]{3}-[0-9]{3}-[0-9]{3}(-[0-9]{1,3})?",
+                            title="TIN must contain 9 to 12 digits, grouped every 3 digits (e.g., 123-456-789 or
+                            123-456-789-000).",
+                            value=jobseeker.tin if jobseeker and jobseeker.tin else ''
+                            ) }}
+                            <small class="form-help-text">Enter 9 to 12 digits. Dashes are added automatically every 3
+                                digits.</small>
+                        </div>
+                        <div class="input-group">
+                            <label>Height (cm)</label>
+                            {{ form.height(id="heightField", placeholder="e.g., 160", inputmode="numeric",
+                            maxlength="3", pattern="[0-9]{2,3}", title="Enter height in centimeters using 2 or 3 digits
+                            (50–250 cm).", value=jobseeker.height if
+                            jobseeker and jobseeker.height else '') }}
+                            <small class="form-help-text">Enter height in centimeters (50–250 cm).</small>
+                        </div>
+                    </div>
+
+                    <div class="input-grid grid-2" style="margin-top: 20px;">
+                        <div class="input-group">
+                            <label>Civil Status</label>
+                            <div class="radio-pill-group civil-status-pills">
+                                {% for subfield in form.civil_status %}
+                                <label class="radio-pill">
+                                    {{ subfield() }}
+                                    <span>{{ "Fisherfolk" if subfield.data == "Fisherman" else subfield.label.text }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>Sex</label>
+                            <div class="radio-pill-group">
+                                {% for subfield in form.sex %}
+                                <label class="radio-pill">
+                                    {{ subfield() }}
+                                    <span>{{ subfield.label.text }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-card-section" style="margin-top: 20px;">
+                    <label class="subsection-title">Current Address</label>
+                    <div class="input-grid grid-3">
+                        <div class="input-group">
+                            <label for="province">Province</label>
+                            <select id="province" name="province" required
+                                data-selected="{{ jobseeker.province if jobseeker and jobseeker.province else '' }}">
+                                <option value="">Loading provinces...</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="city">Municipality / City</label>
+                            <select id="city" name="city" required
+                                data-selected="{{ jobseeker.city if jobseeker and jobseeker.city else '' }}" disabled>
+                                <option value="">Select province first</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="barangay">Barangay</label>
+                            <select id="barangay" name="barangay" required
+                                data-selected="{{ jobseeker.barangay if jobseeker and jobseeker.barangay else '' }}"
+                                disabled>
+                                <option value="">Select city / municipality first</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-grid" style="margin-top: 15px;">
+                        <div class="input-group">
+                            <label>House No. / Street Village</label>
+                            {{ form.street(placeholder="House No. / Street Village", required=True,
+                            value=jobseeker.street if jobseeker and jobseeker.street else '') }}
+                        </div>
+                    </div>
+
+                    <label class="subsection-title" style="margin-top: 25px;">Contact Credentials</label>
+                    <div class="input-grid grid-2">
+                        <div class="input-group feedback-group">
+                            <label>Active Email Address</label>
+                            {{ form.email(id="emailField", placeholder="name@example.com", required=True,
+                            oninput="validateLiveEmail()", value=current_user.email if current_user else '') }}
+                            <i class="fa-solid fa-circle-check feedback-icon"></i>
+                        </div>
+                        <div class="input-group feedback-group">
+                            <label>Mobile Contact Number</label>
+                            {{ form.contact_number(id="phoneField", placeholder="09XXXXXXXXX", required=True,
+                            oninput="validateLivePhone()", value=jobseeker.contact_number if jobseeker and
+                            jobseeker.contact_number else '') }}
+                            <i class="fa-solid fa-circle-check feedback-icon"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions action-right">
+                    <a href="{{ url_for('jobseeker.dashboard') }}" class="btn-secondary">Cancel</a>
+                    <button type="button" class="btn-primary" onclick="goToStep(2)">Next Step <i
+                            class="fa-solid fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- STEP 2: Current Employment Situation -->
+            <div class="form-step" id="step2">
+                <div class="step-header">
+                    <h2>Current Employment Situation</h2>
+                    <p>Help DOLE accurately capture your active work profile status classification.</p>
+                </div>
+
+                <div class="form-card-section">
+                    <div class="input-grid grid-2">
+                        <div class="input-group">
+                            <label>What is your current work status?</label>
+                            {{ form.employment_status(id="empStatusSelect", onchange="toggleEmploymentDrawers()") }}
+                        </div>
+                        <div class="input-group">
+                            <label>Are you a 4Ps Beneficiary?</label>
+                            <div class="radio-pill-group">
+                                {% for subfield in form.fourps %}
+                                <label class="radio-pill">
+                                    {{ subfield(id="fourpsYes" if subfield.data == "yes" else "fourpsNo",
+                                    onchange="toggleFourPsDrawer()") }}
+                                    <span>{{ subfield.label.text }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="fourpsDrawer" class="conditional-drawer" style="margin-top: 15px;">
+                        <div class="input-group">
+                            <label>Please provide your 4Ps Household ID No.</label>
+                            {{ form.fourps_id(placeholder="Enter Household ID Number") }}
+                        </div>
+                    </div>
+
+                    <label class="subsection-title" style="margin-top: 25px;">Migrant Worker Profile (OFW
+                        Status)</label>
+                    <div class="input-grid grid-2"
+                        style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <div class="input-group">
+                            <label>Are you an OFW?</label>
+                            <div class="radio-pill-group">
+                                {% for subfield in form.ofw_status %}
+                                <label class="radio-pill">
+                                    {{ subfield(id="ofwYes" if subfield.data == "yes" else "ofwNo",
+                                    onchange="toggleOfwFields()") }}
+                                    <span>{{ subfield.label.text }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                            {{ form.ofw_country(id="ofwCountry", placeholder="Specify target country location...",
+                            style="margin-top: 10px; height: 42px; display: none;") }}
+                        </div>
+                        <div class="input-group">
+                            <label>Are you a former OFW?</label>
+                            <div class="radio-pill-group">
+                                {% for subfield in form.former_ofw %}
+                                <label class="radio-pill">
+                                    {{ subfield(id="formerOfwYes" if subfield.data == "yes" else "formerOfwNo",
+                                    onchange="toggleFormerOfwFields()") }}
+                                    <span>{{ subfield.label.text }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                            <div id="formerOfwFields"
+                                style="display: none; flex-direction: column; gap: 10px; margin-top: 10px;">
+                                {{ form.former_ofw_country(placeholder="Latest country of deployment...", style="height:
+                                42px;") }}
+                                {{ form.former_ofw_return_date(placeholder="Month and year of return to Philippines
+                                (MM/YYYY)...", style="height: 42px;") }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="employedDrawer" class="conditional-drawer active-drawer">
+                        <label class="subsection-title" style="margin-top: 25px;">Employment Specifications</label>
+                        <div class="input-group">
+                            <label>Select Employment Classification Type:</label>
+                            <div class="radio-pill-group">
+                                {% for subfield in form.employed_type %}
+                                <label class="radio-pill">
+                                    {{ subfield(id="typeWage" if subfield.data == "wage" else "typeSelf",
+                                    onchange="toggleSelfEmployedOptions()") }}
+                                    <span>{{ subfield.label.text }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div id="selfEmployedSubDrawer" class="conditional-drawer"
+                            style="margin-top: 20px; padding-left: 20px; border-left: 3px solid #cbd5e1;">
+                            <div class="input-group">
+                                <label style="font-size: 13px; color: #475569;">Specify Self-Employment Sector
+                                    Type:</label>
+                            </div>
+                            <div class="modern-checkbox-grid" style="margin-top: 8px;">
+                                {% for subfield in form.self_sector %}
+                                <label class="check-card">
+                                    {{ subfield(id="otherSelfCheck" if subfield.data == "Others" else "",
+                                    onchange="toggleOtherSelfInput()") }}
+                                    <span>{{ "Fisherfolk" if subfield.data == "Fisherman" else subfield.label.text }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+
+                            <div id="otherSelfInputDrawer" class="conditional-drawer" style="margin-top: 12px;">
+                                <div class="input-group">
+                                    {{ form.self_sector_other(placeholder="Please specify your self-employment sector", style="height: 42px;") }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="unemployedDrawer" class="conditional-drawer">
+                        <label class="subsection-title" style="margin-top: 25px;">Unemployment Specifications</label>
+                        <div class="input-grid grid-2">
+                            <div class="input-group">
+                                <label>Reason for Unemployment</label>
+                                {{ form.unemployed_reason(id="unemployedReasonSelect",
+                                onchange="toggleOtherUnemployedInput()") }}
+                            </div>
+                            <div class="input-group">
+                                <label>How long have you been looking for work? (Months)</label>
+                                {{ form.jobsearch_duration(placeholder="e.g., 3", min="0") }}
+                            </div>
+                        </div>
+
+                        <div id="unemployedCountryDrawer" class="conditional-drawer" style="margin-top: 12px;">
+                            <div class="input-group">
+                                <label>Specify Country of Termination:</label>
+                                {{ form.termination_country(placeholder="Enter country location...", style="height:
+                                42px;") }}
+                            </div>
+                        </div>
+                        <div id="unemployedOtherDrawer" class="conditional-drawer" style="margin-top: 12px;">
+                            <div class="input-group">
+                                <label>Specify Reason Details:</label>
+                                {{ form.unemployed_reason_other(placeholder="Please specify reason details...",
+                                style="height: 42px;") }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-group" style="margin-top: 30px;">
+                        <label>Disability Classification (If applicable)</label>
+                        <div class="modern-checkbox-grid">
+                            {% for subfield in form.disability %}
+                            <label class="check-card">
+                                {{ subfield(id="otherDisabilityCheck" if subfield.data == "Others" else "",
+                                onchange="toggleOtherDisability()" if subfield.data == "Others" else "") }}
+                                <span>{{ subfield.label.text }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div id="otherDisabilityDrawer" class="conditional-drawer" style="margin-top: 15px;">
+                        <div class="input-group">
+                            <label>Please specify disability details:</label>
+                            {{ form.disability_other(id="otherDisabilityInput", placeholder="Enter specific disability
+                            details") }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions action-right">
+                    <button type="button" class="btn-secondary" onclick="goToStep(1)"><i
+                            class="fa-solid fa-arrow-left"></i> Back</button>
+                    <button type="button" class="btn-primary" onclick="goToStep(3)">Next Step <i
+                            class="fa-solid fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- STEP 3: Job Preferences -->
+            <div class="form-step" id="step3">
+                <div class="step-header">
+                    <h2>Job Preference Targets</h2>
+                    <p>Specify your employment schedule types, priority occupation roles, and target location
+                        parameters.</p>
+                </div>
+                <div class="form-card-section">
+                    <div class="jsrf-preferred-employment-row">
+                        <div class="input-group">
+                            <label>Preferred Employment Type</label>
+                            <div class="jsrf-preferred-types">
+                                {% for subfield in form.pref_job_type %}
+                                <label class="check-card" style="flex:1;">
+                                    {{ subfield() }}
+                                    <span>{{ subfield.label.text }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <label class="subsection-title" style="margin-top: 25px;">Preferred Occupations (Ranked
+                        Hierarchy)</label>
+                    
+<div class="input-grid grid-3">
+                        <div class="input-group">
+                            <label style="font-size: 12px; color: #64748b;">1st Choice Preference <span class="jsrf-required">Required</span></label>
+                            {{ form.pref_occupation_1(list="preferred-occupation-options", autocomplete="off", placeholder="e.g., Office Clerk", required=True) }}
+                        </div>
+                        <div class="input-group">
+                            <label style="font-size: 12px; color: #64748b;">2nd Choice Preference <span class="jsrf-optional">Optional</span></label>
+                            {{ form.pref_occupation_2(list="preferred-occupation-options", autocomplete="off", placeholder="e.g., Data Encoder") }}
+                        </div>
+                        <div class="input-group">
+                            <label style="font-size: 12px; color: #64748b;">3rd Choice Preference <span class="jsrf-optional">Optional</span></label>
+                            {{ form.pref_occupation_3(list="preferred-occupation-options", autocomplete="off", placeholder="e.g., Customer Service") }}
+                        </div>
+                    </div>
+
+                    <div class="input-group" style="margin-top: 30px;">
+                        <label>Preferred Work Map Location Scope (Select all applicable options)</label>
+                        <div style="display: flex; gap: 15px;">
+                            {% for subfield in form.location_scope %}
+                            <label class="check-card" style="flex:1;">
+                                {% if subfield.data == 'Local' or 'Local' in subfield.label.text %}
+                                {{ subfield(id="localCheck", onchange="toggleLocationInputs()") }}
+                                {% else %}
+                                {{ subfield(id="overseasCheck", onchange="toggleLocationInputs()") }}
+                                {% endif %}
+                                <span>{{ subfield.label.text }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="input-grid grid-2" style="margin-top: 15px; gap: 25px;">
+                        <div id="localGroup" style="display: flex; flex-direction: column; gap: 12px;">
+                            <label style="font-weight: 600; font-size: 14px; color: #0E3386;">
+                                <i class="fa-solid fa-map-location-dot"></i> Target Local Cities / Municipalities
+                            </label>
+                            <div class="input-group">
+                                {{ form.local_location_1(placeholder="1st Local Location Choice (e.g., Manila)",
+                                class="local-input", required=True) }}
+                            </div>
+                            <div class="input-group">
+                                {{ form.local_location_2(placeholder="2nd Local Location Choice", class="local-input")
+                                }}
+                            </div>
+                            <div class="input-group">
+                                {{ form.local_location_3(placeholder="3rd Local Location Choice", class="local-input")
+                                }}
+                            </div>
+                        </div>
+
+                        <div id="overseasGroup" class="input-disabled"
+                            style="display: flex; flex-direction: column; gap: 12px;">
+                            <label style="font-weight: 600; font-size: 14px; color: #64748b;" id="overseasLabel">
+                                <i class="fa-solid fa-earth-americas"></i> Target Country Destinations
+                            </label>
+                            <div class="input-group">
+                                {{ form.overseas_location_1(placeholder="1st Overseas Choice (e.g., Japan)",
+                                class="overseas-input", disabled=True) }}
+                            </div>
+                            <div class="input-group">
+                                {{ form.overseas_location_2(placeholder="2nd Overseas Choice", class="overseas-input",
+                                disabled=True) }}
+                            </div>
+                            <div class="input-group">
+                                {{ form.overseas_location_3(placeholder="3rd Overseas Choice", class="overseas-input",
+                                disabled=True) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions action-right">
+                    <button type="button" class="btn-secondary" onclick="goToStep(2)"><i
+                            class="fa-solid fa-arrow-left"></i> Back</button>
+                    <button type="button" class="btn-primary" onclick="goToStep(4)">Next Step <i
+                            class="fa-solid fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- STEP 4: Language Proficiency -->
+            <div class="form-step" id="step4">
+                <div class="step-header">
+                    <h2>Language & Dialect Proficiency</h2>
+                    <p>Check all communication categories that match your native literacy skills.</p>
+                </div>
+                <div class="form-card-section">
+                    <div class="language-select-all"
+                        style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+                        <label class="check-card"
+                            style="display: inline-flex; align-items: center; gap: 8px; padding: 9px 12px;">
+                            <input type="checkbox" id="selectAllLanguages">
+                            <span>Select All Language Proficiencies</span>
+                        </label>
+                    </div>
+                    <style>
+@media (max-width:768px) {
+ #step4 .form-card-section {min-width:0!important;overflow-x:hidden!important;padding-left:10px!important;padding-right:10px!important}
+ #langTable {width:100%!important;min-width:0!important;max-width:100%!important;table-layout:fixed!important;border-collapse:collapse!important}
+ #langTable th,#langTable td {box-sizing:border-box!important;min-width:0!important;max-width:none!important;padding:10px 2px!important;text-align:center!important}
+ #langTable th {white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.2!important;font-size:clamp(8px,2.3vw,11px)!important;overflow:visible!important;text-overflow:clip!important}
+ #langTable th:first-child,#langTable td:first-child {width:32%!important;text-align:left!important}
+ #langTable th:not(:first-child),#langTable td:not(:first-child) {width:17%!important}
+ #langTable td:first-child {overflow-wrap:anywhere!important;font-size:11px!important}
+ #langTable input[type="checkbox"] {width:16px!important;height:16px!important;max-width:100%!important;margin:0 auto!important;display:inline-block!important}
+}
+</style>
+<table class="matrix-table" id="langTable">
+                        <thead>
+                            <tr>
+                                <th>Language / Dialect</th>
+                                <th>Read</th>
+                                <th>Write</th>
+                                <th>Speak</th>
+                                <th>Under<wbr>stand</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>English</strong><input type="hidden" name="lang_name[]" value="English">
+                                </td>
+                                <td><input type="checkbox" name="lang_read_English"></td>
+                                <td><input type="checkbox" name="lang_write_English"></td>
+                                <td><input type="checkbox" name="lang_speak_English"></td>
+                                <td><input type="checkbox" name="lang_understand_English"></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Filipino</strong><input type="hidden" name="lang_name[]" value="Filipino">
+                                </td>
+                                <td><input type="checkbox" name="lang_read_Filipino"></td>
+                                <td><input type="checkbox" name="lang_write_Filipino"></td>
+                                <td><input type="checkbox" name="lang_speak_Filipino"></td>
+                                <td><input type="checkbox" name="lang_understand_Filipino"></td>
+                            </tr>
+                        <tr>
+                                <td><strong>Mandarin</strong><input type="hidden" name="lang_name[]" value="Mandarin"></td>
+                                <td><input type="checkbox" name="lang_read_Mandarin"></td>
+                                <td><input type="checkbox" name="lang_write_Mandarin"></td>
+                                <td><input type="checkbox" name="lang_speak_Mandarin"></td>
+                                <td><input type="checkbox" name="lang_understand_Mandarin"></td>
+                            </tr>
+</tbody>
+                    </table>
+                    <button type="button" class="btn-add-more" onclick="addNewLanguageRow()">
+                        <i class="fa-solid fa-circle-plus"></i> Add Another Language
+                    </button>
+                </div>
+                <div class="form-actions action-right">
+                    <button type="button" class="btn-secondary" onclick="goToStep(3)"><i
+                            class="fa-solid fa-arrow-left"></i> Back</button>
+                    <button type="button" class="btn-primary" onclick="goToStep(5)">Next Step <i
+                            class="fa-solid fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- STEP 5: Educational Background & Certifications -->
+            <div class="form-step" id="step5">
+                <div class="step-header">
+                    <h2>Educational Background</h2>
+                    <p>Provide your formal academic milestone background logs following standard NSRP structures.</p>
+                </div>
+
+                <div class="form-card-section">
+                    <div class="input-group" style="margin-bottom: 25px;">
+                        <label>Currently in school?</label>
+                        <div class="radio-pill-group">
+                            {% for subfield in form.schooling_status %}
+                            <label class="radio-pill">
+                                {{ subfield() }}
+                                <span>{{ subfield.label.text }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- RESPONSIVE EDUCATIONAL BACKGROUND SECTIONS -->
+                                        <div class="education-sections-wrapper" style="display: flex; flex-direction: column; gap: 20px;">
+
+                        <!-- 1. Elementary Level -->
+                        <div class="edu-level-block"
+                            style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; background: #ffffff;">
+                            <label class="subsection-title" style="margin-bottom: 15px;">Elementary</label>
+
+                            <div class="input-grid grid-2">
+                                <div class="input-group">
+                                    <label>School Name & Address</label>
+                                    <input type="text" id="elem_school" name="elem_school"
+                                        placeholder="School Name & Address" class="inline-input">
+                                </div>
+                                <div class="input-group">
+                                    <label>Educational Status</label>
+                                    <select id="elem_status" class="inline-input" onchange="toggleEduStatus('elem')">
+                                        <option value="graduated">Graduated</option>
+                                        <option value="undergraduate">Undergraduate / Attending</option>
+                                        <option value="not_applicable" selected>Not attended (skip this level)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Graduated Fields -->
+                            <div class="input-grid grid-1" id="elem_grad_group" style="margin-top: 15px;">
+                                <div class="input-group">
+                                    <label>Year Graduated</label>
+                                    <input type="text" name="elem_year_grad" placeholder="e.g. 2024" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" title="Enter a four-digit year" class="inline-input">
+                                </div>
+                            </div>
+
+                            <!-- Undergraduate Fields Drawer -->
+                            <div class="input-grid grid-2 conditional-drawer" id="elem_undergrad_group">
+                                <div class="input-group">
+                                    <label>Level Reached (If Undergraduate)</label>
+                                    <input type="text" name="elem_level_reached"
+                                        placeholder="Level Reached (e.g., Grade 5)" class="inline-input" list="elem-levels">
+                                </div>
+                                <div class="input-group">
+                                    <label>Year Last Attended (If Undergraduate)</label>
+                                    <input type="text" name="elem_year_attended" placeholder="e.g. 2024" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" title="Enter a four-digit year"
+                                        class="inline-input">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Secondary Level -->
+                        <div class="edu-level-block"
+                            style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; background: #ffffff;">
+                            <label class="subsection-title" style="margin-bottom: 15px;">Secondary Education</label>
+
+                            <div class="input-group" style="margin-bottom: 15px;">
+                                <label>Secondary Education Type <span class="jsrf-required">Required</span></label>
+                                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                                    <label class="check-card" style="flex: 1; min-width: 180px;">
+                                        <input type="radio" id="secTypeNonK12" name="sec_type" value="Non-K12" required
+                                            onchange="toggleSecondaryStrand()">
+                                        <span>Secondary (Non-K12)</span>
+                                    </label>
+                                    <label class="check-card" style="flex: 1; min-width: 180px;">
+                                        <input type="radio" id="secTypeK12" name="sec_type" value="K-12" required
+                                            onchange="toggleSecondaryStrand()">
+                                        <span>Secondary (K-12)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="input-grid grid-1" id="secInputGrid">
+                                <div class="input-group">
+                                    <label>School Name & Address</label>
+                                    <input type="text" id="sec_school" name="sec_school"
+                                        placeholder="School Name & Address" class="inline-input">
+                                </div>
+
+                                <!-- DYNAMICALLY TOGGLED STRAND CONTAINER -->
+                                <div class="input-group conditional-drawer" id="strandInputGroup">
+                                    <label>Senior High Strand (if K-12)</label>
+                                    <input type="text" id="senior_high_strand" name="senior_high_strand"
+                                        placeholder="e.g., STEM, ABM, HUMSS" class="inline-input" list="strand-suggestions">
+                                </div>
+                            </div>
+
+                            <div class="input-grid grid-2" style="margin-top: 15px;">
+                                <div class="input-group">
+                                    <label>Educational Status</label>
+                                    <select id="sec_status" class="inline-input" onchange="toggleEduStatus('sec')">
+                                        <option value="graduated">Graduated</option>
+                                        <option value="undergraduate">Undergraduate / Attending</option>
+                                        <option value="not_applicable" selected>Not attended (skip this level)</option>
+                                    </select>
+                                </div>
+                                <!-- Graduated Fields -->
+                                <div class="input-group" id="sec_grad_group">
+                                    <label>Year Graduated</label>
+                                    <input type="text" name="sec_year_grad" placeholder="e.g. 2024" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" title="Enter a four-digit year" class="inline-input">
+                                </div>
+                            </div>
+
+                            <!-- Undergraduate Fields Drawer -->
+                            <div class="input-grid grid-2 conditional-drawer" id="sec_undergrad_group">
+                                <div class="input-group">
+                                    <label>Grade Level Reached (If Undergraduate)</label>
+                                    <input type="text" name="sec_level_reached"
+                                        placeholder="Grade Level (e.g., Grade 11)" class="inline-input" list="secondary-levels">
+                                </div>
+                                <div class="input-group">
+                                    <label>Year Last Attended (If Undergraduate)</label>
+                                    <input type="text" name="sec_year_attended" placeholder="e.g. 2024" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" title="Enter a four-digit year" class="inline-input">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Tertiary / College Level -->
+                        <div class="edu-level-block"
+                            style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; background: #ffffff;">
+                            <label class="subsection-title" style="margin-bottom: 15px;">Tertiary / College</label>
+
+                            <div class="input-grid grid-2">
+                                <div class="input-group">
+                                    <label>Course / Degree Program</label>
+                                    <input type="text" name="tertiary_course" id="tertiaryCourseStored" class="inline-input" style="display:none" tabindex="-1" aria-hidden="true">
+                                    <select id="tertiaryCourseSelect" class="inline-input" aria-label="Course or degree program">
+                                        <option value="">Select course / degree program</option>
+                                        <option value="Bachelor of Science in Information Technology (BSIT)">Bachelor of Science in Information Technology (BSIT)</option>
+                                        <option value="Bachelor of Science in Computer Science (BSCS)">Bachelor of Science in Computer Science (BSCS)</option>
+                                        <option value="Bachelor of Science in Information Systems (BSIS)">Bachelor of Science in Information Systems (BSIS)</option>
+                                        <option value="Bachelor of Science in Computer Engineering (BSCpE)">Bachelor of Science in Computer Engineering (BSCpE)</option>
+                                        <option value="Bachelor of Science in Business Administration (BSBA)">Bachelor of Science in Business Administration (BSBA)</option>
+                                        <option value="Bachelor of Science in Accountancy (BSA)">Bachelor of Science in Accountancy (BSA)</option>
+                                        <option value="Bachelor of Science in Entrepreneurship (BSEntrep)">Bachelor of Science in Entrepreneurship (BSEntrep)</option>
+                                        <option value="Bachelor of Science in Office Administration (BSOA)">Bachelor of Science in Office Administration (BSOA)</option>
+                                        <option value="Bachelor of Science in Hospitality Management (BSHM)">Bachelor of Science in Hospitality Management (BSHM)</option>
+                                        <option value="Bachelor of Science in Tourism Management (BSTM)">Bachelor of Science in Tourism Management (BSTM)</option>
+                                        <option value="Bachelor of Elementary Education (BEEd)">Bachelor of Elementary Education (BEEd)</option>
+                                        <option value="Bachelor of Secondary Education (BSEd)">Bachelor of Secondary Education (BSEd)</option>
+                                        <option value="Bachelor of Science in Nursing (BSN)">Bachelor of Science in Nursing (BSN)</option>
+                                        <option value="Bachelor of Science in Psychology (BSPsych)">Bachelor of Science in Psychology (BSPsych)</option>
+                                        <option value="Bachelor of Science in Criminology (BSCrim)">Bachelor of Science in Criminology (BSCrim)</option>
+                                        <option value="Bachelor of Arts in Communication (BA Communication)">Bachelor of Arts in Communication (BA Communication)</option>
+                                        <option value="Bachelor of Science in Civil Engineering (BSCE)">Bachelor of Science in Civil Engineering (BSCE)</option>
+                                        <option value="Bachelor of Science in Electrical Engineering (BSEE)">Bachelor of Science in Electrical Engineering (BSEE)</option>
+                                        <option value="Bachelor of Science in Mechanical Engineering (BSME)">Bachelor of Science in Mechanical Engineering (BSME)</option>
+                                        <option value="Bachelor of Science in Architecture (BS Architecture)">Bachelor of Science in Architecture (BS Architecture)</option>
+                                        <option value="Bachelor of Science in Agriculture (BS Agriculture)">Bachelor of Science in Agriculture (BS Agriculture)</option>
+                                        <option value="Associate Degree / Diploma Program">Associate Degree / Diploma Program</option>
+                                        <option value="__other__">Others (please specify)</option>
+                                    </select>
+                                    <div id="tertiaryCourseOtherWrap" style="display:none; margin-top:10px;">
+                                        <label for="tertiaryCourseOther">Please specify your course / degree program</label>
+                                        <input type="text" id="tertiaryCourseOther" class="inline-input" placeholder="Enter your course / degree program" maxlength="180" disabled>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label>Institution Name</label>
+                                    <input type="text" id="tertiary_school" name="tertiary_school"
+                                        placeholder="Institution Name & Address" class="inline-input">
+                                </div>
+                            </div>
+
+                            <div class="input-grid grid-2" style="margin-top: 15px;">
+                                <div class="input-group">
+                                    <label>Educational Status</label>
+                                    <select id="tertiary_status" class="inline-input"
+                                        onchange="toggleEduStatus('tertiary')">
+                                        <option value="graduated">Graduated</option>
+                                        <option value="undergraduate">Undergraduate / Attending</option>
+                                        <option value="not_applicable" selected>Not attended (skip this level)</option>
+                                    </select>
+                                </div>
+                                <!-- Graduated Fields -->
+                                <div class="input-group" id="tertiary_grad_group">
+                                    <label>Year Graduated</label>
+                                    <input type="text" name="tertiary_year_grad" placeholder="e.g. 2024" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" title="Enter a four-digit year"
+                                        class="inline-input">
+                                </div>
+                            </div>
+
+                            <!-- Undergraduate Fields Drawer -->
+                            <div class="input-grid grid-2 conditional-drawer" id="tertiary_undergrad_group">
+                                <div class="input-group">
+                                    <label>Year Level Reached (If Undergraduate)</label>
+                                    <input type="text" name="tertiary_level_reached"
+                                        placeholder="Year Level (e.g., 3rd Year)" class="inline-input" list="college-levels">
+                                </div>
+                                <div class="input-group">
+                                    <label>Year Last Attended (If Undergraduate)</label>
+                                    <input type="text" name="tertiary_year_attended" placeholder="e.g. 2024" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" title="Enter a four-digit year"
+                                        class="inline-input">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Graduate Studies / Post-graduate Level -->
+                        <div class="edu-level-block"
+                            style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; background: #ffffff;">
+                            <label class="subsection-title" style="margin-bottom: 15px;">Graduate Studies /
+                                Post-graduate</label>
+
+                            <div class="input-grid grid-2">
+                                <div class="input-group">
+                                    <label>Degree / Master's / Doctorate</label>
+                                    <input type="hidden" id="gradCourseStored" name="grad_course">
+                                    <select id="gradCourseSelect" class="inline-input" aria-label="Degree / Master's / Doctorate">
+                                        <option value="">Select graduate degree</option>
+                                        <optgroup label="Master's Degrees">
+                                            <option>Master of Arts (MA)</option>
+                                            <option>Master of Science (MS / MSc)</option>
+                                            <option>Master of Science in Information Technology (MSIT)</option>
+                                            <option>Master of Science in Computer Science (MSCS)</option>
+                                            <option>Master in Information Technology (MIT)</option>
+                                            <option>Master in Business Administration (MBA)</option>
+                                            <option>Master in Public Administration (MPA)</option>
+                                            <option>Master of Arts in Education (MAEd)</option>
+                                            <option>Master of Education (MEd)</option>
+                                            <option>Master of Engineering (MEng)</option>
+                                            <option>Master of Science in Nursing (MSN)</option>
+                                            <option>Master of Public Health (MPH)</option>
+                                            <option>Master of Laws (LLM)</option>
+                                        </optgroup>
+                                        <optgroup label="Doctoral Degrees">
+                                            <option>Doctor of Philosophy (PhD)</option>
+                                            <option>Doctor of Education (EdD)</option>
+                                            <option>Doctor of Business Administration (DBA)</option>
+                                            <option>Doctor of Public Administration (DPA)</option>
+                                            <option>Doctor of Information Technology (DIT)</option>
+                                            <option>Doctor of Medicine (MD)</option>
+                                            <option>Juris Doctor (JD)</option>
+                                        </optgroup>
+                                        <option value="__other__">Others (please specify)</option>
+                                    </select>
+                                    <div id="gradCourseOtherWrap" style="display:none; margin-top:10px;">
+                                        <label for="gradCourseOther">Please specify your graduate degree</label>
+                                        <input type="text" id="gradCourseOther" class="inline-input"
+                                            placeholder="Enter your master's or doctorate degree" autocomplete="off" maxlength="180" disabled>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label>Institution Name</label>
+                                    <input type="text" name="grad_school" placeholder="Institution Name & Address"
+                                        class="inline-input">
+                                </div>
+                            </div>
+
+                            <div class="input-grid grid-2" style="margin-top: 15px;">
+                                <div class="input-group">
+                                    <label>Educational Status</label>
+                                    <select id="grad_status" class="inline-input" onchange="toggleEduStatus('grad')">
+                                        <option value="graduated">Graduated</option>
+                                        <option value="undergraduate">Undergraduate / Attending</option>
+                                        <option value="not_applicable" selected>Not attended (skip this level)</option>
+                                    </select>
+                                </div>
+                                <!-- Graduated Fields -->
+                                <div class="input-group" id="grad_grad_group">
+                                    <label>Year Graduated</label>
+                                    <input type="text" name="grad_year_grad" placeholder="e.g. 2024" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" title="Enter a four-digit year" class="inline-input">
+                                </div>
+                            </div>
+
+                            <!-- Undergraduate Fields Drawer -->
+                            <div class="input-grid grid-2 conditional-drawer" id="grad_undergrad_group">
+                                <div class="input-group">
+                                    <label>Units Earned / Level (If Undergraduate)</label>
+                                    <input type="text" name="grad_level_reached" placeholder="Units Earned / Level"
+                                        class="inline-input" list="grad-levels">
+                                </div>
+                                <div class="input-group">
+                                    <label>Year Last Attended (If Undergraduate)</label>
+                                    <input type="text" name="grad_year_attended" placeholder="e.g. 2024" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" title="Enter a four-digit year"
+                                        class="inline-input">
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- TVET Section with Toggle Bypass -->
+                    <div style="margin-top: 30px; border-top: 1px dashed #cbd5e1; padding-top: 25px;">
+                        <div class="jsrf-answer-card" data-bypass-control="hasNoTvet">
+                        <p class="jsrf-answer-question">Do you have any technical or vocational (TVET) certifications? <span class="jsrf-answer-required">Required</span></p>
+                        <div class="jsrf-original-bypass"><input type="checkbox" id="hasNoTvet" onchange="toggleTvetSection()"></div>
+                        <div class="jsrf-answer-options" role="group" aria-label="Do you have any technical or vocational (TVET) certifications?">
+                            <button type="button" class="jsrf-answer-option" data-bypass-answer="yes" aria-pressed="false">Yes, I have TVET certifications.</button>
+                            <button type="button" class="jsrf-answer-option" data-bypass-answer="no" aria-pressed="false">No, I do not have any.</button>
+                        </div>
+                        <p class="jsrf-answer-help">Select Yes to complete this section, or No if it does not apply to you.</p>
+                    </div>
+
+                        <div class="conditional-drawer active-drawer" id="tvetDrawer">
+                            <label class="subsection-title">Technical / Vocational Certifications (TVET)</label>
+                            <div id="tvetContainer">
+                                <div class="tvet-row input-grid grid-5">
+                                    <div class="input-group">
+                                        <label>Training Course</label>
+                                        <input type="text" name="tvet_course[]" placeholder="e.g., Web Development" list="tvet-options">
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Hours</label>
+                                        <input type="number" name="tvet_hours[]" placeholder="e.g. 160" min="1" max="100000">
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Training Institution</label>
+                                        <input type="text" name="tvet_institution[]" placeholder="e.g., TESDA">
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Skills Acquired</label>
+                                        <input type="text" name="tvet_skills[]" placeholder="e.g., Coding">
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Certificate Received</label>
+                                        <input type="text" name="tvet_certificate[]" placeholder="e.g., NC II" list="tvet-cert-options">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn-add-more" id="addTvetBtn" onclick="addMoreTVET()"
+                                style="margin-top: 15px;">
+                                <i class="fa-solid fa-circle-plus"></i> Add Another Certification Log
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="form-actions action-right">
+                    <button type="button" class="btn-secondary" onclick="goToStep(4)">
+                        <i class="fa-solid fa-arrow-left"></i> Back
+                    </button>
+                    <button type="button" class="btn-primary" onclick="goToStep(6)">
+                        Next Step <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 6: Eligibility & License -->
+            <div class="form-step" id="step6">
+                <div class="step-header">
+                    <h2>Eligibility / Professional License</h2>
+                    <p>Provide details of your Civil Service eligibilities and PRC professional licenses.</p>
+                </div>
+
+                <div class="form-card-section">
+                    <div class="jsrf-answer-card" data-bypass-control="no-license-check">
+                        <p class="jsrf-answer-question">Do you have Civil Service eligibility or a professional license? <span class="jsrf-answer-required">Required</span></p>
+                        <div class="jsrf-original-bypass">{{ form.no_license(id="no-license-check", onchange="toggleLicenseTable()") }}</div>
+                        <div class="jsrf-answer-options" role="group" aria-label="Do you have Civil Service eligibility or a professional license?">
+                            <button type="button" class="jsrf-answer-option" data-bypass-answer="yes" aria-pressed="false">Yes, I have an eligibility or license.</button>
+                            <button type="button" class="jsrf-answer-option" data-bypass-answer="no" aria-pressed="false">No, I do not have either.</button>
+                        </div>
+                        <p class="jsrf-answer-help">Select Yes to complete this section, or No if it does not apply to you.</p>
+                    </div>
+
+                    <p class="jsrf-help">Include Civil Service, technical / TESDA-related eligibility, or professional credentials as applicable. Choose a suggestion or type another credential.</p>
+                     <datalist id="eligibility-options"><option value="Career Service Professional"><option value="Career Service Subprofessional"><option value="Barangay Official Eligibility"><option value="Honor Graduate Eligibility"><option value="TESDA National Certificate (NC I)"><option value="TESDA National Certificate (NC II)"><option value="TESDA National Certificate (NC III)"><option value="TESDA National Certificate (NC IV)"><option value="Certificate of Competency (COC)"></datalist>
+                     <datalist id="license-options"><option value="PRC Professional License"><option value="TESDA National Certificate"><option value="Driver's License"></datalist>
+                     <p class="jsrf-license-either-note">Complete <strong>either Eligibility or Professional License</strong>. You do not need to fill out both. Enter the corresponding date for the credential you select.</p>
+                     <table class="matrix-table" id="licenseTable">
+                        <thead>
+                            <tr>
+                                <th>ELIGIBILITY (Civil Service)</th>
+                                <th>DATE TAKEN</th>
+                                <th>PROFESSIONAL LICENSE (PRC)</th>
+                                <th>VALID UNTIL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><input type="text" name="eligibility_name[]" class="inline-input" list="eligibility-options" placeholder="Select or specify eligibility"></td>
+                                <td><input type="date" name="eligibility_date[]"></td>
+                                <td><input type="text" name="license_name[]" class="inline-input" list="license-options" placeholder="Select or specify license"></td>
+                                <td><input type="date" name="license_validity[]"></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="form-actions action-right">
+                    <button type="button" class="btn-secondary" onclick="goToStep(5)">
+                        <i class="fa-solid fa-arrow-left"></i> Back
+                    </button>
+                    <button type="button" class="btn-primary" onclick="goToStep(7)">
+                        Next Step <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 7: Work History -->
+            <div class="form-step" id="step7">
+                <div class="step-header">
+                    <h2>Professional Employment History</h2>
+                    <p>Provide work experiences over the past 10-year log timeline window.</p>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <div class="jsrf-answer-card" data-bypass-control="freshGradBypass">
+                        <p class="jsrf-answer-question">Do you have any previous work experience? <span class="jsrf-answer-required">Required</span></p>
+                        <div class="jsrf-original-bypass">{{ form.fresh_grad_bypass(id="freshGradBypass", onchange="toggleWorkHistoryBypass()") }}</div>
+                        <div class="jsrf-answer-options" role="group" aria-label="Do you have any previous work experience?">
+                            <button type="button" class="jsrf-answer-option" data-bypass-answer="yes" aria-pressed="false">Yes, I have work experience.</button>
+                            <button type="button" class="jsrf-answer-option" data-bypass-answer="no" aria-pressed="false">No, I have no previous work experience.</button>
+                        </div>
+                        <p class="jsrf-answer-help">Select Yes to complete this section, or No if it does not apply to you.</p>
+                    </div>
+                </div>
+
+                <div id="workHistoryMainContainer">
+                    <div class="work-history-block form-card-section">
+                        <div class="input-grid grid-2">
+                            <div class="input-group">
+                                <label>Company Name <span class="jsrf-required">Required</span></label>
+                                <input type="text" name="company[]" class="work-req" maxlength="150"
+                                    placeholder="Company Name" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Address (City / Municipality)</label>
+                                <input type="text" name="company_address[]" class="work-req" maxlength="150"
+                                    placeholder="e.g., San Jose del Monte, Bulacan" required>
+                            </div>
+                        </div>
+                        <div class="input-grid grid-3" style="margin-top: 15px;">
+                            <div class="input-group">
+                                <label>Position <span class="jsrf-required">Required</span></label>
+                                <input type="text" name="position[]" class="work-req" maxlength="150"
+                                    placeholder="e.g., Frontend Developer" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Number of Months <span class="jsrf-required">Required</span></label>
+                                <input type="number" name="number_of_months[]" class="work-req" min="0" max="1200"
+                                    step="1" placeholder="e.g., 12" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Status <span class="jsrf-required">Required</span></label>
+                                <input type="text" name="appointment_status[]" class="work-req" maxlength="50"
+                                    placeholder="e.g., Permanent" required list="appointment-options">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" id="addWorkBtn" class="btn-add-more" onclick="addMoreWork()">
+                    <i class="fa-solid fa-circle-plus"></i> Add Previous Employment Position
+                </button>
+
+                <div class="form-actions action-right">
+                    <button type="button" class="btn-secondary" onclick="goToStep(6)"><i
+                            class="fa-solid fa-arrow-left"></i> Back</button>
+                    <button type="button" class="btn-primary" onclick="goToStep(8)">Next Step <i
+                            class="fa-solid fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- STEP 8: SKILLS & ATTESTATION -->
+            <div class="form-step" id="step8">
+                <div class="step-header">
+                    <h2>Skills & Attestation</h2>
+                    <p>Select your uncertified trade skills and finalize your NSRP confirmation authorization.</p>
+                </div>
+
+                <div class="form-card-section">
+                    <label class="subsection-title">Uncertified Practical Skills Registry</label>
+                    <div class="skills-tag-grid">
+                        {% for subfield in form.skills %}
+                        <label class="tag-badge">
+                            {{ subfield() }}
+                            <span>{{ subfield.label.text }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <div class="input-group" id="skillsOtherGroup" style="margin-top: 15px; display: none;">
+                        <label for="skillsOtherInput">Others — Please specify</label>
+
+                        {{ form.skills_other(
+                        id="skillsOtherInput",
+                        placeholder="e.g., Computer Repair, Graphic Design, Video Editing",
+                        maxlength="150"
+                        ) }}
+
+                        <small
+                            style="display: block; margin-top: 6px; font-size: 13px; color: #64748b; line-height: 1.5;">
+                            <i class="fa-solid fa-circle-info" style="margin-right: 5px;"></i>
+                            Separate multiple skills with commas (e.g., Computer Repair, Graphic Design, Video Editing).
+                        </small>
+                    </div>
+
+                    
+                    <script>
+                    (function () {
+                        const group = document.getElementById('skillsOtherGroup');
+                        const input = document.getElementById('skillsOtherInput');
+                        const grid = group && group.parentElement.querySelector('.skills-tag-grid');
+                        if (!group || !input || !grid) return;
+
+                        function syncOtherSkill() {
+                            const others = Array.from(grid.querySelectorAll('input[type="checkbox"], input[type="radio"]'))
+                                .find(field => {
+                                    const label = field.closest('label');
+                                    return (String(field.value).trim().toLowerCase() === 'others') ||
+                                        (label && Array.from(label.querySelectorAll('span'))
+                                            .some(span => span.textContent.trim().toLowerCase() === 'others'));
+                                });
+                            const show = Boolean(others && others.checked);
+                            group.style.display = show ? '' : 'none';
+                            input.disabled = !show;
+                        }
+                        grid.addEventListener('change', syncOtherSkill);
+                        syncOtherSkill();
+                    })();
+                    </script>
+
+                    <div class="legal-attestation-box jsrf-attestation-section" style="margin-top: 35px;">
+                        <div class="jsrf-attestation-heading">PRIVACY &amp; ATTESTATION</div>
+                        <!-- Privacy Policy & Legal Terms Container -->
+                        <div class="privacy-terms-container"
+                            style="min-height: 140px; border: 1px solid #cbd5e1; padding: 18px 20px; border-radius: 8px; background-color: #f8fafc; margin-bottom: 20px; font-size: 0.92rem; color: #475569; line-height: 1.6;">
+                            <p
+                                style="margin-top: 0; font-weight: 700; color: #0E3386; font-size: 1rem; margin-bottom: 8px;">
+                                Data Privacy Act of 2012 (Republic Act No. 10173) Notice & Consent
+                            </p>
+                            <p style="margin-bottom: 10px;">
+                                In compliance with the Data Privacy Act (DPA) of 2012, the Public Employment Service
+                                Office (PESO) and the Department of Labor and Employment (DOLE) are committed to
+                                protecting and respecting your personal data privacy.
+                            </p>
+                            <p style="margin-bottom: 10px;">
+                                By completing and submitting this National Skills Registration (NSRP Form 1) platform,
+                                you authorize the collection, processing, updating, and secure retention of your
+                                personal, educational, professional, and employment information. The data collected will
+                                be utilized exclusively for labor market analysis, employment facilitation services,
+                                manpower matching, and government reporting requirements.
+                            </p>
+                            <p style="margin-bottom: 0;">
+                                Your information will be handled with strict confidentiality and will not be shared with
+                                unauthorized third parties without your explicit consent, except as required or
+                                permitted by law.
+                            </p>
+                        </div>
+
+                        <!-- Single Container Checkbox Cards -->
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <label class="attestation-card">
+                                {{ form.privacy_act_consent(id="privacyActCheck", required=True,
+                                onchange="toggleSubmitButton()", style="width: 18px; height: 18px; margin-top: 2px;
+                                cursor: pointer; flex-shrink: 0; accent-color: #059669;") }}
+                                <span>
+                                    <strong>I have read, understood, and agree</strong> to the terms of the Data Privacy
+                                    Act of 2012 regarding the collection and processing of my personal data.
+                                </span>
+                            </label>
+
+                            <label class="attestation-card">
+                                {{ form.legal_consent(id="legalConsentCheck", required=True,
+                                onchange="toggleSubmitButton()", style="width: 18px; height: 18px; margin-top: 2px;
+                                cursor: pointer; flex-shrink: 0; accent-color: #059669;") }}
+                                <span>
+                                    <strong>I hereby certify</strong> that all information provided in this 8-step
+                                    registration profile is accurate, true, and complete, and I authorize DOLE & PESO to
+                                    store and process this profile.
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 8 Navigation Actions -->
+                <div class="form-actions action-right" style="margin-top: 25px;">
+                    <button type="button" class="btn-secondary" onclick="goToStep(7)">
+                        <i class="fa-solid fa-arrow-left"></i> Back
+                    </button>
+                    <button type="button" id="finalSubmitBtn" class="btn-primary btn-disabled" disabled
+                        onclick="openReviewModal()">
+                        Submit Registration <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Review Inputs Confirmation Modal -->
+<div id="reviewModal" class="modal-overlay" style="display: none;">
+    <div class="modal-container">
+        <div class="modal-header">
+            <div class="modal-title-group">
+                <div>
+                    <h3>Review Registration Details</h3>
+                    <p>Please double-check all your information before final submission.</p>
+                </div>
+            </div>
+            <button type="button" class="modal-close-btn" onclick="closeReviewModal()">&times;</button>
+        </div>
+
+        <div class="modal-body" id="reviewModalContent">
+            <!-- Dynamic summary sections will be rendered here by JS -->
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeReviewModal()">
+                <i class="fa-solid fa-pen-to-square"></i> Edit Details
+            </button>
+            <button type="button" class="btn-primary" onclick="confirmFinalSubmit()">
+                Confirm & Submit <i class="fa-solid fa-check"></i>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<script id="jsrf-field-errors-data" type="application/json">{{ (jsrf_field_errors or {}) | tojson }}</script>
+<style>
+    .jsrf-server-invalid {
+        border-color: #c62828 !important;
+        box-shadow: 0 0 0 2px rgba(198, 40, 40, .12) !important;
+    }
+
+    .jsrf-server-field-error {
+        color: #b42318;
+        font-size: 14px;
+        line-height: 1.45;
+        margin-top: 6px;
+        font-weight: 500;
+    }
+
+    .jsrf-server-error-summary {
+        border-left: 4px solid #c62828;
+        background: #fff5f5;
+        color: #842029;
+        border-radius: 8px;
+        padding: 14px 16px;
+        margin: 12px 0 20px;
+        font-size: 14px;
+    }
+</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared/jsrf_work_history_friendly.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared/jsrf_step8_polish.css') }}?v=20261019compact2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared/jsrf_ofw_dropdowns.css') }}?v=20261020fieldspacing2">
+{% block javascript %}
+<script defer src="{{ url_for('static', filename='javascript/shared/jsrf_ofw_dropdowns.js') }}?v=20261020fieldspacing2"></script>
+<script defer src="{{ url_for('static', filename='javascript/shared/jsrf_education_layout_refine.js') }}"></script>
+<script defer src="{{ url_for('static', filename='javascript/shared/jsrf_eligibility_tvet_dropdowns.js') }}"></script>
+<script defer src="{{ url_for('static', filename='javascript/shared/jsrf_step3_scope_secondary_ui.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/shared/jsrf_education_step.js') }}" defer></script>
+<script defer src="{{ url_for('static', filename='javascript/jobseeker/jsrf_ui_refresh_recovery.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/shared/jsrf_choice_selects.js') }}" defer></script>
+
+<script src="{{ url_for('static', filename='javascript/shared/jsrf_dropdown_enhancements.js') }}" defer></script>
+<script src="{{ url_for('static', filename='javascript/shared/philippine_address.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/jobseeker/jobseeker_jsrf.js') }}"></script>
+<script defer src="{{ url_for('static', filename='javascript/shared/jsrf_sector_card_toggle.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/jobseeker/jsrf_server_errors.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/shared/jsrf_age_validation.js') }}" defer></script>
+
+<script defer src="{{ url_for('static', filename='javascript/shared/jsrf_work_history_friendly.js') }}"></script>
+<script>
+(function(){
+ function sync(card){
+   const checkbox=document.getElementById(card.dataset.bypassControl);
+   if(!checkbox)return;
+   // A checked legacy bypass means No. An unchecked bypass means Yes.
+   // Do not dispatch change during hydration: legacy handlers clear values.
+   card.querySelectorAll('[data-bypass-answer]').forEach(function(btn){
+     const selected=(btn.dataset.bypassAnswer==='no')===checkbox.checked;
+     btn.setAttribute('aria-pressed',String(selected));
+   });
+ }
+ function init(){
+   document.querySelectorAll('[data-bypass-control]').forEach(function(card){
+     const checkbox=document.getElementById(card.dataset.bypassControl);
+     if(!checkbox||card.dataset.answerWired)return;
+     card.dataset.answerWired='1';
+     card.querySelectorAll('[data-bypass-answer]').forEach(function(btn){
+       btn.addEventListener('click',function(){
+         const next=btn.dataset.bypassAnswer==='no';
+         if(checkbox.checked!==next){checkbox.click();}
+         sync(card);
+       });
+     });
+     checkbox.addEventListener('change',function(){sync(card)});
+     sync(card);
+   });
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+ window.addEventListener('pageshow',init);
+})();
+</script>
+<script>
+/* Tertiary course selector: retain the original form field name for backend and drafts. */
+(function () {
+  function setup() {
+    const stored = document.getElementById('tertiaryCourseStored');
+    const select = document.getElementById('tertiaryCourseSelect');
+    const wrap = document.getElementById('tertiaryCourseOtherWrap');
+    const other = document.getElementById('tertiaryCourseOther');
+    if (!stored || !select || !wrap || !other || select.dataset.initialized) return;
+    select.dataset.initialized = 'true';
+    let internal = false;
+    function showOther() {
+      const isOther = select.value === '__other__';
+      wrap.style.display = isOther ? 'block' : 'none';
+      other.disabled = !isOther;
+    }
+    function restore() {
+      if (internal) return;
+      const value = stored.value || '';
+      const known = Array.from(select.options).some(o => o.value === value && value !== '__other__');
+      if (known || !value) { select.value = value; other.value = ''; }
+      else { select.value = '__other__'; other.value = value; }
+      showOther();
+    }
+    function commit() {
+      internal = true;
+      showOther();
+      stored.value = select.value === '__other__' ? other.value.trim() : select.value;
+      stored.dispatchEvent(new Event('input', {bubbles:true}));
+      stored.dispatchEvent(new Event('change', {bubbles:true}));
+      internal = false;
+    }
+    select.addEventListener('change', commit);
+    other.addEventListener('input', commit);
+    stored.addEventListener('input', restore);
+    stored.addEventListener('change', restore);
+    restore();
+    window.addEventListener('pageshow', restore);
+    /* Some draft-restoration scripts populate fields after DOMContentLoaded. */
+    window.addEventListener('load', restore);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup);
+  else setup();
+})();
+</script>
+<script>
+/* Graduate degree selector: keep the existing grad_course form field for backend and draft compatibility. */
+(function () {
+  function setup() {
+    const stored = document.getElementById('gradCourseStored');
+    const select = document.getElementById('gradCourseSelect');
+    const wrap = document.getElementById('gradCourseOtherWrap');
+    const other = document.getElementById('gradCourseOther');
+    if (!stored || !select || !wrap || !other || select.dataset.initialized) return;
+    select.dataset.initialized = 'true';
+    let internal = false;
+    function showOther() {
+      const custom = select.value === '__other__';
+      wrap.style.display = custom ? 'block' : 'none';
+      other.disabled = !custom;
+    }
+    function restore() {
+      if (internal) return;
+      const value = stored.value || '';
+      const known = Array.from(select.options).some(o => o.value === value && value !== '__other__');
+      if (known || !value) { select.value = value; other.value = ''; }
+      else { select.value = '__other__'; other.value = value; }
+      showOther();
+    }
+    function commit() {
+      internal = true;
+      showOther();
+      stored.value = select.value === '__other__' ? other.value.trim() : select.value;
+      stored.dispatchEvent(new Event('input', {bubbles:true}));
+      stored.dispatchEvent(new Event('change', {bubbles:true}));
+      internal = false;
+    }
+    select.addEventListener('change', commit);
+    other.addEventListener('input', commit);
+    stored.addEventListener('input', restore);
+    stored.addEventListener('change', restore);
+    restore();
+    window.addEventListener('pageshow', restore);
+    window.addEventListener('load', restore);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup);
+  else setup();
+})();
+</script>
+{% endblock %}
+

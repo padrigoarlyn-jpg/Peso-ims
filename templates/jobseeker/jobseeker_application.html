@@ -1,0 +1,774 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}jobseeker-app{% endblock %}
+
+{% block title %}
+Application Status | PESO IMS
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_application.css', v='20261024responsive2') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_ui_consistency.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/jobseeker_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="application-page">
+    <div class="application-container">
+
+        <!-- =====================================================
+             PROFILE / SUMMARY
+        ====================================================== -->
+        <section class="applicant-hero">
+            <div class="profile-section">
+                <img src="{{ url_for('static', filename='uploads/jobseekers/' ~ jobseeker.profile_picture) if jobseeker.profile_picture else url_for('static', filename='images/pfp_placeholder.png') }}" alt="{{ jobseeker.first_name }} {{ jobseeker.last_name }}">
+
+                <div class="profile-info">
+                    <h1>{{ jobseeker.first_name }} {{ jobseeker.last_name }}</h1>
+                    <p class="email">{{ jobseeker.user.email if jobseeker.user else current_user.email }}</p>
+
+                    <div class="profile-tags">
+                        <span class="app-id">{{ jobseeker.user.public_id }}</span>
+                        <span class="resume-status {% if not jobseeker.resume %}resume-missing{% endif %}">
+                            {% if jobseeker.resume %}
+                            <i class="fa-solid fa-circle-check"></i> Resume Uploaded
+                            {% else %}
+                            <i class="fa-solid fa-circle-xmark"></i> No Resume Uploaded
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <strong>{{ applications|length }}</strong>
+                    <span>Applications</span>
+                </div>
+                <div class="stat-card">
+                    <strong>{{ interviews|length }}</strong>
+                    <span>Interviews</span>
+                </div>
+                <div class="stat-card">
+                    <strong>{{ offers|length }}</strong>
+                    <span>Outcomes</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- =====================================================
+             PAGE GUIDE
+        ====================================================== -->
+        <section class="application-workflow-guide">
+            <div class="workflow-guide-heading">
+                <div class="workflow-guide-icon">
+                    <i class="fa-solid fa-route"></i>
+                </div>
+                <div>
+                    <h2>Application Progress</h2>
+                    <p>Referral applications and Job Fair applications follow different review processes.</p>
+                </div>
+            </div>
+
+            <div class="workflow-guide-grid">
+                <!-- PESO REFERRAL -->
+                <div class="workflow-guide-card">
+                    <span class="workflow-type-badge referral-type">
+                        <i class="fa-solid fa-user-check"></i> PESO Referral
+                    </span>
+                    <div class="workflow-guide-steps">
+                        <span>Referral Requested</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                        <span>Reviewed</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                        <span>Interview</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                        <span>Decision</span>
+                    </div>
+                </div>
+
+                <!-- JOB FAIR -->
+                <div class="workflow-guide-card">
+                    <span class="workflow-type-badge job-fair-type">
+                        <i class="fa-solid fa-calendar-days"></i> Job Fair
+                    </span>
+                    <div class="workflow-guide-steps">
+                        <span>Job Fair Application</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                        <span>Employer Evaluation</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                        <span>Outcome</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =====================================================
+             TABS
+        ====================================================== -->
+        <nav class="application-filters" aria-label="Application sections">
+            <button type="button" class="filter-btn active" data-tab="applied">
+ Applications
+                <span>{{ applications|length }}</span>
+            </button>
+
+            <button type="button" class="filter-btn" data-tab="interviews">
+              Interviews
+                <span>{{ interviews|length }}</span>
+            </button>
+
+            <button type="button" class="filter-btn" data-tab="offers">
+                Outcomes
+                <span>{{ offers|length }}</span>
+            </button>
+        </nav>
+
+        <section class="jobs-container">
+
+            <!-- =================================================
+                 APPLICATIONS TAB
+            ================================================== -->
+            <div id="applied" class="tab-content active-content">
+                <div class="section-title-row">
+                    <div>
+                        <h2>Application Tracking</h2>
+                        <p class="section-subtitle">Track PESO referral requests, Job Fair applications, interviews, and employer decisions.</p>
+                    </div>
+
+                    <div class="header-right-controls">
+                        <span class="record-count">
+                            {{ applications|length }} Record{% if applications|length != 1 %}s{% endif %}
+                        </span>
+
+                        <div class="status-filter-container">
+                            <label for="statusFilter">
+                                <i class="fa-solid fa-filter"></i> Stage
+                            </label>
+                            <select id="statusFilter" class="status-select">
+                                <option value="all">All Stages</option>
+                                <option value="referral-requested">Referral Requested</option>
+                                <option value="reviewed">Under Review</option>
+                                <option value="interview">Interview</option>
+                                <option value="accepted">Accepted / Hired</option>
+                                <option value="rejected">Rejected</option>
+                                <option value="job-fair">Job Fair</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="application-list">
+                    {% for app in applications %}
+                    {% set application_status = app.status or "Pending" %}
+                    {% set referral = app.referrals[0] if app.referrals else none %}
+                    {% set evaluation = app.job_fair_evaluation %}
+                    {% set is_job_fair = evaluation is not none %}
+                    {% set referral_status = referral.status if referral else "" %}
+
+                    <!-- =========================================
+                         DISPLAY STAGE
+                    ========================================== -->
+                    {% if is_job_fair %}
+                        {% if evaluation.status == "Hired" %}
+                            {% set display_stage = "Hired" %}
+                            {% set display_stage_class = "accepted" %}
+                        {% elif evaluation.status == "Nearly-hired" %}
+                            {% set display_stage = "Nearly Hired" %}
+                            {% set display_stage_class = "nearly-hired" %}
+                        {% elif evaluation.status == "Qualified" %}
+                            {% set display_stage = "Qualified" %}
+                            {% set display_stage_class = "qualified" %}
+                        {% elif evaluation.status == "Mismatch" %}
+                            {% set display_stage = "Mismatch" %}
+                            {% set display_stage_class = "mismatch" %}
+                        {% else %}
+                            {% set display_stage = application_status %}
+                            {% set display_stage_class = application_status|lower|replace(' ', '-') %}
+                        {% endif %}
+                    {% elif referral and referral.status == "Pending" %}
+                        {% set display_stage = "Referral Requested" %}
+                        {% set display_stage_class = "referral-requested" %}
+                    {% elif referral and referral.status == "Rejected" %}
+                        {% set display_stage = "Referral Rejected" %}
+                        {% set display_stage_class = "rejected" %}
+                    {% elif application_status == "Reviewed" %}
+                        {% set display_stage = "Under Review" %}
+                        {% set display_stage_class = "reviewed" %}
+                    {% elif application_status == "Interview" %}
+                        {% set display_stage = "Interview Scheduled" %}
+                        {% set display_stage_class = "interview" %}
+                    {% elif application_status == "Accepted" %}
+                        {% set display_stage = "Accepted" %}
+                        {% set display_stage_class = "accepted" %}
+                    {% elif application_status == "Rejected" %}
+                        {% set display_stage = "Rejected" %}
+                        {% set display_stage_class = "rejected" %}
+                    {% elif referral and referral.status == "Referred" %}
+                        {% set display_stage = "Referred by PESO" %}
+                        {% set display_stage_class = "reviewed" %}
+                    {% else %}
+                        {% set display_stage = application_status %}
+                        {% set display_stage_class = application_status|lower|replace(' ', '-') %}
+                    {% endif %}
+
+                    <!-- =========================================
+                         APPLICATION CARD
+                    ========================================== -->
+                    <article class="application-card"
+                        data-application-status="{{ application_status|lower }}"
+                        data-referral-status="{{ referral_status|lower }}"
+                        data-source="{{ 'job-fair' if is_job_fair else ('referral' if referral else 'application') }}"
+                        data-evaluation-status="{{ evaluation.status|lower if evaluation else '' }}">
+
+                        <!-- CARD HEADER -->
+                        <div class="application-card-top">
+                            <div class="application-title">
+                                <h3>{{ app.job.job_title if app.job else "Job Position" }}</h3>
+                                <p>{{ app.job.employer.company_name if (app.job and app.job.employer) else "Company unavailable" }}</p>
+                            </div>
+                            <span class="application-status status-{{ display_stage_class }}">
+                                {{ display_stage }}
+                            </span>
+                        </div>
+
+                        <!-- SOURCE -->
+                        <div class="application-source-row">
+                            {% if is_job_fair %}
+                            <span class="application-source source-job-fair">
+                                <i class="fa-solid fa-calendar-days"></i> Job Fair
+                            </span>
+                            {% elif referral %}
+                            <span class="application-source source-referred">
+                                <i class="fa-solid fa-user-check"></i> PESO Referral
+                            </span>
+                            {% else %}
+                            <span class="application-source source-direct">
+                                <i class="fa-solid fa-briefcase"></i> Application
+                            </span>
+                            {% endif %}
+
+                            {% if (app.job and app.job.job_type == "Job Fair") %}
+                            <span class="application-source source-exclusive">
+                                Job Fair Exclusive Position
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- META -->
+                        <div class="application-meta">
+                            <span>
+                                <i class="fa-solid fa-hashtag"></i> Application {{ app.application_id }}
+                            </span>
+
+                            <span>
+                                <i class="fa-regular fa-calendar"></i>
+                                {{ app.application_date.strftime("%b %d, %Y") if app.application_date else "N/A" }}
+                            </span>
+
+                            {% if (app.job and app.job.location) %}
+                            <span class="application-location">
+                                <i class="fa-solid fa-location-dot"></i> {{ app.job.location }}
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- =====================================
+                             PROGRESS TRACKER
+                        ====================================== -->
+                        {% if is_job_fair %}
+                        <div class="application-progress job-fair-progress">
+                            <div class="progress-step stage-done">
+                                <span class="progress-dot"><i class="fa-solid fa-check"></i></span>
+                                <span class="progress-label">Job Fair</span>
+                            </div>
+
+                            <span class="progress-line completed"></span>
+
+                            <div class="progress-step stage-done">
+                                <span class="progress-dot"><i class="fa-solid fa-check"></i></span>
+                                <span class="progress-label">Evaluated</span>
+                            </div>
+
+                            <span class="progress-line completed"></span>
+
+                            <div class="progress-step stage-current {% if evaluation.status == 'Mismatch' %}stage-negative{% endif %}">
+                                <span class="progress-dot">
+                                    {% if evaluation.status == "Hired" %}
+                                    <i class="fa-solid fa-check"></i>
+                                    {% elif evaluation.status == "Mismatch" %}
+                                    <i class="fa-solid fa-xmark"></i>
+                                    {% else %}
+                                    <i class="fa-solid fa-circle"></i>
+                                    {% endif %}
+                                </span>
+                                <span class="progress-label">
+                                    {{ "Nearly Hired" if evaluation.status == "Nearly-hired" else evaluation.status }}
+                                </span>
+                            </div>
+                        </div>
+                        {% else %}
+                        {% set referral_is_requested = referral and referral.status == "Pending" %}
+                        {% set referral_is_referred = referral and referral.status == "Referred" %}
+                        {% set referral_is_rejected = referral and referral.status == "Rejected" %}
+                        {% set reached_review = application_status in ["Reviewed", "Interview", "Accepted", "Rejected"] %}
+                        {% set reached_interview = (application_status in ["Interview", "Accepted"]) or (application_status == "Rejected" and app.interview_date) %}
+
+                        <div class="application-progress referral-progress">
+                            <!-- STEP 1 -->
+                            <div class="progress-step {% if referral_is_rejected %}stage-negative{% elif referral_is_requested %}stage-current{% elif referral %}stage-done{% endif %}">
+                                <span class="progress-dot">
+                                    {% if referral_is_rejected %}
+                                    <i class="fa-solid fa-xmark"></i>
+                                    {% elif referral_is_requested %}
+                                    <i class="fa-solid fa-circle"></i>
+                                    {% elif referral %}
+                                    <i class="fa-solid fa-check"></i>
+                                    {% else %}
+                                    1
+                                    {% endif %}
+                                </span>
+                                <span class="progress-label">Referral</span>
+                            </div>
+
+                            <span class="progress-line {% if (referral_is_referred or reached_review) %}completed{% endif %}"></span>
+
+                            <!-- STEP 2 -->
+                            <div class="progress-step {% if (application_status == 'Reviewed') %}stage-current{% elif (application_status in ['Interview', 'Accepted'] or reached_interview) %}stage-done{% elif (referral_is_referred) %}stage-current{% endif %}">
+                                <span class="progress-dot">
+                                    {% if (application_status in ['Interview', 'Accepted'] or reached_interview) %}
+                                    <i class="fa-solid fa-check"></i>
+                                    {% elif (application_status == 'Reviewed' or referral_is_referred) %}
+                                    <i class="fa-solid fa-circle"></i>
+                                    {% else %}
+                                    2
+                                    {% endif %}
+                                </span>
+                                <span class="progress-label">Reviewed</span>
+                            </div>
+
+                            <span class="progress-line {% if reached_interview %}completed{% endif %}"></span>
+
+                            <!-- STEP 3 -->
+                            <div class="progress-step {% if (application_status == 'Interview') %}stage-current{% elif reached_interview and application_status in ['Accepted', 'Rejected'] %}stage-done{% endif %}">
+                                <span class="progress-dot">
+                                    {% if (reached_interview and application_status in ['Accepted', 'Rejected']) %}
+                                    <i class="fa-solid fa-check"></i>
+                                    {% elif (application_status == 'Interview') %}
+                                    <i class="fa-solid fa-circle"></i>
+                                    {% else %}
+                                    3
+                                    {% endif %}
+                                </span>
+                                <span class="progress-label">Interview</span>
+                            </div>
+
+                            <span class="progress-line {% if (application_status in ['Accepted', 'Rejected']) %}completed{% endif %}"></span>
+
+                            <!-- STEP 4 -->
+                            <div class="progress-step {% if (application_status == 'Accepted') %}stage-done{% elif (application_status == 'Rejected') %}stage-negative{% endif %}">
+                                <span class="progress-dot">
+                                    {% if (application_status == 'Accepted') %}
+                                    <i class="fa-solid fa-check"></i>
+                                    {% elif (application_status == 'Rejected') %}
+                                    <i class="fa-solid fa-xmark"></i>
+                                    {% else %}
+                                    4
+                                    {% endif %}
+                                </span>
+                                <span class="progress-label">Decision</span>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- =====================================
+                             JOB FAIR EVALUATION
+                        ====================================== -->
+                        {% if evaluation %}
+                        <div class="job-fair-evaluation-box">
+                            <div class="evaluation-heading">
+                                <div>
+                                    <span class="evaluation-eyebrow">Job Fair Evaluation</span>
+                                    <strong>Employer Evaluation</strong>
+                                </div>
+                                <span class="evaluation-status evaluation-{{ evaluation.status|lower|replace('-', '-')|replace(' ', '-') }}">
+                                    {{ "Nearly Hired" if evaluation.status == "Nearly-hired" else evaluation.status }}
+                                </span>
+                            </div>
+
+                            {% if evaluation.remarks %}
+                            <p class="evaluation-remarks">
+                                <i class="fa-solid fa-comment-dots"></i> {{ evaluation.remarks }}
+                            </p>
+                            {% endif %}
+
+                            {% if evaluation.status == "Hired" %}
+                            <p class="evaluation-explanation positive">
+                                <i class="fa-solid fa-circle-check"></i> You were hired through the Job Fair. Your application has been marked as accepted.
+                            </p>
+                            {% elif evaluation.status == "Nearly-hired" %}
+                            <p class="evaluation-explanation warning">
+                                <i class="fa-solid fa-star"></i> The employer identified you as a near-match. This is a Job Fair evaluation and is not yet a final hiring decision.
+                            </p>
+                            {% elif evaluation.status == "Qualified" %}
+                            <p class="evaluation-explanation positive-soft">
+                                <i class="fa-solid fa-user-check"></i> You were evaluated as qualified for this position. This is not the same as a final hiring decision.
+                            </p>
+                            {% elif evaluation.status == "Mismatch" %}
+                            <p class="evaluation-explanation negative">
+                                <i class="fa-solid fa-circle-xmark"></i> The employer determined that your profile did not match this position during the Job Fair evaluation.
+                            </p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <!-- =====================================
+                             CURRENT STATUS MESSAGE
+                        ====================================== -->
+                        <div class="application-message">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <p>
+                                {% if is_job_fair %}
+                                    {% if evaluation.status == "Hired" %}
+                                    You were hired through the Job Fair for this position.
+                                    {% elif evaluation.status == "Nearly-hired" %}
+                                    Your Job Fair evaluation is Nearly Hired. Continue checking for employer updates.
+                                    {% elif evaluation.status == "Qualified" %}
+                                    The employer marked you as Qualified during the Job Fair evaluation.
+                                    {% elif evaluation.status == "Mismatch" %}
+                                    The employer recorded a Mismatch for this Job Fair position.
+                                    {% else %}
+                                    Your Job Fair application has been evaluated.
+                                    {% endif %}
+                                {% elif (referral and referral.status == "Pending") %}
+                                Your referral request is waiting for PESO review.
+                                {% elif (referral and referral.status == "Rejected") %}
+                                PESO reviewed this referral request and did not issue a referral.
+                                {% elif (application_status == "Pending" and referral_is_referred) %}
+                                PESO has issued your referral. Your application is waiting for employer review.
+                                {% elif (application_status == "Reviewed") %}
+                                Your application has been reviewed and is awaiting the next employer action.
+                                {% elif (application_status == "Interview") %}
+                                You have reached the interview stage. Open the Interviews tab to review your schedule.
+                                {% elif (application_status == "Accepted") %}
+                                Congratulations. Your application has been accepted.
+                                {% elif (application_status == "Rejected") %}
+                                This application was not selected.
+                                {% else %}
+                                Check this page regularly for application updates.
+                                {% endif %}
+                            </p>
+                        </div>
+                    </article>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="fa-solid fa-folder-open"></i>
+                        <h3>No applications yet</h3>
+                        <p>Referral requests and Job Fair applications will appear here.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div id="noFilterResults" class="empty-state" hidden>
+                    <i class="fa-solid fa-filter-circle-xmark"></i>
+                    <h3>No matching applications</h3>
+                    <p>No applications match the selected stage.</p>
+                </div>
+            </div>
+
+            <!-- =================================================
+                 INTERVIEWS TAB
+            ================================================== -->
+            <div id="interviews" class="tab-content">
+                <div class="section-title-row">
+                    <div>
+                        <h2>Interviews</h2>
+                        <p class="section-subtitle">Review your interview schedule and respond to the employer.</p>
+                    </div>
+                    <span class="record-count">
+                        {{ interviews|length }} Interview{% if interviews|length != 1 %}s{% endif %}
+                    </span>
+                </div>
+
+                {% for interview in interviews %}
+                {% set interview_referral = interview.referrals[0] if interview.referrals else none %}
+                {% set interview_is_job_fair = interview.job_fair_evaluation is not none %}
+
+                <article class="interview-card">
+                    <div class="interview-header">
+                        <div>
+                            <div class="interview-source-row">
+                                {% if interview_is_job_fair %}
+                                <span class="application-source source-job-fair">
+                                    <i class="fa-solid fa-calendar-days"></i> Job Fair
+                                </span>
+                                {% elif interview_referral %}
+                                <span class="application-source source-referred">
+                                    <i class="fa-solid fa-user-check"></i> PESO Referral
+                                </span>
+                                {% endif %}
+                            </div>
+
+                            <h3>{{ interview.job.job_title if interview.job else "Position" }}</h3>
+                            <p>{{ interview.job.employer.company_name if (interview.job and interview.job.employer) else "Company" }}</p>
+                        </div>
+
+                        <span class="record-status status-interview">Interview Scheduled</span>
+                    </div>
+
+                    <div class="interview-details">
+                        <div class="interview-detail">
+                            <i class="fa-solid fa-calendar"></i>
+                            <div>
+                                <span>Date</span>
+                                <strong>{{ interview.interview_date.strftime('%B %d, %Y') if interview.interview_date else "TBA" }}</strong>
+                            </div>
+                        </div>
+
+                        <div class="interview-detail">
+                            <i class="fa-solid fa-clock"></i>
+                            <div>
+                                <span>Time</span>
+                                <strong>{{ interview.interview_time.strftime('%I:%M %p') if interview.interview_time else "TBA" }}</strong>
+                            </div>
+                        </div>
+
+                        <div class="interview-detail">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <div>
+                                <span>Location</span>
+                                <strong>{{ interview.interview_location or "Location TBA" }}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if interview.interview_notes %}
+                    <div class="interview-notes">
+                        <i class="fa-solid fa-note-sticky"></i>
+                        <div>
+                            <span>Employer Notes</span>
+                            <p>{{ interview.interview_notes }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="interview-response-summary">
+                        <span class="response-label">Attendance Response</span>
+
+                        {% if (interview.interview_response_status == "Confirmed") %}
+                        <span class="interview-response-badge response-confirmed">
+                            <i class="fa-solid fa-circle-check"></i> Confirmed
+                        </span>
+                        {% elif (interview.interview_response_status == "Unable to Attend") %}
+                        <span class="interview-response-badge response-unable">
+                            <i class="fa-solid fa-calendar-xmark"></i> Unable to Attend
+                        </span>
+                        {% elif (interview.interview_response_status == "Missed") %}
+                        <span class="interview-response-badge response-missed">
+                            <i class="fa-solid fa-circle-xmark"></i> Missed
+                        </span>
+                        {% else %}
+                        <span class="interview-response-badge response-pending">
+                            <i class="fa-solid fa-clock"></i> Confirmation Required
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="interview-actions">
+                        {% if (interview.interview_response_status == "Confirmed") %}
+                        <p class="decision-note success-note">
+                            <i class="fa-solid fa-circle-check"></i> Attendance Confirmed
+                        </p>
+                        {% elif (interview.interview_response_status == "Unable to Attend") %}
+                        <div class="interview-response-state">
+                            <p class="decision-note danger-note">
+                                <i class="fa-solid fa-calendar-xmark"></i> Unable to Attend
+                            </p>
+                            {% if (interview.interview_response_note) %}
+                            <p class="interview-response-note">
+                                {{ interview.interview_response_note }}
+                            </p>
+                            {% endif %}
+                        </div>
+                        {% elif (interview.interview_response_status == "Missed") %}
+                        <p class="decision-note danger-note">
+                            <i class="fa-solid fa-circle-xmark"></i> Interview Missed
+                        </p>
+                        {% else %}
+                        <form method="post" action="{{ url_for('jobseeker.confirm_interview', application_id=interview.application_id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="confirm-btn" type="submit">
+                                <i class="fa-solid fa-check"></i> Confirm Attendance
+                            </button>
+                        </form>
+
+                        <button class="reschedule-btn unable-attend-trigger" type="button" data-application-id="{{ interview.application_id }}" data-job-title="{{ interview.job.job_title if interview.job else 'this position' }}">
+                            <i class="fa-solid fa-calendar-xmark"></i> Unable to Attend
+                        </button>
+                        {% endif %}
+                    </div>
+                </article>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fa-solid fa-calendar-check"></i>
+                    <h3>No interviews</h3>
+                    <p>Interview schedules will appear here when an employer schedules one for you.</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- =================================================
+                 OUTCOMES TAB
+            ================================================== -->
+            <div id="offers" class="tab-content">
+                <div class="section-title-row">
+                    <div>
+                        <h2>Application Outcomes</h2>
+                        <p class="section-subtitle">Review final application decisions and Job Fair evaluation results.</p>
+                    </div>
+                    <span class="record-count">
+                        {{ offers|length }} Record{% if offers|length != 1 %}s{% endif %}
+                    </span>
+                </div>
+
+                {% for offer in offers %}
+                {% set offer_evaluation = offer.job_fair_evaluation %}
+                {% set offer_referral = offer.referrals[0] if offer.referrals else none %}
+
+                <article class="offer-card">
+                    <div class="offer-left">
+                        <div class="outcome-source-row">
+                            {% if offer_evaluation %}
+                            <span class="application-source source-job-fair">
+                                <i class="fa-solid fa-calendar-days"></i> Job Fair
+                            </span>
+                            {% elif offer_referral %}
+                            <span class="application-source source-referred">
+                                <i class="fa-solid fa-user-check"></i> PESO Referral
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        <h3>{{ offer.job.job_title if offer.job else "Position" }}</h3>
+                        <p class="company-name">{{ offer.job.employer.company_name if (offer.job and offer.job.employer) else "Company" }}</p>
+
+                        <div class="offer-info">
+                            {% if (offer.job and (offer.job.salary_min or offer.job.salary_max)) %}
+                            <p>
+                                <strong>Salary:</strong>
+                                {% if offer.job.salary_min %}
+                                ₱{{ "{:,.0f}".format(offer.job.salary_min) }}
+                                {% endif %}
+                                {% if (offer.job.salary_min and offer.job.salary_max) %} – {% endif %}
+                                {% if offer.job.salary_max %}
+                                ₱{{ "{:,.0f}".format(offer.job.salary_max) }}
+                                {% endif %}
+                                / month
+                            </p>
+                            {% endif %}
+
+                            <p>
+                                <strong>Application:</strong> #{{ offer.application_id }}
+                            </p>
+                        </div>
+
+                        {% if (offer_evaluation and offer_evaluation.remarks) %}
+                        <div class="outcome-remarks">
+                            <strong>Employer Remarks</strong>
+                            <p>{{ offer_evaluation.remarks }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="offer-right">
+                        {% if offer_evaluation %}
+                            {% if (offer_evaluation.status == "Hired") %}
+                            <span class="record-status status-accepted">Hired</span>
+                            <p class="decision-note success-note">
+                                <i class="fa-solid fa-circle-check"></i> Accepted through Job Fair
+                            </p>
+                            {% elif (offer_evaluation.status == "Nearly-hired") %}
+                            <span class="record-status status-nearly-hired">Nearly Hired</span>
+                            <p class="decision-note pending-note">
+                                <i class="fa-solid fa-star"></i> Employer Job Fair Evaluation
+                            </p>
+                            {% elif (offer_evaluation.status == "Qualified") %}
+                            <span class="record-status status-qualified">Qualified</span>
+                            <p class="decision-note qualified-note">
+                                <i class="fa-solid fa-user-check"></i> Employer Job Fair Evaluation
+                            </p>
+                            {% elif (offer_evaluation.status == "Mismatch") %}
+                            <span class="record-status status-mismatch">Mismatch</span>
+                            <p class="decision-note danger-note">
+                                <i class="fa-solid fa-circle-xmark"></i> Job Fair Evaluation Result
+                            </p>
+                            {% endif %}
+                        {% elif offer.status == "Accepted" %}
+                        <span class="record-status status-accepted">Accepted</span>
+                        <p class="decision-note success-note">
+                            <i class="fa-solid fa-circle-check"></i> Hired / Accepted
+                        </p>
+                        {% elif offer.status == "Rejected" %}
+                        <span class="record-status status-rejected">Rejected</span>
+                        <p class="decision-note danger-note">
+                            <i class="fa-solid fa-circle-xmark"></i> Application Not Selected
+                        </p>
+                        {% endif %}
+                    </div>
+                </article>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fa-solid fa-file-circle-check"></i>
+                    <h3>No outcomes yet</h3>
+                    <p>Final application decisions and Job Fair evaluations will appear here.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- =========================================================
+     UNABLE TO ATTEND MODAL
+========================================================= -->
+<div id="unableAttendModal" class="reschedule-modal" aria-hidden="true">
+    <div class="reschedule-modal-content" role="dialog" aria-modal="true" aria-labelledby="unableAttendModalTitle">
+        <button type="button" class="close-modal" id="closeUnableAttendModal" aria-label="Close">&times;</button>
+
+        <div class="modal-icon">
+            <i class="fa-solid fa-calendar-xmark"></i>
+        </div>
+
+        <h2 id="unableAttendModalTitle">Unable to Attend Interview</h2>
+
+        <p id="unableAttendModalDescription" class="modal-description">
+            Let the employer know why you cannot attend the scheduled interview. The employer may decide whether to provide another schedule.
+        </p>
+
+        <form id="unableAttendForm" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="form-group">
+                <label for="unable_attend_reason">Reason</label>
+                <textarea id="unable_attend_reason" name="reason" rows="4" maxlength="500" placeholder="Briefly explain why you cannot attend..." required></textarea>
+
+                <div class="reason-field-footer">
+                    <small>Maximum 500 characters.</small>
+                    <small id="reasonCharacterCount" class="character-count">0 / 500</small>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="modal-cancel-btn" id="cancelUnableAttendModal">Cancel</button>
+                <button type="submit" class="modal-submit-btn">Submit Response</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/jobseeker/jobseeker_application.js') }}"></script>
+{% endblock %}

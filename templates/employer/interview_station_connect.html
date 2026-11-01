@@ -1,0 +1,25 @@
+{% extends "layouts/base.html" %}
+{% block title %}PESO Interview Station{% endblock %}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employer/interview_station_connect.css') }}">
+{% endblock %}
+{% block content %}
+<section class="station-connect-page" aria-labelledby="station-connect-title">
+  <div class="station-connect-card">
+    <div class="station-connect-icon" aria-hidden="true"><i class="fa-solid fa-desktop"></i></div>
+    <p class="station-connect-eyebrow">PESO JOB FAIR</p>
+    <h1 id="station-connect-title">Interview Station {{ station.station_number }}</h1>
+    <p class="station-connect-description">Enter the temporary six-digit code displayed by the employer booth controller to connect this station.</p>
+    {% if error %}
+    <div class="station-connect-error" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ error }}</span></div>
+    {% endif %}
+    <form method="post" class="station-connect-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="station-code">Six-digit connection code</label>
+      <input id="station-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="Enter 6-digit code" required autofocus aria-describedby="station-code-help" {% if error %}aria-invalid="true"{% endif %}>
+      <p id="station-code-help" class="station-connect-help">Ask the booth controller for the temporary code.</p>
+      <button type="submit"><i class="fa-solid fa-link" aria-hidden="true"></i> Connect Station</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

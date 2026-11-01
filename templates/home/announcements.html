@@ -1,0 +1,274 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Announcements | PESO IMS{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home/announcements.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="public-announcements-page">
+    <div class="public-announcements-container">
+
+        <header class="announcement-page-header">
+            <p class="page-eyebrow">Event Management</p>
+            <h1>Job Fair Announcements</h1>
+            <p class="page-subtitle">
+                Explore upcoming employment events and discover opportunities through PESO.
+            </p>
+        </header>
+
+        {% if announcements %}
+        <div class="announcements-grid">
+            {% for announcement in announcements %}
+
+            <article class="announcement-card">
+
+                <div class="announcement-poster">
+                    <img
+                        src="{{
+                            url_for(
+                                'static',
+                                filename='uploads/posters/' + announcement.poster_image
+                            )
+                            if announcement.poster_image
+                            else url_for(
+                                'static',
+                                filename='images/announcement_banner.jpg'
+                            )
+                        }}"
+                        alt="{{ announcement.title }}"
+                        loading="lazy"
+                    >
+
+                    <span class="event-status status-{{ announcement.status|lower }}">
+                        {{ announcement.status }}
+                    </span>
+                </div>
+
+                <div class="announcement-card-body">
+
+                    <div class="announcement-heading">
+                        <span class="event-type">
+                            {{ announcement.event_type }}
+                        </span>
+                        <h2>{{ announcement.title }}</h2>
+                    </div>
+
+                    <div class="announcement-details-grid">
+
+                        <div class="announcement-detail">
+                            <span>Start Date</span>
+                            <strong>
+                                {{
+                                    announcement.start_datetime.strftime('%B %d, %Y')
+                                    if announcement.start_datetime
+                                    else 'TBA'
+                                }}
+                            </strong>
+                        </div>
+
+                        <div class="announcement-detail">
+                            <span>Time</span>
+                            <strong>
+                                {% if announcement.start_datetime and announcement.end_datetime %}
+                                    {{ announcement.start_datetime.strftime('%I:%M %p') }}
+                                    -
+                                    {{ announcement.end_datetime.strftime('%I:%M %p') }}
+                                {% else %}
+                                    TBA
+                                {% endif %}
+                            </strong>
+                        </div>
+
+                        <div class="announcement-detail">
+                            <span>Venue</span>
+                            <strong>{{ announcement.venue }}</strong>
+                        </div>
+
+                        <div class="announcement-detail">
+                            <span>Registration</span>
+                            <strong class="{{ 'registration-open' if announcement.registration_open else 'registration-closed' }}">
+                                {{ 'Open' if announcement.registration_open else 'Closed' }}
+                            </strong>
+                        </div>
+
+                    </div>
+
+                    <div class="announcement-actions">
+
+                        <button
+                            type="button"
+                            class="announcement-btn secondary-btn open-announcement-modal"
+                            data-title="{{ announcement.title|e }}"
+                            data-type="{{ announcement.event_type|e }}"
+                            data-description="{{ announcement.description|e }}"
+                            data-venue="{{ announcement.venue|e }}"
+                            data-status="{{ announcement.status|e }}"
+                            data-start="{{
+                                announcement.start_datetime.strftime('%B %d, %Y • %I:%M %p')
+                                if announcement.start_datetime
+                                else 'TBA'
+                            }}"
+                            data-end="{{
+                                announcement.end_datetime.strftime('%B %d, %Y • %I:%M %p')
+                                if announcement.end_datetime
+                                else 'TBA'
+                            }}"
+                            data-deadline="{{
+                                announcement.registration_deadline.strftime('%B %d, %Y • %I:%M %p')
+                                if announcement.registration_deadline
+                                else 'TBA'
+                            }}"
+                            data-poster="{{
+                                url_for(
+                                    'static',
+                                    filename='uploads/posters/' + announcement.poster_image
+                                )
+                                if announcement.poster_image
+                                else url_for(
+                                    'static',
+                                    filename='images/announcement_banner.jpg'
+                                )
+                            }}"
+                        >
+                            View Details
+                        </button>
+
+                        <a
+                            href="{{ url_for('auth.login') }}"
+                            class="announcement-btn primary-btn"
+                        >
+                            Pre Register
+                        </a>
+
+                    </div>
+
+                </div>
+            </article>
+
+            {% endfor %}
+        </div>
+
+        {% else %}
+
+        <section class="announcement-empty-state">
+            <div class="empty-state-icon">
+                <i class="fa-regular fa-calendar-xmark"></i>
+            </div>
+
+            <h2>No Job Fairs Available</h2>
+
+            <p>
+                There are currently no upcoming or ongoing Job Fairs.
+                Please check again for future PESO employment events.
+            </p>
+        </section>
+
+        {% endif %}
+
+    </div>
+</section>
+
+
+<div
+    id="publicAnnouncementModal"
+    class="announcement-modal"
+    aria-hidden="true"
+>
+    <div
+        class="announcement-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="announcementModalTitle"
+    >
+        <header class="announcement-modal-header">
+            <div>
+                <span id="announcementModalType" class="modal-event-type">
+                    Job Fair
+                </span>
+                <h2 id="announcementModalTitle">
+                    Job Fair Details
+                </h2>
+            </div>
+
+            <button
+                type="button"
+                class="announcement-modal-close"
+                aria-label="Close Job Fair details"
+            >
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </header>
+
+        <div class="announcement-modal-body">
+
+            <div class="modal-poster">
+                <img
+                    id="announcementModalPoster"
+                    src="{{ url_for('static', filename='images/announcement_banner.jpg') }}"
+                    alt="Job Fair poster"
+                >
+            </div>
+
+            <section class="modal-section">
+                <div class="modal-status-row">
+                    <span id="announcementModalStatus" class="modal-status">
+                        Upcoming
+                    </span>
+                </div>
+
+                <h3>About this Job Fair</h3>
+
+                <p id="announcementModalDescription">
+                    Event information will appear here.
+                </p>
+            </section>
+
+            <div class="modal-information-grid">
+
+                <div class="modal-information-item">
+                    <span>Starts</span>
+                    <strong id="announcementModalStart">TBA</strong>
+                </div>
+
+                <div class="modal-information-item">
+                    <span>Ends</span>
+                    <strong id="announcementModalEnd">TBA</strong>
+                </div>
+
+                <div class="modal-information-item">
+                    <span>Venue</span>
+                    <strong id="announcementModalVenue">TBA</strong>
+                </div>
+
+                <div class="modal-information-item">
+                    <span>Registration Deadline</span>
+                    <strong id="announcementModalDeadline">TBA</strong>
+                </div>
+
+            </div>
+        </div>
+
+        <footer class="announcement-modal-footer">
+            <button
+                type="button"
+                class="announcement-btn secondary-btn modal-close-action"
+            >
+                Close
+            </button>
+
+            <a
+                href="{{ url_for('auth.login') }}"
+                class="announcement-btn primary-btn"
+            >
+                Sign In to Pre-Register
+            </a>
+        </footer>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/home/announcements.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0"
+
+>
+
+<meta
+name="csrf-token"
+content="{{ csrf_token() }}"
+
+>
+
+<title>Queue Number | PESO</title>
+
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/kiosk/QueuingNumberKiosk.css') }}"
+>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/peso_foundation.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/peso_polish.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_logout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_scrollbar.css') }}">
+    <!-- Shared 15.6-inch kiosk touchscreen scaling (load last) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_screen_15inch.css') }}">
+</head>
+
+<body class="kiosk-app" data-ui-phase="5">
+{% include "kiosk/_kiosk_flash.html" %}
+
+
+<main class="queue-page">
+
+<!-- =========================================================
+     PAGE HEADER
+========================================================== -->
+
+<header class="page-header">
+
+ 
+<div class="header-brand">
+
+    <div class="logo-container">
+
+        <img
+            src="{{ url_for('static', filename='images/peso_logo.png') }}"
+            alt="PESO Logo"
+            class="peso-logo"
+        >
+
+    </div>
+
+
+    <div class="header-title">
+
+        <span class="header-eyebrow">
+            PESO JOB FAIR
+        </span>
+
+        <h1>
+            Queue Number
+        </h1>
+
+        <p>
+            Organize your visit before meeting employers
+        </p>
+
+    </div>
+
+</div>
+ 
+
+</header>
+
+<!-- =========================================================
+     INSTRUCTION BAR
+========================================================== -->
+
+<section class="instruction-bar">
+
+ 
+<div class="instruction-icon">
+    <span>✓</span>
+</div>
+
+
+<div class="instruction-content">
+
+    {% if existing_queue_data %}
+
+        <strong>
+            Your queue numbers are ready
+        </strong>
+
+        <span>
+            Your current queue is shown first. Jobs from the
+            same employer booth are combined into one queue.
+            {% if selected_job_fair_jobs and queue_entry_open %}
+                You may also add another available job below.
+            {% elif not queue_entry_open %}
+                Queue entry is now closed. You may continue with and print your existing queues, but you cannot add another employer or job.
+            {% endif %}
+        </span>
+
+    {% else %}
+
+        <strong>
+            Choose the order you want to visit employers
+        </strong>
+
+        <span>
+            Tap any job from a booth to select it.
+            Jobs from the same booth automatically share
+            one queue number.
+        </span>
+
+    {% endif %}
+
+</div>
+ 
+
+</section>
+
+<!-- =========================================================
+     MAIN CONTENT
+========================================================== -->
+
+<section class="queue-content">
+
+ 
+{% if existing_queue_data %}
+
+    <!-- =================================================
+         EXISTING QUEUES
+    ================================================== -->
+
+    <section class="selection-panel">
+
+
+        <!-- SECTION HEADER -->
+
+        <div class="section-heading">
+
+            <div>
+
+                <span class="section-kicker">
+                    YOUR QUEUE
+                </span>
+
+                <h2>
+                    Queue Schedule
+                </h2>
+
+                <p>
+                    Follow the order shown below.
+                </p>
+
+            </div>
+
+
+            <div class="queue-ready-badge">
+
+                <span class="status-dot"></span>
+
+                Ready
+
+            </div>
+
+        </div>
+
+
+
+        <!-- EXISTING QUEUE LIST -->
+
+        <div class="queue-list">
+
+            {% for queue in existing_queue_data %}
+
+                <div
+                    class="queue-card
+                    {% if queue.group_status == 'Active' %}
+                        queue-card-active
+                    {% elif queue.group_status == 'Finished' %}
+                        queue-card-finished
+                    {% endif %}"
+                    data-queue-status="{{ queue.group_status }}"
+                    data-queue-group-id="{{ queue.queue_group_id }}"
+                >
+
+
+                    <!-- QUEUE NUMBER -->
+
+                    <div class="queue-card-number">
+
+                        <span>
+                            QUEUE
+                        </span>
+
+                        <strong>
+                            {{ queue.queue_number }}
+                        </strong>
+
+                    </div>
+
+
+
+                    <!-- QUEUE CONTENT -->
+
+                    <div class="queue-card-content">
+
+
+                        <div class="queue-card-top">
+
+                            <span class="booth-label">
+                                EMPLOYER BOOTH
+                            </span>
+
+
+                            {% if queue.group_status == "Active" %}
+
+                                <span class="queue-status active">
+
+                                    <span class="status-dot"></span>
+
+                                    CURRENT QUEUE
+
+                                </span>
+
+                            {% elif queue.group_status == "Finished" %}
+
+                                <span class="queue-status finished">
+                                    FINISHED
+                                </span>
+
+                            {% elif queue.group_status == "Cancelled" %}
+
+                                <span class="queue-status finished">
+                                    CANCELLED
+                                </span>
+
+                            {% else %}
+
+                                <span class="queue-status waiting">
+                                    WAITING
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+
+
+                        <h3 class="queue-company">
+                            {{ queue.company }}
+                        </h3>
+                        <div class="queue-jobs">
+
+                            {% for job in queue.jobs %}
+
+                                <div class="queue-job">
+
+                                    <span class="job-bullet"></span>
+
+                                    <span>
+                                        {{ job.job_title }}
+                                    </span>
+
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+                        {% if queue.group_status in ['Active', 'Dormant'] %}
+                        <button type="button" class="cancel-employer-queue-btn"
+                            data-queue-group-id="{{ queue.queue_group_id }}"
+                            data-end-participation-url="{{ url_for('kiosk.end_queue_participation', reference_id=registration.reference_id) }}"
+                            aria-label="Cancel queue for this employer">
+                            Cancel this employer queue
+                        </button>
+                        {% endif %}
+
+
+
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    </section>
+
+
+{% endif %}
+
+{% if selected_job_fair_jobs %}
+
+    <!-- =================================================
+         JOB SELECTION
+    ================================================== -->
+
+    <section class="selection-panel">
+
+
+        <!-- SECTION HEADER -->
+
+        <div class="section-heading">
+
+            <div>
+
+                <span class="section-kicker">
+                    STEP 1
+                </span>
+
+                <h2>
+                    Choose Your Visit Order
+                </h2>
+
+                <p>
+                    Select employers in the order you want
+                    to visit them.
+                </p>
+
+            </div>
+
+
+            <div class="selection-counter">
+
+                <span id="selectedBoothCount">
+                    0
+                </span>
+
+                <small>
+                    booths
+                </small>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             SELECTION INSTRUCTION
+        ================================================== -->
+
+        <div class="selection-guide">
+
+            <div class="guide-icon">
+
+                <span>
+                    1
+                </span>
+
+            </div>
+
+
+            <div class="guide-content">
+
+                <strong>
+                    Tap an employer to add it to your route
+                </strong>
+
+                <span>
+                    The number shows the order you will visit
+                    each employer booth.
+                </span>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             SELECTION STATUS
+        ================================================== -->
+
+        <div
+            class="selection-status"
+            id="selectionStatus"
+        >
+
+            <span class="selection-status-icon">
+                +
+            </span>
+
+            <span>
+                No employers selected yet
+            </span>
+
+        </div>
+
+
+
+        <!-- =================================================
+             JOB CARDS
+        ================================================== -->
+
+        <div
+            class="job-list"
+            id="selectableJobList"
+        >
+
+            {% for job_fair_job in selected_job_fair_jobs %}
+
+                <button
+                    type="button"
+                    class="selected-job selectable-job"
+                    data-job-fair-job-id="{{ job_fair_job.job_fair_job_id }}"
+                    data-employer-registration-id="{{ job_fair_job.registration.registration_id }}"
+                >
+
+
+                    <!-- SELECTION NUMBER -->
+
+                    <span class="selection-number">
+                        —
+                    </span>
+
+
+
+                    <!-- JOB CARD CONTENT -->
+
+                    <span class="job-card-content">
+
+                        <span class="job-card-header">
+
+                            <span class="booth-label">
+                                EMPLOYER BOOTH
+                            </span>
+
+                            <span class="job-card-action">
+                                TAP TO SELECT
+                            </span>
+
+                        </span>
+
+
+                        <span class="selected-job-company">
+                            {{ job_fair_job.job.employer.company_name }}
+                        </span>
+
+
+                        <span class="selected-job-title">
+                            {{ job_fair_job.job.job_title }}
+                        </span>
+
+
+                        <span class="selection-label">
+                            VISIT ORDER
+                        </span>
+
+                    </span>
+
+
+
+                    <!-- ARROW -->
+
+                    <span class="job-card-arrow">
+                        →
+                    </span>
+
+                </button>
+
+            {% endfor %}
+
+        </div>
+
+    </section>
+
+
+{% elif not existing_queue_data %}
+
+    <!-- =================================================
+         NO JOBS
+    ================================================== -->
+
+    <section class="empty-state">
+
+        <div class="empty-icon">
+            !
+        </div>
+
+        <h2>
+            No Jobs Selected
+        </h2>
+
+        <p>
+            You have not selected any jobs for this job fair.
+        </p>
+
+    </section>
+
+{% endif %}
+
+
+
+<!-- =====================================================
+     QUEUE PREVIEW
+====================================================== -->
+
+{% if selected_job_fair_jobs or existing_queue_data %}
+
+    <aside class="preview-panel">
+
+
+        <!-- PREVIEW HEADER -->
+
+        <div class="preview-header">
+
+            <div>
+
+                <span class="section-kicker">
+                    QUEUE PREVIEW
+                </span>
+
+                <h2>
+                    Your Route
+                </h2>
+
+            </div>
+
+
+            <div class="preview-icon">
+                ✓
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             APPLICANT
+        ================================================== -->
+
+        <div class="applicant-card">
+
+            <div class="applicant-avatar">
+
+                {% if job_seeker.first_name %}
+
+                    {{ job_seeker.first_name[0]|upper }}
+
+                {% else %}
+
+                    ?
+
+                {% endif %}
+
+            </div>
+
+
+            <div class="applicant-info">
+
+                <span>
+                    JOB SEEKER
+                </span>
+
+
+                <strong>
+
+                    {{ job_seeker.first_name or '' }}
+                    {{ job_seeker.last_name or '' }}
+
+                </strong>
+
+
+                <small>
+                    Ref No. {{ registration.reference_id }}
+                </small>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             PREVIEW LIST
+        ================================================== -->
+
+        <div
+            class="queue-preview"
+            id="queuePreview"
+        >
+
+
+            {% if existing_queue_data %}
+
+                {% for queue in existing_queue_data %}
+
+                    <div
+                        class="preview-queue-item"
+                        data-queue-status="{{ queue.group_status }}"
+                    >
+
+
+                        <!-- QUEUE NUMBER -->
+
+                        <div class="preview-number">
+                            {{ queue.queue_number }}
+                        </div>
+
+
+
+                        <!-- QUEUE DETAILS -->
+
+                        <div class="preview-details">
+
+                            <span class="preview-company">
+                                {{ queue.company }}
+                            </span>
+
+
+                            {% for job in queue.jobs %}
+
+                                <span class="preview-job">
+                                    {{ job.job_title }}
+                                </span>
+
+                            {% endfor %}
+
+                        </div>
+
+
+
+                        <!-- STATUS -->
+
+                        {% if queue.group_status == "Active" %}
+
+                            <span class="preview-status active">
+                                NOW
+                            </span>
+
+                        {% elif queue.group_status == "Finished" %}
+
+                            <span class="preview-status finished">
+                                DONE
+                            </span>
+
+                        {% elif queue.group_status == "Cancelled" %}
+
+                            <span class="preview-status finished">
+                                CANCELLED
+                            </span>
+
+                        {% else %}
+
+                            <span class="preview-status waiting">
+                                WAIT
+                            </span>
+
+                        {% endif %}
+
+                    </div>
+
+                {% endfor %}
+
+
+            {% else %}
+
+                <div class="preview-empty">
+
+                    <div class="preview-empty-icon">
+                        ↑
+                    </div>
+
+
+                    <strong>
+                        Your route will appear here
+                    </strong>
+
+
+                    <span>
+                        Select employers on the left
+                        to create your visit order.
+                    </span>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+
+
+        <!-- =================================================
+             PREVIEW FOOTER
+        ================================================== -->
+
+        <div class="preview-footer">
+
+            <span class="preview-footer-icon">
+                ℹ
+            </span>
+
+
+            <span>
+                Employers from the same booth share
+                one queue number.
+            </span>
+
+        </div>
+
+    </aside>
+
+{% endif %}
+ 
+
+</section>
+
+<!-- =========================================================
+     ACTION BAR
+========================================================== -->
+
+{% if selected_job_fair_jobs or existing_queue_data %}
+
+ 
+<footer class="action-bar">
+
+
+    <div class="action-info">
+
+
+        {% if existing_queue_data %}
+
+            <!-- EXISTING QUEUE -->
+
+            <span class="action-success-icon">
+                ✓
+            </span>
+
+
+            <div>
+
+                <strong>
+                    Your queue is ready
+                </strong>
+
+                <span>
+                    Keep this ticket and wait for your queue number.
+                </span>
+
+            </div>
+
+
+        {% else %}
+
+            <!-- NEW QUEUE -->
+
+            <span class="action-info-icon">
+                →
+            </span>
+
+
+            <div>
+
+                <strong id="actionTitle">
+                    Select your first employer
+                </strong>
+
+
+                <span id="actionSubtitle">
+                    Your queue order will appear in the preview.
+                </span>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+
+    <!-- =================================================
+         QUEUE ACTIONS
+    ================================================== -->
+
+    <div class="queue-footer-actions">
+    {% if existing_queue_data %}
+    <button
+        type="button"
+        class="end-participation-btn"
+        id="endParticipationBtn"
+        data-end-participation-url="{{ url_for('kiosk.end_queue_participation', reference_id=registration.reference_id) }}"
+    >
+        End Queue Participation
+    </button>
+    {% endif %}
+
+    <button
+        type="button"
+        class="print-btn"
+        id="printQueueBtn"
+        data-create-queue-url="{{ url_for('kiosk.create_queue', reference_id=registration.reference_id) }}"
+        data-confirmation-url="{{ url_for('kiosk.queuing_confirmation', reference_id=registration.reference_id) }}"
+        data-existing-queue="{% if existing_queue_data %}true{% else %}false{% endif %}"
+        data-can-add-jobs="{% if selected_job_fair_jobs and queue_entry_open %}true{% else %}false{% endif %}"
+        data-printer-name=""
+    >
+
+        {% if existing_queue_data %}
+
+            <span class="print-btn-icon">
+                →
+            </span>
+
+            <span>
+                Continue
+            </span>
+
+        {% else %}
+
+            <span class="print-btn-icon">
+                ✓
+            </span>
+
+            <span>
+                Select Jobs First
+            </span>
+
+        {% endif %}
+
+    </button>
+    </div>
+
+</footer>
+ 
+
+{% endif %}
+
+<!-- BACK BUTTON -->
+
+<div class="back-button-container">
+    <a href="{{ url_for('kiosk.personal_information', reference_id=registration.reference_id) }}"
+       class="back-btn">
+        <span class="back-arrow">←</span>
+        <span>Back</span>
+    </a>
+    <a href="{{ url_for('kiosk.dashboard') }}" class="back-btn return-home-btn" aria-label="Return to Job Fair kiosk home">
+        <span aria-hidden="true">⌂</span>
+        <span>Return to Home</span>
+    </a>
+</div>
+
+</main>
+
+<!-- =============================================================
+     PRINTABLE TICKET
+============================================================== -->
+
+<div
+    class="print-ticket"
+    id="printTicket"
+    data-reference="{{ registration.reference_id }}"
+    data-logo-url="{{ url_for('static', filename='images/peso_logo.png') }}"
+>
+
+<div class="print-header">
+
+ 
+<img
+    src="{{ url_for('static', filename='images/peso_logo.png') }}"
+    alt="PESO Logo"
+    class="print-logo"
+>
+
+
+<h2>
+    PESO JOB FAIR
+</h2>
+
+
+<p>
+    QUEUE TICKET
+</p>
+
+
+<p>
+    Ref No:
+    {{ registration.reference_id }}
+</p>
+
+
+<p>Printed: <span id="printCurrentDate">—</span></p>
+ 
+
+</div>
+
+<!-- JAVASCRIPT INSERTS QUEUE ENTRIES -->
+
+<div id="printQueueList">
+</div>
+
+<div class="print-note">
+
+ 
+Please wait for your queue number to be called.
+ 
+
+</div>
+
+</div>
+
+<!-- =============================================================
+     PRINTING MODAL
+============================================================== -->
+
+<div
+    class="printing-modal"
+    id="printingModal"
+    aria-hidden="true"
+>
+
+<!-- MODAL BACKDROP -->
+
+<div class="printing-modal-backdrop"></div>
+
+<!-- MODAL CARD -->
+
+<div
+    class="printing-modal-card"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="printingTitle"
+>
+
+ 
+<!-- =====================================================
+     PRINTING STATE
+====================================================== -->
+
+<div
+    class="printing-state"
+    id="printingState"
+>
+
+    <div
+        class="printing-spinner"
+        aria-hidden="true"
+    ></div>
+
+
+    <div class="printing-content">
+
+        <strong id="printingTitle">
+            Printing your queue ticket
+        </strong>
+
+
+        <span id="printingMessage">
+            Please wait while we print your queue numbers.
+        </span>
+
+    </div>
+
+</div>
+
+
+
+<!-- =====================================================
+     SUCCESS STATE
+====================================================== -->
+
+<div
+    class="printing-success"
+    id="printingSuccess"
+>
+
+    <div
+        class="printing-success-icon"
+        aria-hidden="true"
+    >
+        ✓
+    </div>
+
+
+    <div class="printing-content">
+
+        <strong>
+            Printing complete
+        </strong>
+
+
+        <span>
+            Your queue ticket has been printed successfully.
+        </span>
+
+    </div>
+
+</div>
+ 
+
+</div>
+
+</div>
+
+<!-- =============================================================
+     JAVASCRIPT
+============================================================== -->
+
+<!-- QZ TRAY JAVASCRIPT CONNECTOR -->
+
+<script
+    src="{{ url_for('static', filename='javascript/kiosk/qz-tray.js') }}"
+></script>
+
+<script
+    src="{{ url_for('static', filename='javascript/kiosk/queue.js') }}"
+></script>
+
+{% include "kiosk/components/kiosk_logout.html" %}
+    <script defer src="{{ url_for('static', filename='javascript/kiosk/kiosk_scrollbar.js') }}"></script>
+</body>
+
+</html>

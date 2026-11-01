@@ -1,0 +1,42 @@
+<header class="site-header">
+    <nav class="navbar">
+
+    <div class="nav-left">
+        <a href="{{ url_for('home.index') }}">
+            <img src="{{ url_for('static', filename='images/logo.png') }}"
+                 alt="Logo"
+                 class="nav-logo">
+        </a>
+        <!-- Mobile menu toggle -->
+        <button type="button" class="mobile-nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+    </div>
+
+    <div class="nav-center">
+        <div class="nav-links">
+
+            <a href="{{ url_for('home.index') }}"
+            class="{% if request.endpoint == 'home.index' %}active{% endif %}">
+                HOME
+            </a>
+
+            <a href="{{ url_for('home.joblist') }}"
+            class="{% if request.endpoint == 'home.joblist' %}active{% endif %}">
+                JOB LISTING
+            </a>
+
+            <a href="{{ url_for('home.about') }}"
+            class="{% if request.endpoint == 'home.about' %}active{% endif %}">ABOUT US</a>
+
+            <a href="{{ url_for('home.announcements') }}"
+            class="{% if request.endpoint == 'home.announcements' %}active{% endif %}">
+                ANNOUNCEMENTS
+            </a>
+
+        </div>
+    </div>
+
+
+    </nav>
+</header>

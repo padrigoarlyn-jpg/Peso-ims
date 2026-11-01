@@ -1,0 +1,212 @@
+{% extends "layouts/base.html" %}
+{% block body_class %}jobseeker-app{% endblock %}
+
+{% block title %}
+Registration Confirmation | PESO IMS
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='css/jobseeker/jobseeker_job_fair_confirmation.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/jobseeker/jobseeker_ui_consistency.css') }}">
+{% endblock %}
+
+{% block navbar %}
+{% include "layouts/jobseeker_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="confirmation-page-main">
+    <section class="confirmation-card">
+        <div class="success-icon">
+            <i class="fa-solid fa-check"></i>
+        </div>
+
+        <span class="confirmation-eyebrow">
+            PESO JOB FAIR
+        </span>
+
+        <h1>Registration Confirmed!</h1>
+
+        <p class="confirmation-message">
+            Your registration for
+            <strong>{{ fair.title }}</strong>
+            has been successfully completed.
+        </p>
+
+        <div class="section-label">
+            REGISTRATION DETAILS
+        </div>
+
+        <div class="details-summary">
+            <div class="detail-row">
+                <div class="detail-icon">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+
+                <div class="detail-content">
+                    <span class="detail-label">
+                        Registrant
+                    </span>
+
+                    <strong>
+                        {% if current_user.job_seeker %}
+                            {{ current_user.job_seeker.full_name }}
+                        {% else %}
+                            {{ current_user.username }}
+                        {% endif %}
+                    </strong>
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-icon">
+                    <i class="fa-solid fa-location-dot"></i>
+                </div>
+
+                <div class="detail-content">
+                    <span class="detail-label">
+                        Venue
+                    </span>
+
+                    <strong>
+                        {{ fair.venue or "Venue to be announced" }}
+                    </strong>
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-icon">
+                    <i class="fa-solid fa-calendar"></i>
+                </div>
+
+                <div class="detail-content">
+                    <span class="detail-label">
+                        Date
+                    </span>
+
+                    <strong>
+                        {% if fair.start_datetime %}
+                            {{ fair.start_datetime.strftime('%B %d, %Y') }}
+                        {% else %}
+                            TBA
+                        {% endif %}
+                    </strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="reference-section">
+            <span class="reference-label">
+                YOUR KIOSK REFERENCE ID
+            </span>
+
+            <div class="reference-code">
+                {{ registration.reference_id }}
+            </div>
+
+            <p>
+                Enter this Reference ID at the kiosk to generate your queue number.
+            </p>
+        </div>
+
+        <div class="confirmation-notice">
+            <div class="notice-icon">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+
+            <div>
+                <strong>
+                    What happens next?
+                </strong>
+
+                <p>
+                    Keep your Reference ID with you. Present it at the Job Fair kiosk
+                    to receive your queue number.
+                </p>
+            </div>
+        </div>
+
+        <a href="{{ url_for('jobseeker.announcement') }}"
+           class="btn-back-custom">
+            Back to Announcements
+        </a>
+
+        <span class="page-note">
+            You may now proceed to the Job Fair.
+        </span>
+    </section>
+</div>
+
+<div id="jobFairPreselectionModal"
+     class="preselection-modal"
+     data-fair-id="{{ fair.job_fair_id }}"
+     aria-hidden="true">
+
+    <div class="preselection-modal-content"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="preselectionModalTitle">
+
+        <button type="button"
+                class="preselection-close"
+                id="closePreselectionModal"
+                aria-label="Close">
+            &times;
+        </button>
+
+        <div class="preselection-icon">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
+
+        <span class="preselection-eyebrow">
+            PESO JOB FAIR
+        </span>
+
+        <h2 id="preselectionModalTitle">
+            Registration Successful!
+        </h2>
+
+        <p>
+            Your registration for
+            <strong>{{ fair.title }}</strong>
+            is complete.
+        </p>
+
+        <p>
+            You can now browse and pre-select available
+            <strong>Job Fair jobs</strong>, including
+            <strong>exclusive</strong> and
+            <strong>non-exclusive</strong> opportunities.
+        </p>
+
+        <div class="preselection-info">
+            <i class="fa-solid fa-circle-info"></i>
+
+            <span>
+                Pre-selecting a job indicates your interest in the position.
+                It does not guarantee employment.
+            </span>
+        </div>
+
+        <div class="preselection-countdown">
+            This message will close in
+            <strong>
+                <span id="preselectionCountdown">10</span>
+            </strong>
+            seconds.
+        </div>
+
+        <a href="{{ url_for('jobseeker.joblist', fair_id=fair.job_fair_id) }}"
+           class="preselection-button">
+            Proceed to Pre-Selection
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='javascript/jobseeker/jobseeker_job_fair_confirmation.js') }}"></script>
+{% endblock %}

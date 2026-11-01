@@ -1,0 +1,274 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Apply for a Job | PESO</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for(
+            'static',
+            filename='css/kiosk/Kiosk_qrpage.css'
+        ) }}"
+    >
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/peso_foundation.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui/peso_polish.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_logout.css') }}">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_scrollbar.css') }}">
+    <!-- Shared 15.6-inch kiosk touchscreen scaling (load last) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk/kiosk_screen_15inch.css') }}">
+</head>
+
+
+<body class="kiosk-app" data-ui-phase="5">
+{% include "kiosk/_kiosk_flash.html" %}
+
+
+<main class="registration-page">
+
+
+    <!-- =========================================================
+         PAGE HEADER
+    ========================================================== -->
+
+    <header class="page-header">
+
+        <div class="header-brand">
+
+            <div class="logo-container">
+
+                <img
+                    src="{{ url_for(
+                        'static',
+                        filename='images/peso_logo.png'
+                    ) }}"
+                    alt="PESO Logo"
+                    class="peso-logo"
+                >
+
+            </div>
+
+
+            <div class="header-title">
+
+                <span class="header-eyebrow">
+                    PESO JOB OPPORTUNITIES
+                </span>
+
+                <h1>
+                    Apply for a Job
+                </h1>
+
+                <p>
+                    Use your phone to complete your application
+                    through the PESO website.
+                </p>
+
+            </div>
+
+        </div>
+
+    </header>
+
+
+
+    <!-- =========================================================
+         INSTRUCTION BAR
+    ========================================================== -->
+
+    <section class="instruction-bar">
+
+        <div class="instruction-icon">
+            <span>✓</span>
+        </div>
+
+
+        <div class="instruction-content">
+
+            <strong>
+                Ready to apply?
+            </strong>
+
+            <span>
+                Scan the QR code below using your phone to
+                {% if ongoing_job_fair %}register for the job fair{% else %}log in to the PESO website{% endif %}.
+            </span>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================================================
+         QR REGISTRATION CONTENT
+    ========================================================== -->
+
+    <section class="registration-content">
+
+
+        <section class="registration-card qr-card">
+
+
+            <!-- =================================================
+                 CARD HEADER
+            ================================================== -->
+
+            <div class="section-heading">
+
+                <div class="section-heading-main">
+
+                    <span class="section-kicker">
+                        ONLINE APPLICATION
+                    </span>
+
+                    <h2>
+                        Scan to Apply
+                    </h2>
+
+                    <p>
+                        Scan the QR code with your phone to open
+                        {% if ongoing_job_fair %}the job fair registration page{% else %}the PESO login page{% endif %}
+                        and continue on your phone.
+                    </p>
+
+                </div>
+
+
+                <div class="step-badge">
+                    QR
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 QR AREA
+            ================================================== -->
+
+            <div class="qr-area">
+
+                <div class="qr-wrapper">
+
+                    <img
+                        src="data:image/png;base64,{{ registration_qr }}"
+                        alt="PESO Online Application QR Code"
+                        class="qr-code"
+                    >
+
+                </div>
+
+
+                <div class="qr-instruction">
+
+                    <strong>
+                        Scan the QR code
+                    </strong>
+
+                    <span>
+                        Open your phone camera and point it
+                        at the code above.
+                    </span>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 QR BUTTON / ACTION
+            ================================================== -->
+
+            <div class="scan-instruction">
+
+                <span class="scan-icon">
+                    ↗
+                </span>
+
+                <div class="scan-instruction-content">
+
+                    <strong>
+                        Continue on your phone
+                    </strong>
+
+                    <span>
+                        After scanning, follow the instructions
+                        on the PESO website to complete your
+                        job application.
+                    </span>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 CARD NOTE
+            ================================================== -->
+
+            <div class="card-note">
+
+                <span class="note-icon">
+                    i
+                </span>
+
+                <span>
+                    Make sure your phone has an internet
+                    connection before continuing.
+                </span>
+
+            </div>
+
+        </section>
+
+    </section>
+
+
+
+    <!-- =========================================================
+         NAVIGATION
+    ========================================================== -->
+
+    <footer class="navigation-row">
+
+        <a
+            href="{{ url_for('kiosk.jobsearch') }}"
+            class="back-button"
+        >
+
+            <span class="back-arrow">
+                ←
+            </span>
+
+            <span>
+                Back to Job Search
+            </span>
+
+        </a>
+
+    </footer>
+
+
+</main>
+
+
+{% include "kiosk/components/kiosk_logout.html" %}
+    <script defer src="{{ url_for('static', filename='javascript/kiosk/kiosk_scrollbar.js') }}"></script>
+</body>
+
+</html>
+ 

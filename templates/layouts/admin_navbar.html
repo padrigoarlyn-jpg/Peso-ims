@@ -1,0 +1,185 @@
+<header class="site-header">
+    <nav class="navbar">
+
+        <div class="nav-left">
+            <a href="{{ url_for('admin.dashboard') }}">
+                <img src="{{ url_for('static', filename='images/peso_logo.png') }}" alt="Logo" class="nav-logo">
+            </a>
+            <button type="button" class="mobile-nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+
+        <div class="nav-center">
+            <div class="nav-links">
+                <a href="{{ url_for('admin.dashboard') }}"
+                    class="{% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+                    HOME
+                </a>
+
+                <a href="{{ url_for('admin.joblist') }}"
+                    class="{% if request.endpoint == 'admin.joblist' %}active{% endif %}">
+                    JOB LISTING
+                </a>
+
+                <!-- New Registered Employers Page Link -->
+                <a href="{{ url_for('admin.all_employers') }}"
+                    class="{% if request.endpoint in ['admin.all_employers', 'admin.employer_profile', 'admin.company_jobs'] %}active{% endif %}">
+                    EMPLOYERS
+                </a>
+
+                <a href="{{ url_for('admin.jobseekers') }}"
+                    class="{% if request.endpoint == 'admin.jobseekers' %}active{% endif %}">
+                    JOB SEEKERS
+                </a>
+
+                <a href="{{ url_for('admin.job_referral') }}"
+                    class="{% if request.endpoint == 'admin.job_referral' %}active{% endif %}">
+                    JOB REFERRAL
+                </a>
+
+                <a href="{{ url_for('admin.job_fairs') }}"
+                    class="{% if request.endpoint == 'admin.job_fairs' %}active{% endif %}">
+                    JOB FAIR MANAGEMENT
+                </a>
+            </div>
+        </div>
+
+        <div class="nav-right">
+
+            <!-- Notification -->
+            <div class="notification-menu">
+
+                <button class="notification-toggle" type="button" aria-label="Notifications" aria-expanded="false">
+
+                    <i class="fa-regular fa-bell notif"></i>
+
+                    {% if unread_notifications > 0 %}
+                    <span class="notification-badge">
+                        {{ unread_notifications }}
+                    </span>
+                    {% endif %}
+
+                </button>
+
+                <div class="notification-dropdown">
+
+                    <div class="notification-header">
+                        <span>Notifications</span>
+                        <form action="{{ url_for('mark_all_notifications') }}" method="POST"
+                            class="notification-action-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="mark-all-link notification-action-button">Mark all as
+                                read</button>
+                        </form>
+                    </div>
+
+                    {% if notifications %}
+
+                    {% for notification in notifications %}
+
+                    <form action="{{ url_for('read_notification', notification_id=notification.notification_id) }}"
+                        method="POST" class="notification-action-form notification-item-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit"
+                            class="notification-item {% if not notification.is_read %}unread{% endif %}">
+
+                            <div class="notification-title">
+                                {{ notification.title }}
+                            </div>
+
+                            <div class="notification-message">
+                                {{ notification.message }}
+                            </div>
+
+                            <small>
+                                {{ notification.created_at | local_dt }}
+                            </small>
+
+                        </button>
+                    </form>
+
+                    {% endfor %}
+
+                    {% else %}
+
+                    <div class="notification-empty">
+                        No notifications
+                    </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+            <div class="profile-menu {% if request.endpoint in [
+                    'admin.profile',
+                    'admin.employer_registration_requests',
+                    'admin.kiosk_management',
+                    'admin.create_admin',
+                    'admin.audit_logs',
+                    'kiosk.staff_ticket_reprints'
+                ] %}has-active-page{% endif %}">
+
+                <button class="profile-menu-toggle" type="button" aria-label="Open profile menu" aria-expanded="false">
+
+                    <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.admin.profile_picture) if current_user.admin and current_user.admin.profile_picture else url_for('static', filename='images/pfp_placeholder.png') }}"
+                        class="profile" alt="Profile">
+
+
+                    <i class="fa-solid fa-chevron-down"></i>
+
+                </button>
+
+                <div class="profile-menu-dropdown">
+
+                    <a href="{{ url_for('admin.profile') }}"
+                        class="{% if request.endpoint == 'admin.profile' %}active{% endif %}">
+                        <i class="fa-regular fa-user"></i>
+                        Profile
+                    </a>
+
+                    <a href="{{ url_for('admin.employer_registration_requests') }}"
+                        class="{% if request.endpoint == 'admin.employer_registration_requests' %}active{% endif %}">
+                        <i class="fa-solid fa-user-check"></i>
+                        Verification Requests
+                    </a>
+
+                    <!-- Kiosk Management -->
+                    <a href="{{ url_for('admin.kiosk_management') }}"
+                        class="{% if request.endpoint == 'admin.kiosk_management' %}active{% endif %}">
+                        <i class="fa-solid fa-desktop"></i>
+                        Kiosk Management
+                    </a>
+
+                    <a href="{{ url_for('kiosk.staff_ticket_reprints') }}"
+                        class="{% if request.endpoint == 'kiosk.staff_ticket_reprints' %}active{% endif %}">
+                        <i class="fa-solid fa-print"></i>
+                        Ticket Reprints
+                    </a>
+
+                    <a href="{{ url_for('admin.audit_logs') }}"
+                        class="{% if request.endpoint == 'admin.audit_logs' %}active{% endif %}">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        Audit Logs
+                    </a>
+
+                    <form method="POST" action="{{ url_for('auth.logout') }}" class="logout-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="logout-link">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            Logout
+                        </button>
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        </div>
+    </nav>
+</header>
+<script src="{{ url_for('static', filename='javascript/notifications_live.js') }}" defer></script>
